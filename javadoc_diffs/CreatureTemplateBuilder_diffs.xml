@@ -1,0 +1,417 @@
+<diff>
+<file>package com.garward.wurmmodloader.modsupport;</file>
+<line_above>package com.garward.wurmmodloader.modsupport;</line_above>
+<line_below></line_below>
+<before></before>
+<after>/**
+ * CreatureTemplateBuilder provides a fluent API for creating and configuring CreatureTemplate instances.
+ * 
+ * This builder allows modders to define custom creatures with various properties including physical characteristics,
+ * combat abilities, skills, resistances, and behavioral traits. It uses reflection to access private fields and methods
+ * of the CreatureTemplate class to provide comprehensive customization capabilities.
+ * 
+ * Usage example:
+ * <pre>@code
+ * CreatureTemplate myCreature = new CreatureTemplateBuilder("mycreature")
+ *     .name("My Creature")
+ *     .description("A custom creature for my mod")
+ *     .modelName("model.creature.mycreature")
+ *     .dimension((short)100, (short)50, (short)30)
+ *     .speed(1.5f)
+ *     .naturalArmour(5.0f)
+ *     .damages(3.0f, 4.0f, 2.0f, 1.0f, 0.0f)
+ *     .skill(102, 30.0f) // Body strength
+ *     .skill(104, 25.0f) // Body control
+ *     .build();
+ * </pre>@code
+ * 
+ * @since 1.0.0
+ * @threadsafe This class is not thread-safe. Each instance should only be used by one thread at a time.
+ * @lifecycle Instances of this class are typically created during mod initialization and used to build CreatureTemplate
+ *            instances that are then registered with the game server.
+ */</after>
+</diff>
+
+<diff>
+<file>public class CreatureTemplateBuilder {</file>
+<line_above>public class CreatureTemplateBuilder {</line_above>
+<line_below>	</line_below>
+<before></before>
+<after>	/**
+	 * Constructs a new CreatureTemplateBuilder with the specified template ID.
+	 * 
+	 * @param id the unique identifier for this creature template
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder(int id) {</line_above>
+<line_below>		this.templateId = id;</line_below>
+<before></before>
+<after>	/**
+	 * Constructs a new CreatureTemplateBuilder with an ID derived from the given identifier string.
+	 * 
+	 * @param identifier a string identifier that will be converted to a numeric ID
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder(String identifier) {</line_above>
+<line_below>		this(IdFactory.getIdFor(identifier, IdType.CREATURETEMPLATE));</line_below>
+<before></before>
+<after>	/**
+	 * Constructs a new CreatureTemplateBuilder with comprehensive creature configuration.
+	 * 
+	 * @param identifier a string identifier that will be converted to a numeric ID
+	 * @param name the name of the creature
+	 * @param description a description of the creature
+	 * @param modelName the 3D model name for this creature
+	 * @param types an array of creature type identifiers
+	 * @param bodyType the body type of the creature
+	 * @param vision the vision range of the creature
+	 * @param sex the sex of the creature (0=male, 1=female)
+	 * @param centimetersHigh the height of the creature in centimeters
+	 * @param centimetersLong the length of the creature in centimeters
+	 * @param centimetersWide the width of the creature in centimeters
+	 * @param deathSndMale the death sound for male creatures
+	 * @param deathSndFemale the death sound for female creatures
+	 * @param hitSndMale the hit sound for male creatures
+	 * @param hitSndFemale the hit sound for female creatures
+	 * @param naturalArmour the natural armor value of the creature
+	 * @param handDam the hand damage value
+	 * @param kickDam the kick damage value
+	 * @param biteDam the bite damage value
+	 * @param headDam the head damage value
+	 * @param breathDam the breath damage value
+	 * @param speed the movement speed of the creature
+	 * @param moveRate the movement rate of the creature
+	 * @param itemsButchered an array of item IDs that can be butchered from this creature
+	 * @param maxHuntDist the maximum hunting distance
+	 * @param aggress the aggression level of the creature
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder(final String identifier, final String name, final String description, final String modelName, final int[] types, final byte bodyType, final short vision, final byte sex, final short centimetersHigh, final short centimetersLong, final short centimetersWide,</line_above>
+<line_below>			final String deathSndMale, final String deathSndFemale, final String hitSndMale, final String hitSndFemale, final float naturalArmour, final float handDam, final float kickDam, final float biteDam, final float headDam, final float breathDam, final float speed, final int moveRate,</line_below>
+<before></before>
+<after>	/**
+	 * Constructs a new CreatureTemplateBuilder with comprehensive creature configuration including meat material.
+	 * 
+	 * @param identifier a string identifier that will be converted to a numeric ID
+	 * @param name the name of the creature
+	 * @param description a description of the creature
+	 * @param modelName the 3D model name for this creature
+	 * @param types an array of creature type identifiers
+	 * @param bodyType the body type of the creature
+	 * @param vision the vision range of the creature
+	 * @param sex the sex of the creature (0=male, 1=female)
+	 * @param centimetersHigh the height of the creature in centimeters
+	 * @param centimetersLong the length of the creature in centimeters
+	 * @param centimetersWide the width of the creature in centimeters
+	 * @param deathSndMale the death sound for male creatures
+	 * @param deathSndFemale the death sound for female creatures
+	 * @param hitSndMale the hit sound for male creatures
+	 * @param hitSndFemale the hit sound for female creatures
+	 * @param naturalArmour the natural armor value of the creature
+	 * @param handDam the hand damage value
+	 * @param kickDam the kick damage value
+	 * @param biteDam the bite damage value
+	 * @param headDam the head damage value
+	 * @param breathDam the breath damage value
+	 * @param speed the movement speed of the creature
+	 * @param moveRate the movement rate of the creature
+	 * @param itemsButchered an array of item IDs that can be butchered from this creature
+	 * @param maxHuntDist the maximum hunting distance
+	 * @param aggress the aggression level of the creature
+	 * @param meatMaterial the material type of the creature's meat
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder(final String identifier, final String name, final String description, final String modelName, final int[] types, final byte bodyType, final short vision, final byte sex, final short centimetersHigh, final short centimetersLong, final short centimetersWide,</line_above>
+<line_below>			final String deathSndMale, final String deathSndFemale, final String hitSndMale, final String hitSndFemale, final float naturalArmour, final float handDam, final float kickDam, final float biteDam, final float headDam, final float breathDam, final float speed, final int moveRate,</line_below>
+<before></before>
+<after>	/**
+	 * Sets the damage values for various attack types.
+	 * 
+	 * @param handDam2 the hand damage value
+	 * @param kickDam2 the kick damage value
+	 * @param biteDam2 the bite damage value
+	 * @param headDam2 the head damage value
+	 * @param breathDam2 the breath damage value
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder damages(float handDam2, float kickDam2, float biteDam2, float headDam2, float breathDam2) {</line_above>
+<line_below>		this.handDam = handDam2;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the movement speed of the creature.
+	 * 
+	 * @param speed the movement speed value
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder speed(float speed) {</line_above>
+<line_below>		this.speed = speed;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the movement rate of the creature.
+	 * 
+	 * @param moveRate the movement rate value
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder moveRate(int moveRate) {</line_above>
+<line_below>		this.moveRate = moveRate;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the items that can be butchered from this creature.
+	 * 
+	 * @param itemsButchered an array of item IDs that can be obtained through butchering
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder itemsButchered(int[] itemsButchered) {</line_above>
+<line_below>		this.itemsButchered = itemsButchered;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the maximum hunting distance for this creature.
+	 * 
+	 * @param maxHuntDist the maximum hunting distance
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder maxHuntDist(int maxHuntDist) {</line_above>
+<line_below>		this.maxHuntDist = maxHuntDist;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the aggression level of the creature.
+	 * 
+	 * @param aggress the aggression level (0=passive, higher values=more aggressive)
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder aggressive(int aggress) {</line_above>
+<line_below>		this.aggressive = aggress;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the meat material type for this creature.
+	 * 
+	 * @param meatMaterial the material type identifier for the creature's meat
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder meatMaterial(byte meatMaterial) {</line_above>
+<line_below>		this.meatMaterial = meatMaterial;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the natural armor value of the creature.
+	 * 
+	 * @param naturalArmour2 the natural armor value
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder naturalArmour(float naturalArmour2) {</line_above>
+<line_below>		this.naturalArmour = naturalArmour2;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the hit sounds for male and female versions of this creature.
+	 * 
+	 * @param hitSndMale2 the hit sound for male creatures
+	 * @param hitSndFemale2 the hit sound for female creatures
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder hitSounds(String hitSndMale2, String hitSndFemale2) {</line_above>
+<line_below>		this.hitSndMale = hitSndMale2;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the death sounds for male and female versions of this creature.
+	 * 
+	 * @param deathSndMale the death sound for male creatures
+	 * @param deathSndFemale the death sound for female creatures
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder deathSounds(String deathSndMale, String deathSndFemale) {</line_above>
+<line_below>		this.deathSndMale = deathSndMale;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the physical dimensions of the creature.
+	 * 
+	 * @param centimetersHigh2 the height in centimeters
+	 * @param centimetersLong2 the length in centimeters
+	 * @param centimetersWide2 the width in centimeters
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder dimension(short centimetersHigh2, short centimetersLong2, short centimetersWide2) {</line_above>
+<line_below>		this.centimetersHigh = centimetersHigh2;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the sex of the creature.
+	 * 
+	 * @param sex the sex identifier (0=male, 1=female)
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder sex(byte sex) {</line_above>
+<line_below>		this.sex = sex;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the vision range of the creature.
+	 * 
+	 * @param vision the vision range value
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder vision(short vision) {</line_above>
+<line_below>		this.vision = vision;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the body type of the creature.
+	 * 
+	 * @param bodyType the body type identifier
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder bodyType(byte bodyType) {</line_above>
+<line_below>		this.bodyType = bodyType;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the 3D model name for this creature.
+	 * 
+	 * @param modelName the model name string
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder modelName(String modelName) {</line_above>
+<line_below>		this.modelName = modelName;</line_below>
+<before></before>
+<after>	/**
+	 * Sets default skill values for the creature.
+	 * 
+	 * This method initializes the creature with basic skill values of 20.0 for common skills.
+	 * 
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder defaultSkills() {</line_above>
+<line_below>		skills.put(102, 20.0f);</line_below>
+<before></before>
+<after>	/**
+	 * Sets a specific skill value for the creature.
+	 * 
+	 * @param skillNumber the skill identifier
+	 * @param startValue the starting value for this skill
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder skill(int skillNumber, float startValue) {</line_above>
+<line_below>		this.skills.put(skillNumber, startValue);</line_below>
+<before></before>
+<after>	/**
+	 * Sets the creature type identifiers.
+	 * 
+	 * @param types an array of creature type identifiers
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder types(int[] types) {</line_above>
+<line_below>		this.types = types;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the name of the creature.
+	 * 
+	 * @param name the creature name
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder name(String name) {</line_above>
+<line_below>		this.name = name;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the plural form of the creature name.
+	 * 
+	 * @param plural the plural form of the creature name
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+
+<diff>
+<line_above>	public CreatureTemplateBuilder plural(String plural) {</line_above>
+<line_below>		this.plural = plural;</line_below>
+<before></before>
+<after>	/**
+	 * Sets the description of the creature.
+	 * 
+	 * @param description the creature description
+	 * @return this builder instance for method chaining
+	 * @since 1.0.0
+	 */</after>
+</diff>
+

@@ -1,0 +1,9 @@
+package com.garward.wurmmodloader.modloader.interfaces;
+
+/**
+ * Compatibility interface
+ */
+@Deprecated
+public interface WurmMod extends WurmServerMod {
+
+}

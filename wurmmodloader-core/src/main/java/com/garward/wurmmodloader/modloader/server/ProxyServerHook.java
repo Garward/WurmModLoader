@@ -1,0 +1,593 @@
+package com.garward.wurmmodloader.modloader.server;
+
+import com.garward.wurmmodloader.api.events.combat.OpportunityAttackEvent;
+import com.wurmonline.server.Message;
+import com.wurmonline.server.creatures.Communicator;
+import com.wurmonline.server.players.Player;
+import com.wurmonline.server.villages.PvPAlliance;
+import com.wurmonline.server.villages.Village;
+
+/**
+ * Hook into com.wurmonline.server.Server.startRunning()
+ * 
+ * The InvocationHandler calls startRunning() first, then fires onServerStarted
+ * event
+ */
+public class ProxyServerHook extends ServerHook {
+
+	private static ProxyServerHook instance;
+
+	private boolean playerHooksRegistered = false;
+
+	private static final ThreadLocal<OpportunityContext> OPPORTUNITY_CONTEXT =
+		ThreadLocal.withInitial(OpportunityContext::new);
+
+	// Captured attackers map (stored before die() clears them, retrieved by LootManager)
+	private static final java.util.concurrent.ConcurrentHashMap<Long, java.util.Map<Long, Long>> CAPTURED_ATTACKERS =
+		new java.util.concurrent.ConcurrentHashMap<>();
+
+	// Damage tracking per creature (victimId -> attackerId -> total damage dealt)
+	private static final java.util.concurrent.ConcurrentHashMap<Long, java.util.concurrent.ConcurrentHashMap<Long, Double>> DAMAGE_TRACKING =
+		new java.util.concurrent.ConcurrentHashMap<>();
+
+	// Note: Capability hooks are installed in DelegatedLauncher.main()
+	// BEFORE this class is ever loaded. See DelegatedLauncher.java:22
+
+	private ProxyServerHook() {
+		// Creature and combat hooks (Phase 3 event system) are installed via BytecodePatch implementations.
+		// Item hooks (Phase 3 - for soulbound gear and RPG mods) are installed via BytecodePatch implementations.
+
+		// Phase 4+ hooks are installed via BytecodePatch implementations; retained fire helpers below.
+	}
+
+	@Override
+	public void registerPlayerHooks() {
+		if (!playerHooksRegistered) {
+			playerHooksRegistered = true;
+		}
+	}
+
+	public static boolean communicatorMessageHook(Communicator communicator, String message, String title) {
+		return getInstance().fireOnMessage(communicator, message, title);
+	}
+
+	public static boolean communicatorChannelHook(Message message) {
+		return getInstance().fireOnKingdomMessage(message);
+	}
+
+	public static boolean communicatorChannelHook(Village village, Message message) {
+		if ("Alliance".equals(message.getWindow())) {
+			return false;
+		}
+		return getInstance().fireOnVillageMessage(village, message);
+	}
+
+	public static boolean communicatorChannelHook(PvPAlliance alliance, Message message) {
+		return getInstance().fireOnAllianceMessage(alliance, message);
+	}
+
+	// ========================================================================
+	// Static Fire Methods (called from bytecode hooks)
+	// ========================================================================
+
+	/**
+	 * Capture attackers map before die() clears it (called from bytecode hook).
+	 */
+	public static void captureAttackers(long creatureId, java.util.Map<Long, Long> attackers) {
+		CAPTURED_ATTACKERS.put(creatureId, attackers);
+	}
+
+	/**
+	 * Retrieve and remove captured attackers (called by LootManager).
+	 */
+	public static java.util.Map<Long, Long> getAndRemoveCapturedAttackers(long creatureId) {
+		return CAPTURED_ATTACKERS.remove(creatureId);
+	}
+
+	/**
+	 * Track damage dealt by an attacker to a victim (called from CombatDamageEvent).
+	 *
+	 * @param victimId The creature being damaged
+	 * @param attackerId The creature dealing damage
+	 * @param damage The amount of damage dealt
+	 */
+	public static void trackDamage(long victimId, long attackerId, double damage) {
+		DAMAGE_TRACKING.computeIfAbsent(victimId, k -> new java.util.concurrent.ConcurrentHashMap<>())
+			.merge(attackerId, damage, Double::sum);
+	}
+
+	/**
+	 * Retrieve and remove damage tracking for a creature (called by LootManager).
+	 * Returns map of attackerId -> total damage dealt.
+	 *
+	 * @param victimId The creature that died
+	 * @return Map of attacker IDs to total damage dealt, or empty map if none tracked
+	 */
+	public static java.util.Map<Long, Double> getAndRemoveDamageTracking(long victimId) {
+		java.util.concurrent.ConcurrentHashMap<Long, Double> damage = DAMAGE_TRACKING.remove(victimId);
+		return damage != null ? new java.util.HashMap<>(damage) : new java.util.HashMap<>();
+	}
+
+	/**
+	 * Fire CreatureDeathEvent (called from bytecode hook).
+	 */
+	public static void fireCreatureDeathEvent(com.wurmonline.server.creatures.Creature victim,
+			com.wurmonline.server.creatures.Creature killer) {
+		getInstance().fireCreatureDeath(victim, killer);
+	}
+
+	/**
+	 * Fire CreatureExamineEvent (called from bytecode hook).
+	 * Returns modified examine text.
+	 */
+	public static String fireCreatureExamineEvent(com.wurmonline.server.creatures.Creature creature,
+	                                              String examineText) {
+		return getInstance().fireCreatureExamine(creature, examineText);
+	}
+
+	/**
+	 * Fire CombatDamageEvent (called from bytecode hook).
+	 * Returns modified damage value.
+	 */
+	public static double fireCombatDamageEvent(com.wurmonline.server.creatures.Creature attacker,
+			com.wurmonline.server.creatures.Creature defender,
+			double damage,
+			byte woundType,
+			int bodyPart) {
+		return getInstance().fireCombatDamage(attacker, defender, damage, woundType, bodyPart);
+	}
+
+	/**
+	 * Fire CreatureSpawnEvent (called from bytecode hook).
+	 */
+	public static void fireCreatureSpawnEvent(com.wurmonline.server.creatures.Creature creature) {
+		getInstance().fireCreatureSpawn(creature);
+	}
+
+	/**
+	 * Fire CreatureBreedEvent (called from bytecode hook).
+	 * Returns true if the event was cancelled and breeding should be prevented.
+	 */
+	public static boolean fireCreatureBreedEvent(com.wurmonline.server.creatures.Creature performer,
+	                                              com.wurmonline.server.creatures.Creature target,
+	                                              short breedType,
+	                                              com.wurmonline.server.behaviours.Action action,
+	                                              float counter) {
+		return getInstance().fireCreatureBreed(performer, target, breedType, action, counter);
+	}
+
+	/**
+	 * Fire CreatureDbSaveEvent (called from bytecode hook in DbCreatureStatus.save()).
+	 */
+	public static void fireCreatureDbSaveEvent(com.wurmonline.server.creatures.Creature creature) {
+		getInstance().fireCreatureDbSave(creature);
+	}
+
+	/**
+	 * Fire CreatureDbLoadEvent (called from bytecode hook in DbCreatureStatus constructor).
+	 */
+	public static void fireCreatureDbLoadEvent(com.wurmonline.server.creatures.Creature creature,
+	                                            java.sql.ResultSet resultSet) {
+		getInstance().fireCreatureDbLoad(creature, resultSet);
+	}
+
+	/**
+	 * Fire DeityDbSaveEvent (called from bytecode hook in DbDeity.save()).
+	 */
+	public static void fireDeityDbSaveEvent(int deityId, String deityName) {
+		getInstance().fireDeityDbSave(deityId, deityName);
+	}
+
+	/**
+	 * Fire DeityDbLoadEvent (called from bytecode hook in DbDeity constructor).
+	 */
+	public static void fireDeityDbLoadEvent(int deityId, String deityName,
+	                                         java.sql.ResultSet resultSet) {
+		getInstance().fireDeityDbLoad(deityId, deityName, resultSet);
+	}
+
+	/**
+	 * Fire StructureDbSaveEvent (called from bytecode hook in DbStructure.save()).
+	 */
+	public static void fireStructureDbSaveEvent(long structureId, String structureName) {
+		getInstance().fireStructureDbSave(structureId, structureName);
+	}
+
+	/**
+	 * Fire StructureDbLoadEvent (called from bytecode hook in DbStructure.load()).
+	 */
+	public static void fireStructureDbLoadEvent(long structureId, String structureName,
+	                                            java.sql.ResultSet resultSet) {
+		getInstance().fireStructureDbLoad(structureId, structureName, resultSet);
+	}
+
+	/**
+	 * Fire ActionFatigueEvent (called from bytecode hook in Action constructor).
+	 * Returns the fatigue value after mods have had a chance to modify it.
+	 */
+	public static boolean fireActionFatigueEvent(com.wurmonline.server.creatures.Creature performer,
+	                                              long subject,
+	                                              long target,
+	                                              short action,
+	                                              boolean defaultFatigue) {
+		return getInstance().fireActionFatigue(performer, subject, target, action, defaultFatigue);
+	}
+
+	/**
+	 * Fire CropHarvestEvent (called from bytecode hook in Terraforming.harvest).
+	 * Returns the harvest quantity after mods have had a chance to modify it.
+	 */
+	public static int fireCropHarvestEvent(com.wurmonline.server.creatures.Creature performer,
+	                                        int tilex,
+	                                        int tiley,
+	                                        boolean onSurface,
+	                                        int tile,
+	                                        float counter,
+	                                        com.wurmonline.server.items.Item tool,
+	                                        int quantity) {
+		return getInstance().fireCropHarvest(performer, tilex, tiley, onSurface, tile, counter, tool, quantity);
+	}
+
+	/**
+	 * Fire CropGrowthEvent (called from bytecode hook in CropTilePoller/TilePoller).
+	 * Returns true if the event was cancelled and growth check should be skipped.
+	 */
+	public static boolean fireCropGrowthEvent(int tilex, int tiley, int tile, byte data, byte farmData) {
+		return getInstance().fireCropGrowth(tilex, tiley, tile, data, farmData);
+	}
+
+	/**
+	 * Fire PriestRestrictionCheckEvent (called from bytecode hook in crafting methods).
+	 * Returns the modified priest status after mods have had a chance to override it.
+	 */
+	public static boolean firePriestRestrictionCheckEvent(com.wurmonline.server.creatures.Creature creature,
+	                                                       String context,
+	                                                       boolean defaultIsPriest) {
+		return getInstance().firePriestRestrictionCheck(creature, context, defaultIsPriest);
+	}
+
+	/**
+	 * Fire PrayerFaithEvent (called from bytecode hook in prayer/faith methods).
+	 * Returns array [numFaith, lastFaith] after mods have had a chance to modify them.
+	 */
+	public static Object[] firePrayerFaithEvent(long playerId, byte numFaith, long lastFaith) {
+		return getInstance().firePrayerFaith(playerId, numFaith, lastFaith);
+	}
+
+	/**
+	 * Fire CombatAttackEvent (called from bytecode hook).
+	 * Returns result indicating if event was cancelled and the attack result.
+	 */
+	public static CombatAttackResult fireCombatAttackEvent(com.wurmonline.server.creatures.Creature attacker,
+	                                                        com.wurmonline.server.creatures.Creature defender,
+	                                                        int combatCounter,
+	                                                        boolean opportunity,
+	                                                        float actionCounter,
+	                                                        com.wurmonline.server.behaviours.Action action) {
+		return getInstance().fireCombatAttack(attacker, defender, combatCounter, opportunity, actionCounter, action);
+	}
+
+	/**
+	 * Fire SpecialMoveSendEvent (called from bytecode hook).
+	 * Returns true if event was cancelled (suppresses vanilla UI).
+	 */
+	public static boolean fireSpecialMoveSendEvent(com.wurmonline.server.creatures.Creature creature) {
+		return getInstance().fireSpecialMoveSend(creature);
+	}
+
+	/**
+	 * Fire SpecialMoveHandleEvent (called from bytecode hook).
+	 * Returns result indicating if event was cancelled and the handler result.
+	 */
+	public static SpecialMoveResult fireSpecialMoveHandleEvent(com.wurmonline.server.creatures.Creature performer,
+	                                                             com.wurmonline.server.creatures.Creature target,
+	                                                             short action,
+	                                                             float counter) {
+		return getInstance().fireSpecialMoveHandle(performer, target, action, counter);
+	}
+
+	/**
+	 * Fire PlayerSkillLossEvent (called from bytecode hook).
+	 * Returns true if event was cancelled (prevents skill loss).
+	 */
+	public static boolean firePlayerSkillLossEvent(com.wurmonline.server.creatures.Creature creature) {
+		return getInstance().firePlayerSkillLoss(creature);
+	}
+
+	/**
+	 * Fire ShieldCheckEvent (called from bytecode hook).
+	 */
+	public static com.garward.wurmmodloader.api.events.combat.shield.ShieldCheckEvent fireShieldCheckEvent(
+			com.wurmonline.server.creatures.Creature attacker,
+			com.wurmonline.server.creatures.Creature defender,
+			com.wurmonline.server.items.Item weapon,
+			com.wurmonline.server.items.Item shield) {
+		return getInstance().fireShieldCheck(attacker, defender, weapon, shield);
+	}
+
+	/**
+	 * Fire ShieldDamageEvent (called from bytecode hook).
+	 */
+	public static double fireShieldDamageEvent(com.wurmonline.server.creatures.Creature defender,
+			com.wurmonline.server.creatures.Creature attacker,
+			com.wurmonline.server.items.Item shield,
+			double damageDelta) {
+		return getInstance().fireShieldDamage(defender, attacker, shield, damageDelta);
+	}
+
+	public static float fireMaterialDamageModifierEvent(com.wurmonline.server.items.Item item, byte material,
+			float base) {
+		return getInstance().fireMaterialDamageModifier(item, material, base);
+	}
+
+	public static float fireMaterialDecayModifierEvent(com.wurmonline.server.items.Item item, byte material,
+			float base) {
+		return getInstance().fireMaterialDecayModifier(item, material, base);
+	}
+
+	public static float fireMaterialImpBonusEvent(com.wurmonline.server.items.Item item, byte material, float base) {
+		return getInstance().fireMaterialImpBonus(item, material, base);
+	}
+
+	public static float fireMaterialRepairTimeEvent(com.wurmonline.server.items.Item item, byte material, float base) {
+		return getInstance().fireMaterialRepairTime(item, material, base);
+	}
+
+	public static double fireMaterialBonusEvent(
+			com.garward.wurmmodloader.api.events.item.material.MaterialBonusEvent.BonusType type,
+			Object context,
+			byte material,
+			double base) {
+		return getInstance().fireMaterialBonus(type, context, material, base);
+	}
+
+	public static double fireWeaponStatEvent(com.wurmonline.server.combat.Weapon weapon,
+			com.wurmonline.server.items.Item item,
+			byte material,
+			com.garward.wurmmodloader.api.events.combat.weapon.WeaponStatQueryEvent.StatType type,
+			double baseValue) {
+		return getInstance().fireWeaponStat(weapon, item, material, type, baseValue);
+	}
+
+	public static OpportunityAttackEvent fireOpportunityAttackEvent(com.wurmonline.server.creatures.Creature defender,
+			com.wurmonline.server.creatures.Creature trespasser,
+			double skillResult,
+			double difficulty,
+			byte opportunityCounter,
+			int usedOpportunityAttacks,
+			int combatCounter,
+			float actionCounter) {
+		return getInstance().fireOpportunityAttack(defender, trespasser, skillResult, difficulty,
+				opportunityCounter, usedOpportunityAttacks, combatCounter, actionCounter);
+	}
+
+	public static void recordOpportunitySkill(double skillResult, double difficulty) {
+		OpportunityContext ctx = OPPORTUNITY_CONTEXT.get();
+		ctx.skillResult = skillResult;
+		ctx.difficulty = difficulty;
+	}
+
+	public static OpportunityContext getOpportunityContext() {
+		return OPPORTUNITY_CONTEXT.get();
+	}
+
+	public static float fireCombatCriticalHitChanceEvent(com.wurmonline.server.creatures.Creature attacker,
+			com.wurmonline.server.creatures.Creature defender,
+			com.wurmonline.server.items.Item weapon,
+			com.wurmonline.server.creatures.AttackAction attackAction,
+			float baseChance,
+			boolean usingNewCombatSystem) {
+		return getInstance().fireCombatCriticalHitChance(attacker, defender, weapon, attackAction, baseChance,
+				usingNewCombatSystem);
+	}
+
+	public static final class OpportunityContext {
+		private double skillResult;
+		private double difficulty;
+
+		public double getSkillResult() {
+			return skillResult;
+		}
+
+		public double getDifficulty() {
+			return difficulty;
+		}
+	}
+
+	public static float fireActionTimeEvent(com.wurmonline.server.creatures.Creature performer,
+			com.wurmonline.server.items.Item source,
+			com.wurmonline.server.items.Item target,
+			float baseTime) {
+		return getInstance().fireActionTime(performer, source, target, baseTime);
+	}
+
+	public static com.garward.wurmmodloader.api.events.skill.SkillAdvanceEvent fireSkillAdvanceEvent(
+			com.wurmonline.server.skills.Skill skill,
+			com.wurmonline.server.items.Item item,
+			double difficulty,
+			double bonus) {
+		return getInstance().fireSkillAdvance(skill, item, difficulty, bonus);
+	}
+
+	public static float fireActionSpeedEvent(com.wurmonline.server.creatures.Creature performer,
+			int staminaNeeded,
+			float baseModifier) {
+		return getInstance().fireActionSpeed(performer, staminaNeeded, baseModifier);
+	}
+
+	public static float fireCombatSwingSpeedEvent(com.wurmonline.server.creatures.Creature attacker,
+			com.wurmonline.server.items.Item weapon,
+			float baseSpeed) {
+		return getInstance().fireCombatSwingSpeed(attacker, weapon, baseSpeed);
+	}
+
+	public static com.garward.wurmmodloader.api.events.combat.CombatDualWieldEvent fireCombatDualWieldEvent(
+			com.wurmonline.server.creatures.Creature attacker,
+			com.wurmonline.server.creatures.Creature defender,
+			com.wurmonline.server.items.Item offhand,
+			float delta) {
+		return getInstance().fireCombatDualWield(attacker, defender, offhand, delta);
+	}
+
+	public static com.garward.wurmmodloader.api.events.combat.WeaponUseEvent fireWeaponUseEvent(
+			com.wurmonline.server.creatures.Creature creature,
+			com.wurmonline.server.items.Item weapon,
+			float previousValue,
+			float newValue) {
+		return getInstance().fireWeaponUse(creature, weapon, previousValue, newValue);
+	}
+
+	/**
+	 * Fire PlayerDeathEvent (called from bytecode hook).
+	 */
+	public static void firePlayerDeathEvent(com.wurmonline.server.players.Player player,
+			com.wurmonline.server.creatures.Creature killer) {
+		getInstance().firePlayerDeath(player, killer);
+	}
+
+	/**
+	 * Fire ItemExamineEvent (called from bytecode hook).
+	 * Returns the potentially modified examine text.
+	 */
+	public static String fireItemExamineEvent(com.wurmonline.server.items.Item item,
+			com.wurmonline.server.creatures.Creature examiner,
+			com.wurmonline.server.creatures.Creature owner,
+			String originalText) {
+		return getInstance().fireItemExamine(item, examiner, owner, originalText);
+	}
+
+	/**
+	 * Fire ItemEnchantmentStringsEvent (called from bytecode hook).
+	 * Allows mods to send additional colored messages about item stats.
+	 */
+	public static void fireItemEnchantmentStringsEvent(com.wurmonline.server.items.Item item,
+			com.wurmonline.server.creatures.Creature examiner) {
+		getInstance().fireItemEnchantmentStrings(item, examiner);
+	}
+
+	/**
+	 * Fire ItemDropEvent (called from bytecode hook).
+	 * Returns true if the drop should be cancelled.
+	 *
+	 * @param itemId   The item being dropped
+	 * @param ownerId  The creature dropping the item
+	 * @param onGround Whether the item is being dropped on ground (true) or to
+	 *                 container/corpse (false)
+	 */
+	public static boolean fireItemDropEvent(long itemId, long ownerId, boolean onGround) {
+		try {
+			// Look up the item being dropped
+			com.wurmonline.server.items.Item item = com.wurmonline.server.Items.getItem(itemId);
+
+			// Look up the creature dropping the item
+			com.wurmonline.server.creatures.Creature dropper = com.wurmonline.server.creatures.Creatures.getInstance()
+					.getCreatureOrNull(ownerId);
+
+			// Fire the event
+			return getInstance().fireItemDrop(item, dropper, onGround);
+
+		} catch (com.wurmonline.server.NoSuchItemException e) {
+			// Item not found - allow drop
+			return false;
+		} catch (Exception e) {
+			// Log error but allow drop to proceed
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+					.log(java.util.logging.Level.WARNING, "Error firing ItemDropEvent", e);
+			return false;
+		}
+	}
+
+	/**
+	 * Fire ItemTradeEvent (called from bytecode hook).
+	 * Returns true if the trade should be cancelled.
+	 */
+	public static boolean fireItemTradeEvent(com.wurmonline.server.items.Item item,
+			com.wurmonline.server.items.TradingWindow window) {
+		return getInstance().fireItemTrade(item, window);
+	}
+
+	// ========================================================================
+	// Vehicle/Mount Hook Static Fire Methods
+	// ========================================================================
+
+	/**
+	 * Fire VehicleMountEvent for creature mounting (called from bytecode hook).
+	 */
+	public static boolean fireVehicleMountEventCreature(
+			com.wurmonline.server.creatures.Creature rider,
+			com.wurmonline.server.creatures.Creature mount,
+			com.wurmonline.server.behaviours.Vehicle vehicle,
+			int seatNum,
+			boolean asDriver) {
+		return getInstance().fireVehicleMount(rider, mount, vehicle, seatNum, asDriver);
+	}
+
+	/**
+	 * Fire VehicleMountEvent for item vehicle mounting (called from bytecode hook).
+	 */
+	public static boolean fireVehicleMountEventItem(
+			com.wurmonline.server.creatures.Creature rider,
+			com.wurmonline.server.items.Item mount,
+			com.wurmonline.server.behaviours.Vehicle vehicle,
+			int seatNum,
+			boolean asDriver) {
+		return getInstance().fireVehicleMount(rider, mount, vehicle, seatNum, asDriver);
+	}
+
+	/**
+	 * Fire VehicleSpeedCalculationEvent for creature mounts (called from bytecode
+	 * hook).
+	 * Returns modified speed based on event handlers.
+	 */
+	public static float fireVehicleSpeedCalculationCreature(
+			com.wurmonline.server.behaviours.Vehicle vehicle,
+			com.wurmonline.server.creatures.Creature mount,
+			long pilotId,
+			boolean mounting,
+			float vanillaSpeed) {
+		try {
+			com.wurmonline.server.creatures.Creature rider = null;
+			if (pilotId != -10L) {
+				rider = com.wurmonline.server.Server.getInstance().getCreature(pilotId);
+			}
+
+			// Fire event with vanilla calculated speed as base
+			float finalSpeed = getInstance().fireVehicleSpeedCalculation(
+					vehicle, mount, rider, vanillaSpeed, mounting);
+
+			return finalSpeed;
+
+		} catch (Exception e) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+					.log(java.util.logging.Level.WARNING, "Error in vehicle speed calculation", e);
+			return vanillaSpeed; // Use vanilla calculation on error
+		}
+	}
+
+	/**
+	 * Fire MountEquipmentCheckEvent (called from bytecode hook).
+	 * Returns true if equipment is incompatible (cancel mounting).
+	 */
+	public static boolean fireMountEquipmentCheckEvent(
+			com.wurmonline.server.creatures.Creature mount,
+			com.wurmonline.server.items.Item equipment) {
+		return getInstance().fireMountEquipmentCheck(mount, equipment);
+	}
+
+	/**
+	 * Fire BodyMenuPopulateEvent (called from bytecode hook).
+	 * Allows mods to add custom menu entries to the body context menu.
+	 */
+	public static void fireBodyMenuPopulateEvent(com.wurmonline.server.creatures.Creature performer,
+	                                              com.wurmonline.server.items.Item bodyPart,
+	                                              java.util.List<com.wurmonline.server.behaviours.ActionEntry> menuEntries) {
+		getInstance().fireBodyMenuPopulate(performer, bodyPart, menuEntries);
+	}
+
+	public static synchronized ProxyServerHook getInstance() {
+		if (instance == null) {
+			instance = new ProxyServerHook();
+		}
+		return instance;
+	}
+}

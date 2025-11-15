@@ -1,0 +1,72 @@
+package com.garward.wurmmodloader.serverlauncher;
+
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.garward.wurmmodloader.modloader.ModLoader;
+import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
+import org.gotti.wurmunlimited.modloader.interfaces.ModEntry;
+import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
+import com.garward.wurmmodloader.modloader.server.ServerHook;
+
+public class DelegatedLauncher {
+	
+	public static void main(String[] args) {
+		
+		try {
+			ModLoader modLoader = new ModLoader();
+			List<? extends ModEntry<WurmServerMod>> wurmMods = modLoader.loadModsFromModDir(Paths.get("mods"));
+			
+			ServerHook serverHook = ServerHook.createServerHook();
+			serverHook.addMods(wurmMods);
+			serverHook.addVersionHandler(modLoader.getVersion(), modLoader.getGameVersion(), wurmMods);
+			HookManager.getInstance().initCallbacks();
+			
+			Logger.getLogger(DelegatedLauncher.class.getName()).info("===================================");
+			Logger.getLogger(DelegatedLauncher.class.getName()).info("ModLoader initialization COMPLETE!");
+			Logger.getLogger(DelegatedLauncher.class.getName()).info("===================================");
+			Logger.getLogger(DelegatedLauncher.class.getName()).info("Loaded " + wurmMods.size() + " mods");
+			Logger.getLogger(DelegatedLauncher.class.getName()).info("All mod hooks are installed and ready");
+			Logger.getLogger(DelegatedLauncher.class.getName()).info("");
+			Logger.getLogger(DelegatedLauncher.class.getName()).info("Attempting to start Wurm server...");
+
+			// Use HookManager's loader to run the server class
+			// This allows the native launcher to provide JNI implementations
+			// Try ServerLauncher first (for dedicated server), then GUI classes (for client)
+			String[] serverClasses = {
+					"com.wurmonline.server.ServerLauncher",
+					"com.wurmonline.server.gui.WurmServerGuiMain",
+					"com.wurmonline.server.gui.WurmServerGuiMainDeferred"
+			};
+
+			for (String className : serverClasses) {
+				try {
+					Logger.getLogger(DelegatedLauncher.class.getName()).info("Starting server via: " + className);
+					// Use Javassist Loader's run method - this delegates com.wurmonline.* to parent
+					// The parent classloader allows native JNI implementations to work
+					HookManager.getInstance().getLoader().run(className, args);
+					return; // If we get here, server started successfully
+				} catch (ClassNotFoundException e) {
+					Logger.getLogger(DelegatedLauncher.class.getName()).info("Class not found: " + className + ", trying next...");
+					continue;
+				} catch (RuntimeException e) {
+					if (e.getMessage() != null && e.getMessage().equals("Unimplemented")) {
+						Logger.getLogger(DelegatedLauncher.class.getName()).info("Class is stub: " + className + ", trying next...");
+						continue;
+					}
+					throw e;
+				}
+			}
+
+			Logger.getLogger(DelegatedLauncher.class.getName()).warning("Could not start server - no valid entry point found");
+			Logger.getLogger(DelegatedLauncher.class.getName()).warning("Server classes appear to be stubs - native implementation may be missing");
+		} catch (Throwable e) {
+			Logger.getLogger(DelegatedLauncher.class.getName()).log(Level.SEVERE, e.getMessage(), e);
+			e.printStackTrace();
+			System.exit(-1);
+		}
+	}
+
+}

@@ -1,0 +1,296 @@
+package com.wurmonline.server.spells;
+/**
+ * A spell implementation that modifies karma values for creatures, items, and wounds.
+ * 
+ * This spell extends the base KarmaSpell functionality to provide positive and negative
+ * karma modifications based on the target type and casting power. It can be used to
+ * increase or decrease karma values for various game entities.
+ * 
+ * Usage example:
+ * <pre>@code
+ * ModKarmaSpell karmaSpell = new ModKarmaSpell("Karma Boost", 101, 30, 50, 20, 3, 600000L);
+ * // Cast the spell on a target creature
+ * karmaSpell.doEffect(skill, 50.0, performer, targetCreature);
+ * </pre>
+ * 
+ * Thread-safety: This class inherits thread-safety characteristics from its parent class.
+ * Lifecycle: Instances should be created during server initialization and remain active
+ * throughout the server's lifetime.
+ * 
+ * @since 1.0.0
+ */
+
+import com.wurmonline.mesh.Tiles.TileBorderDirection;
+import com.wurmonline.server.bodys.Wound;
+import com.wurmonline.server.creatures.Creature;
+import com.wurmonline.server.items.Item;
+import com.wurmonline.server.skills.Skill;
+
+public class ModKarmaSpell extends KarmaSpell {
+	/**
+	 * Constructs a new ModKarmaSpell with the specified parameters.
+	 * 
+	 * @param aName the name of the spell
+	 * @param aNum the spell number identifier
+	 * @param aCastingTime the time in deciseconds required to cast the spell
+	 * @param aCost the mana cost to cast the spell
+	 * @param aDifficulty the difficulty level of the spell
+	 * @param aLevel the minimum skill level required to cast the spell
+	 * @param cooldown the cooldown period in milliseconds before the spell can be cast again
+	 * @since 1.0.0
+	 */
+
+	public ModKarmaSpell(String aName, int aNum, int aCastingTime, int aCost, int aDifficulty, int aLevel, long cooldown) {
+	/**
+	 * Executes the positive karma effect on a creature target.
+	 * 
+	 * This method applies positive karma modifications to the target creature based
+	 * on the casting power and skill level. The actual effect magnitude is determined
+	 * by the parent class implementation.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param power the power level of the spell cast (0.0 to 100.0)
+	 * @param performer the creature performing the spell cast
+	 * @param target the creature target to receive the karma modification
+	 * @since 1.0.0
+	 */
+		super(aName, aNum, aCastingTime, aCost, aDifficulty, aLevel, cooldown);
+	}
+
+	@Override
+	public void doEffect(Skill castSkill, double power, Creature performer, Creature target) {
+	/**
+	 * Executes the negative karma effect on a creature target.
+	 * 
+	 * This method applies negative karma modifications to the target creature based
+	 * on the casting power and skill level. The actual effect magnitude is determined
+	 * by the parent class implementation.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param power the power level of the spell cast (0.0 to 100.0)
+	 * @param performer the creature performing the spell cast
+	 * @param target the creature target to receive the karma modification
+	 * @since 1.0.0
+	 */
+		super.doEffect(castSkill, power, performer, target);
+	}
+
+	@Override
+	public void doNegativeEffect(Skill castSkill, double power, Creature performer, Creature target) {
+	/**
+	 * Executes the positive karma effect on an item target.
+	 * 
+	 * This method applies positive karma modifications to the target item based
+	 * on the casting power and skill level. The actual effect magnitude is determined
+	 * by the parent class implementation.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param power the power level of the spell cast (0.0 to 100.0)
+	 * @param performer the creature performing the spell cast
+	 * @param target the item target to receive the karma modification
+	 * @since 1.0.0
+	 */
+		super.doNegativeEffect(castSkill, power, performer, target);
+	}
+
+	@Override
+	public void doEffect(Skill castSkill, double power, Creature performer, Item target) {
+	/**
+	 * Executes the negative karma effect on an item target.
+	 * 
+	 * This method applies negative karma modifications to the target item based
+	 * on the casting power and skill level. The actual effect magnitude is determined
+	 * by the parent class implementation.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param power the power level of the spell cast (0.0 to 100.0)
+	 * @param performer the creature performing the spell cast
+	 * @param target the item target to receive the karma modification
+	 * @since 1.0.0
+	 */
+		super.doEffect(castSkill, power, performer, target);
+	}
+
+	@Override
+	public void doNegativeEffect(Skill castSkill, double power, Creature performer, Item target) {
+	/**
+	 * Executes the positive karma effect on a wound target.
+	 * 
+	 * This method applies positive karma modifications to the target wound based
+	 * on the casting power and skill level. The actual effect magnitude is determined
+	 * by the parent class implementation.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param power the power level of the spell cast (0.0 to 100.0)
+	 * @param performer the creature performing the spell cast
+	 * @param target the wound target to receive the karma modification
+	 * @since 1.0.0
+	 */
+		super.doNegativeEffect(castSkill, power, performer, target);
+	}
+
+	@Override
+	public void doEffect(Skill castSkill, double power, Creature performer, Wound target) {
+	/**
+	 * Executes the positive karma effect on a tile location.
+	 * 
+	 * This method applies positive karma modifications to the specified tile location based
+	 * on the casting power and skill level. The actual effect magnitude is determined
+	 * by the parent class implementation.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param power the power level of the spell cast (0.0 to 100.0)
+	 * @param performer the creature performing the spell cast
+	 * @param tilex the x-coordinate of the target tile
+	 * @param tiley the y-coordinate of the target tile
+	 * @param layer the layer of the target tile
+	 * @param heightOffset the height offset within the tile
+	 * @param dir the direction of the tile border
+	 * @since 1.0.0
+	 */
+		super.doEffect(castSkill, power, performer, target);
+	}
+
+	@Override
+	public void doEffect(Skill castSkill, double power, Creature performer, int tilex, int tiley, int layer, int heightOffset, TileBorderDirection dir) {
+	/**
+	 * Executes the positive karma effect on a tile location without direction.
+	 * 
+	 * This method applies positive karma modifications to the specified tile location based
+	 * on the casting power and skill level. The actual effect magnitude is determined
+	 * by the parent class implementation.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param power the power level of the spell cast (0.0 to 100.0)
+	 * @param performer the creature performing the spell cast
+	 * @param tilex the x-coordinate of the target tile
+	 * @param tiley the y-coordinate of the target tile
+	 * @param layer the layer of the target tile
+	 * @param heightOffset the height offset within the tile
+	 * @since 1.0.0
+	 */
+		super.doEffect(castSkill, power, performer, tilex, tiley, layer, heightOffset, dir);
+	}
+
+	@Override
+	public void doEffect(Skill castSkill, double power, Creature performer, int tilex, int tiley, int layer, int heightOffset) {
+	/**
+	 * Checks if the spell can be cast on a creature target.
+	 * 
+	 * This method validates whether the spell casting conditions are met for
+	 * targeting a creature. The actual validation logic is implemented in the
+	 * parent class.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param performer the creature performing the spell cast
+	 * @param target the creature target to be validated
+	 * @return true if the spell can be cast on the target, false otherwise
+	 * @since 1.0.0
+	 */
+		super.doEffect(castSkill, power, performer, tilex, tiley, layer, heightOffset);
+	}
+
+	@Override
+	public boolean precondition(Skill castSkill, Creature performer, Creature target) {
+	/**
+	 * Checks if the spell can be cast on an item target.
+	 * 
+	 * This method validates whether the spell casting conditions are met for
+	 * targeting an item. The actual validation logic is implemented in the
+	 * parent class.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param performer the creature performing the spell cast
+	 * @param target the item target to be validated
+	 * @return true if the spell can be cast on the target, false otherwise
+	 * @since 1.0.0
+	 */
+		return super.precondition(castSkill, performer, target);
+	}
+
+	@Override
+	public boolean precondition(Skill castSkill, Creature performer, Item target) {
+	/**
+	 * Checks if the spell can be cast on an item target after the effect.
+	 * 
+	 * This method validates whether the spell casting conditions are still met
+	 * after applying the effect to an item target. The actual validation logic
+	 * is implemented in the parent class.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param performer the creature performing the spell cast
+	 * @param target the item target that was affected
+	 * @param effect the effect value that was applied
+	 * @return true if the postcondition is satisfied, false otherwise
+	 * @since 1.0.0
+	 */
+		return super.precondition(castSkill, performer, target);
+	}
+
+	@Override
+	public boolean postcondition(Skill castSkill, Creature performer, Item target, double effect) {
+	/**
+	 * Checks if the spell can be cast on a wound target.
+	 * 
+	 * This method validates whether the spell casting conditions are met for
+	 * targeting a wound. The actual validation logic is implemented in the
+	 * parent class.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param performer the creature performing the spell cast
+	 * @param target the wound target to be validated
+	 * @return true if the spell can be cast on the target, false otherwise
+	 * @since 1.0.0
+	 */
+		return super.postcondition(castSkill, performer, target, effect);
+	}
+
+	@Override
+	public boolean precondition(Skill castSkill, Creature performer, Wound target) {
+	/**
+	 * Checks if the spell can be cast on a tile location.
+	 * 
+	 * This method validates whether the spell casting conditions are met for
+	 * targeting a tile location. The actual validation logic is implemented in the
+	 * parent class.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param performer the creature performing the spell cast
+	 * @param tilex the x-coordinate of the target tile
+	 * @param tiley the y-coordinate of the target tile
+	 * @param layer the layer of the target tile
+	 * @return true if the spell can be cast on the target location, false otherwise
+	 * @since 1.0.0
+	 */
+		return super.precondition(castSkill, performer, target);
+	}
+
+	@Override
+	public boolean precondition(Skill castSkill, Creature performer, int tilex, int tiley, int layer) {
+	/**
+	 * Checks if the spell can be cast on a tile border location.
+	 * 
+	 * This method validates whether the spell casting conditions are met for
+	 * targeting a tile border location with specific direction. The actual
+	 * validation logic is implemented in the parent class.
+	 * 
+	 * @param castSkill the skill used to cast the spell
+	 * @param performer the creature performing the spell cast
+	 * @param tilex the x-coordinate of the target tile
+	 * @param tiley the y-coordinate of the target tile
+	 * @param layer the layer of the target tile
+	 * @param heightOffset the height offset within the tile
+	 * @param dir the direction of the tile border
+	 * @return true if the spell can be cast on the target location, false otherwise
+	 * @since 1.0.0
+	 */
+		return super.precondition(castSkill, performer, tilex, tiley, layer);
+	}
+
+	@Override
+	public boolean precondition(Skill castSkill, Creature performer, int tilex, int tiley, int layer, int heightOffset, TileBorderDirection dir) {
+
+		return super.precondition(castSkill, performer, tilex, tiley, layer, heightOffset, dir);
+	}
+
+}

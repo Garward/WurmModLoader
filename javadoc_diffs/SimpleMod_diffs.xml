@@ -1,0 +1,31 @@
+<diff>
+<file>SimpleMod.java</file>
+<line_above>import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;</line_above>
+<line_below>public class SimpleMod implements WurmServerMod {</line_below>
+<before></before>
+<after>	/**
+	 * A basic implementation of the WurmServerMod interface.
+	 * 
+	 * <p>This class serves as a simple mod template that can be extended
+	 * to create custom server-side modifications for Wurm Online/Unlimited.
+	 * It implements the core WurmServerMod interface which defines the
+	 * lifecycle methods for server mods.</p>
+	 * 
+	 * <p><b>Usage example:</b></p>
+	 * <pre>
+	 * public class MyCustomMod extends SimpleMod {
+	 *     // Override methods to implement custom behavior
+	 * }
+	 * </pre>
+	 * 
+	 * <p><b>Lifecycle notes:</b></p>
+	 * <ul>
+	 *   <li>Mod initialization occurs during server startup</li>
+	 *   <li>All methods are called on the main server thread</li>
+	 *   <li>This implementation is thread-safe by default</li>
+	 * </ul>
+	 * 
+	 * @since 1.0.0
+	 * @see WurmServerMod
+	 */</after>
+</diff>

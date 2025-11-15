@@ -1,0 +1,191 @@
+package com.garward.wurmmodloader.modsupport;
+
+/**
+ * Default id types enumeration for Wurm Unlimited mod support.
+ *
+ * <p>This enum defines the standard ID types used within the Wurm Unlimited modding framework
+ * for assigning unique identifiers to various game entities. Each enum constant represents
+ * a specific type of ID with its own starting value and counting behavior.</p>
+ *
+ * <p>The ID system is crucial for mod compatibility as it ensures that mods can register
+ * their custom content without conflicting with existing game content or other mods.
+ * Each ID type maintains its own counter to track the last used ID value.</p>
+ *
+ * <p>Usage example:
+ * <pre>{@code
+ * // Get the next available item template ID
+ * int newItemId = IdType.ITEMTEMPLATE.getNextId();
+ *
+ * // Update the last used ID for a creature template
+ * IdType.CREATURETEMPLATE.updateLastUsedId(30000);
+ *
+ * // Check the current last used skill ID
+ * int lastSkillId = IdType.SKILL.getLastUsedId();
+ * }</pre>
+ * </p>
+ *
+ * <p>This class is thread-safe as each enum constant maintains its own state and
+ * all methods operate on instance-specific data without shared mutable state.</p>
+ *
+ * @since 1.0.0
+ * @see IIdType
+ */
+public enum IdType implements IIdType {
+	/**
+	 * Item template ID type.
+	 *
+	 * <p>Used for registering custom item templates in the game. Starts counting
+	 * down from 22767 to avoid conflicts with vanilla item IDs.</p>
+	 *
+	 * @since 1.0.0
+	 */
+	ITEMTEMPLATE {
+		@Override
+		public int startValue() {
+			return 22767;
+		}
+	},
+	
+	/**
+	 * Creature template ID type.
+	 *
+	 * <p>Used for registering custom creature templates in the game. Starts counting
+	 * down from {@link Integer#MAX_VALUE} to ensure no conflicts with vanilla creatures.</p>
+	 *
+	 * @since 1.0.0
+	 */
+	CREATURETEMPLATE {
+		@Override
+		public int startValue() {
+			return Integer.MAX_VALUE;
+		}
+	},
+	
+	/**
+	 * Skill ID type.
+	 *
+	 * <p>Used for registering custom skills in the game. Starts counting
+	 * down from {@link Integer#MAX_VALUE} to ensure no conflicts with vanilla skills.</p>
+	 *
+	 * @since 1.0.0
+	 */
+	SKILL {
+		@Override
+		public int startValue() {
+			return Integer.MAX_VALUE;
+		}
+	},
+	
+	/**
+	 * Player property ID type.
+	 *
+	 * <p>Used for registering custom player properties in the game. Starts counting
+	 * up from 0 as player properties typically use ascending IDs.</p>
+	 *
+	 * @since 1.0.0
+	 */
+	PLAYERPROPERTY {
+		@Override
+		public int startValue() {
+			return 0;
+		}
+
+		@Override
+		public boolean isCountingDown() {
+			return false;
+		}
+	};
+
+	/**
+	 * The last used ID value for this ID type.
+	 *
+	 * <p>This field tracks the most recently assigned ID for this type to ensure
+	 * that subsequent ID assignments don't create conflicts.</p>
+	 *
+	 * <p>For ID types that count down, this represents the lowest ID used so far.
+	 * For ID types that count up, this represents the highest ID used so far.</p>
+	 */
+	private int lastUsedId = startValue();
+
+	/**
+	 * Gets the starting value for this ID type.
+	 *
+	 * <p>This abstract method must be implemented by each enum constant to define
+	 * where the ID sequence should begin. The starting value is used to initialize
+	 * the {@link #lastUsedId} field and serves as the baseline for ID assignment.</p>
+	 *
+	 * @return the starting value for ID assignment for this type
+	 * @since 1.0.0
+	 */
+	@Override
+	public abstract int startValue();
+
+	/**
+	 * Determines if this ID type counts down or up.
+	 *
+	 * <p>By default, most ID types count down from their starting value to avoid
+	 * conflicts with vanilla content which typically uses ascending IDs. However,
+	 * some types like {@link #PLAYERPROPERTY} count up from their starting value.</p>
+	 *
+	 * <p>This method affects how {@link #updateLastUsedId(int)} and {@link #getNextId()}
+	 * behave for this ID type.</p>
+	 *
+	 * @return {@code true} if this ID type counts down, {@code false} if it counts up
+	 * @since 1.0.0
+	 */
+	@Override
+	public boolean isCountingDown() {
+		return true;
+	}
+
+	/**
+	 * Gets the type name for this ID type.
+	 *
+	 * <p>Returns the enum constant name as a string representation of this ID type.
+	 * This is used for logging and identification purposes.</p>
+	 *
+	 * @return the name of this enum constant
+	 * @since 1.0.0
+	 */
+	@Override
+	public String typeName() {
+		return name();
+	}
+
+	/**
+	 * Updates the last used ID for this ID type.
+	 *
+	 * <p>This method updates the internal tracking of the last used ID based on
+	 * whether this ID type counts up or down. For counting down types, it keeps
+	 * the minimum value. For counting up types, it keeps the maximum value.</p>
+	 *
+	 * <p>This is typically called when registering existing content to ensure
+	 * newly assigned IDs don't conflict with already used ones.</p>
+	 *
+	 * @param id the ID to compare against the current last used ID
+	 * @since 1.0.0
+	 */
+	@Override
+	public void updateLastUsedId(int id) {
+		if (isCountingDown()) {
+			lastUsedId = Math.min(lastUsedId, id);
+		} else {
+			lastUsedId = Math.max(lastUsedId, id);
+		}
+	}
+
+	/**
+	 * Gets the last used ID for this ID type.
+	 *
+	 * <p>Returns the current value of the last used ID tracker. This represents
+	 * either the lowest ID used (for counting down types) or the highest ID used
+	 * (for counting up types).</p>
+	 *
+	 * @return the last used ID value for this type
+	 * @since 1.0.0
+	 */
+	@Override
+	public int getLastUsedId() {
+		return lastUsedId;
+	}
+}

@@ -1,0 +1,199 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Gradle Wrapper
+gradle-app.setting
+.gradletasknamecache
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# IDE - Eclipse
+.project
+.classpath
+.settings/
+.metadata/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.recommenders
+
+# IDE - VSCode
+.vscode/
+*.code-workspace
+.history/
+
+# IDE - NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Java
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/*.jar
+!**/src/test/**/*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+# Maven (for reference/legacy)
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Test Mods (downloaded for testing)
+test-mods/*.jar
+!test-mods/.gitkeep
+
+# Documentation builds
+docs/_build/
+docs/_site/
+site/
+
+# Coverage reports
+*.coverage
+.nyc_output/
+coverage/
+*.lcov
+
+# Testing
+.pytest_cache/
+junit/
+test-results/
+test-output/
+
+# Wurm Unlimited specific
+wurm_data/
+logs/
+mods/*.jar
+!mods/.gitkeep
+
+# Compiled native code
+*.so
+*.dylib
+*.dll
+
+# Package Files
+*.dmg
+
+# JVM crash logs
+hs_err_pid*.log
+
+# Profiling
+*.hprof
+*.prof
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+*.zip
+*.tar.gz
+dist/
+releases/
+
+# CI/CD
+.circleci/
+.travis.yml
+
+# Editor backups
+*~
+*.swp
+*.swo
+*.swn
+
+# Generated files
+generated/
+gen/
+
+# Local configuration
+local.properties
+config/local.yaml
+
+# ─────────────── Wurm Unlimited local compile jars ───────────────
+# Do not commit the game’s own jars under any circumstances.
+distribution/server.jar
+distribution/common.jar
+common.jar
+server.jar
+*.class
+# Optional: ignore any build artifacts that might sneak out
+build/
+out/
+.gradle/
