@@ -115,6 +115,11 @@ public class ServerConfig {
     public PlayersConfig players = new PlayersConfig();
 
     /**
+     * Server properties (SERVERPROPERTIES table settings)
+     */
+    public ServerPropertiesConfig properties = new ServerPropertiesConfig();
+
+    /**
      * Default constructor for YAML deserialization.
      */
     public ServerConfig() {
@@ -140,6 +145,40 @@ public class ServerConfig {
 
         /** Steam server password (leave empty for no password) */
         public String steamPassword = "";
+
+        /** Server password for player connections (leave empty for no password) */
+        public String serverPassword = "";
+
+        /** Home server kingdom (1=Jenn-Kellon, 2=Mol-Rehan, 3=HOTS/Libila, 4=Freedom) */
+        public byte homeServerKingdom = 1;
+
+        // ===================================================================
+        // NETWORK CONFIGURATION
+        // ===================================================================
+
+        /** External IP address (public IP for players to connect) */
+        public String externalIp = "127.0.1.1";
+
+        /** External port (public port for players to connect) */
+        public String externalPort = "3724";
+
+        /** Internal/Intra-server IP address (for server-to-server communication) */
+        public String internalIp = "127.0.0.1";
+
+        /** Internal/Intra-server port */
+        public String internalPort = "48020";
+
+        /** RMI (Remote Method Invocation) port */
+        public String rmiPort = "7220";
+
+        /** RMI registration port */
+        public String rmiRegPort = "7221";
+
+        /** Intra-server password (for server cluster authentication) */
+        public String intraServerPassword = "";
+
+        /** Maximum number of players allowed on the server */
+        public int maxPlayers = 200;
 
         /**
          * Default kingdom for players (1=Freedom/Jenn-Kellon, 2=Mol-Rehan, 3=HOTS, 4=Freedom).
@@ -839,6 +878,100 @@ public class ServerConfig {
              */
             public int startingMoney = 10000; // 1 gold
         }
+    }
+
+    /**
+     * Server properties configuration (SERVERPROPERTIES table).
+     *
+     * <p>These settings control advanced server behavior and are stored in
+     * the SERVERPROPERTIES table (key-value pairs). They override some SERVERS
+     * table settings and add additional configuration options.</p>
+     */
+    public static class ServerPropertiesConfig {
+        /**
+         * Multi-kingdom mode (CRITICAL for kingdom behavior).
+         *
+         * <p><strong>What This Controls:</strong></p>
+         * <ul>
+         *   <li>false = Freedom server (no kingdoms, all players are friends)</li>
+         *   <li>true = PvP server with kingdoms (JK, MR, HOTS can war)</li>
+         * </ul>
+         *
+         * <p><strong>IMPORTANT:</strong> Setting this to false disables kingdom selection
+         * at character creation and prevents spawn villages from attacking players.</p>
+         */
+        public boolean multiKingdom = false;
+
+        /**
+         * Epic mode (connects to Epic cluster mission system).
+         * Duplicates SERVERS.EPIC but stored as a property.
+         */
+        public boolean epic = false;
+
+        /**
+         * Allow Chaos kingdom (enables Libila/HOTS kingdom).
+         *
+         * <p><strong>What This Controls:</strong></p>
+         * <ul>
+         *   <li>false = Players cannot join Chaos/HOTS</li>
+         *   <li>true = Chaos kingdom available (PvP only)</li>
+         * </ul>
+         */
+        public boolean allowChaos = false;
+
+        /**
+         * Newbie-friendly mode (enables tutorial and starter gear).
+         *
+         * <p><strong>What This Provides:</strong></p>
+         * <ul>
+         *   <li>Newbie protection from PvP</li>
+         *   <li>Starter tools and food</li>
+         *   <li>Tutorial messages</li>
+         * </ul>
+         */
+        public boolean newbieFriendly = true;
+
+        /**
+         * Spy prevention (prevents viewing other players' skills/stats).
+         *
+         * <p><strong>What This Controls:</strong></p>
+         * <ul>
+         *   <li>false = Players can examine each other freely</li>
+         *   <li>true = Players cannot see others' exact skills</li>
+         * </ul>
+         */
+        public boolean spyPrevention = false;
+
+        /**
+         * Enable NPCs (traders, guards, spirit templars, etc.).
+         */
+        public boolean npcs = true;
+
+        /**
+         * Enable end-game items (artifacts, dragon armor, etc.).
+         */
+        public boolean endGameItems = true;
+
+        /**
+         * Auto-networking (automatic UPnP port forwarding).
+         */
+        public boolean autoNetworking = true;
+
+        /**
+         * Enable PnP port forwarding (auto-configure router).
+         */
+        public boolean enablePnpPortForward = true;
+
+        /**
+         * Steam query port (for server browser visibility).
+         */
+        public int steamQueryPort = 27016;
+
+        /**
+         * Admin password (for remote administration).
+         * Leave empty for no password.
+         */
+        public String adminPassword = "";
     }
 
     /**

@@ -146,9 +146,14 @@ public class SoulboundGearMod implements WurmServerMod, PreInitable, Configurabl
      */
     @SubscribeEvent
     public void onItemExamine(ItemExamineEvent event) {
+        logger.info("[DEBUG] onItemExamine called for item: " + event.getItem().getName() +
+                    " (ID: " + event.getItem().getWurmId() + ") by " + event.getExaminer().getName());
+
         try {
             SoulboundGearManager manager = SoulboundGearManager.getInstance();
             java.util.Optional<SoulboundItem> soulbound = manager.getItem(event.getItem());
+
+            logger.info("[DEBUG] Soulbound check result: " + (soulbound.isPresent() ? "BOUND" : "NOT BOUND"));
 
             if (soulbound.isPresent()) {
                 // Build soulbound info text
@@ -193,7 +198,10 @@ public class SoulboundGearMod implements WurmServerMod, PreInitable, Configurabl
                       .append("/").append(config.getMaxInfusionSlots()).append("\n");
                 }
 
-                event.addDescription(sb.toString());
+                String description = sb.toString();
+                logger.info("[DEBUG] Adding soulbound description (length: " + description.length() + "):\n" + description);
+                event.addDescription(description);
+                logger.info("[DEBUG] Description added. Event has additional description: " + event.hasAdditionalDescription());
             }
         } catch (Exception e) {
             logger.log(Level.WARNING, "Error adding soulbound info to examine text", e);

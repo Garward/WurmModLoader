@@ -111,7 +111,7 @@ public final class PatchManager {
                     "[BytecodePatch] Skipping {0} - class already frozen by legacy mod",
                     descriptor);
                 LOGGER.log(Level.WARNING,
-                    "[BytecodePatch] Events for {0} may not fire - consider porting legacy mod to event system",
+                    "[BytecodePatch] Events for {0} may not fire - consider porting legacy mod to event system please :D",
                     patch.targetClassName());
                 return false;
             }

@@ -151,6 +151,60 @@ public class DatabaseConnectionUtil {
     }
 
     /**
+     * Check if database connections are available.
+     *
+     * <p>Tests if DbConnector is ready to provide connections.
+     * Use this before attempting database operations during early server startup.</p>
+     *
+     * @return true if database is ready, false otherwise
+     */
+    public static boolean isDatabaseReady() {
+        Connection testConn = null;
+        java.sql.Statement stmt = null;
+        java.sql.ResultSet rs = null;
+
+        try {
+            // Get a connection from the pool
+            testConn = getLoginDbConnection();
+
+            if (testConn == null) {
+                logger.warning("[DatabaseConnectionUtil] Database not ready - connection is NULL");
+                return false;
+            }
+
+            // Actually TEST the connection with a simple query
+            // Just checking isClosed() doesn't work - the connection can report as open but be dead
+            stmt = testConn.createStatement();
+            rs = stmt.executeQuery("SELECT 1");
+
+            boolean hasResult = rs.next();
+            if (!hasResult) {
+                logger.warning("[DatabaseConnectionUtil] Database not ready - test query returned no results");
+                return false;
+            }
+
+            logger.info("[DatabaseConnectionUtil] Database is ready - test query succeeded");
+            return true;
+
+        } catch (SQLException e) {
+            // Database not ready - connection pool might have stale/closed connections
+            logger.warning("[DatabaseConnectionUtil] Database not ready - SQL error during test query: " + e.getMessage());
+            return false;
+        } catch (Exception e) {
+            // Database not ready yet (expected during early startup)
+            logger.warning("[DatabaseConnectionUtil] Database not ready - exception: " + e.getClass().getName() + ": " + e.getMessage());
+            if (e.getCause() != null) {
+                logger.warning("[DatabaseConnectionUtil] Caused by: " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage());
+            }
+            return false;
+        } finally {
+            // Clean up test resources (but NOT the connection - let the pool manage it)
+            if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
+            if (stmt != null) try { stmt.close(); } catch (SQLException ignored) {}
+        }
+    }
+
+    /**
      * Close a database connection safely.
      *
      * @param conn Connection to close (can be null)

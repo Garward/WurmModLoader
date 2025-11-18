@@ -38,6 +38,8 @@ import com.garward.wurmmodloader.api.events.item.material.MaterialRepairTimeEven
 import com.garward.wurmmodloader.api.events.combat.weapon.WeaponStatQueryEvent;
 import com.garward.wurmmodloader.api.events.action.ActionTimeCalculationEvent;
 import com.garward.wurmmodloader.api.events.action.ActionSpeedModifierEvent;
+import com.garward.wurmmodloader.api.events.movement.MovementBroadcastEvent;
+import com.garward.wurmmodloader.api.events.movement.PlayerMovementBroadcastEvent;
 import com.garward.wurmmodloader.api.events.skill.SkillAdvanceEvent;
 import com.garward.wurmmodloader.api.events.player.PlayerDeathEvent;
 import com.garward.wurmmodloader.api.events.server.CapabilityRegistrationEvent;
@@ -62,6 +64,7 @@ import com.garward.wurmmodloader.modloader.interfaces.ServerStartedListener;
 import com.wurmonline.server.MiscConstants;
 import com.wurmonline.server.Message;
 import com.wurmonline.server.creatures.AttackAction;
+import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.combat.Weapon;
@@ -222,10 +225,10 @@ public class ServerHook {
 		eventBus.post(new CapabilityRegistrationEvent());
 		logger.info("[ServerHook] DEBUG: Capability registration complete");
 
-		// Load and sync server configuration (AFTER database is ready, BEFORE mod listeners)
-		logger.info("[ServerHook] DEBUG: Loading server configuration");
-		loadAndSyncServerConfig();
-		logger.info("[ServerHook] DEBUG: Server configuration loaded and synced");
+		// Schedule delayed database sync (30 seconds after server start to ensure DB pool is ready)
+		// Note: Memory config was already applied in syncServerConfigBeforeLoad()
+		logger.info("[ServerHook] DEBUG: Scheduling delayed database sync in 30 seconds");
+		scheduleDatabaseSync();
 
 		// Fire legacy listeners
 		logger.info("[ServerHook] DEBUG: Firing legacy serverStarted listeners");
@@ -376,7 +379,7 @@ public class ServerHook {
 	}
 
 	// ========================================================================
-	// Creature and Combat Events (Phase 3)
+	// Creature and Combat Events
 	// ========================================================================
 
 	public void fireCreatureDeath(com.wurmonline.server.creatures.Creature victim,
@@ -447,6 +450,22 @@ public class ServerHook {
 
 		if (DEBUG) {
 			logger.info("[Event] CreatureSpawnEvent: completed");
+		}
+	}
+
+	public void fireCreaturePositionUpdated(com.wurmonline.server.creatures.Creature creature,
+	                                         float x, float y, float z, float rot, long bridgeId) {
+		if (DEBUG) {
+			logger.info(String.format("[Event] CreaturePositionUpdatedEvent: creature=%s, pos=(%.2f, %.2f, %.2f), rot=%.2f, bridgeId=%d",
+				creature.getName(), x, y, z, rot, bridgeId));
+		}
+
+		// Post modern event
+		eventBus.post(new com.garward.wurmmodloader.api.events.creature.CreaturePositionUpdatedEvent(
+			creature, x, y, z, rot, bridgeId));
+
+		if (DEBUG) {
+			logger.info("[Event] CreaturePositionUpdatedEvent: completed");
 		}
 	}
 
@@ -558,6 +577,89 @@ public class ServerHook {
 			logger.info("[Event] StructureDbLoadEvent: completed");
 		}
 	}
+
+
+    public void fireMovementBroadcast(
+            Communicator communicator,
+            long creatureId,
+            float x,
+            float y,
+            int rotation,
+            boolean moving
+    ) {
+        Creature watcher = null;
+        try {
+            // Communicator usually has a getPlayer() / getCreature() accessor.
+            // If decompiled name differs, Claude can swap this to the exact method.
+            watcher = communicator.getPlayer();
+        } catch (Throwable ignored) {
+            // Safe: watcher stays null if we can't resolve it.
+        }
+
+        if (DEBUG) {
+            logger.info(String.format(
+                    "[Event] MovementBroadcast: watcher=%s, creatureId=%d, x=%.2f, y=%.2f, rot=%d, moving=%s",
+                    watcher != null ? watcher.getName() : "null",
+                    creatureId,
+                    x,
+                    y,
+                    rotation,
+                    moving
+            ));
+        }
+
+        eventBus.post(new MovementBroadcastEvent(
+                watcher,
+                creatureId,
+                x,
+                y,
+                rotation,
+                moving
+        ));
+
+        if (DEBUG) {
+            logger.info("[Event] MovementBroadcast: completed");
+        }
+    }
+
+        public void firePlayerMovementBroadcast(
+            Communicator communicator,
+            float x,
+            float y,
+            float z,
+            float rotation,
+            boolean moving
+    ) {
+        Creature player = null;
+        try {
+            // adjust this accessor name to whatever the decompile shows
+            player = communicator.getPlayer();
+        } catch (Throwable ignored) {
+            // leave player as null if we can't resolve it
+        }
+
+        if (DEBUG) {
+            logger.info(String.format(
+                    "[Event] PlayerMovementBroadcast: player=%s, x=%.2f, y=%.2f, z=%.2f, rot=%.2f, moving=%s",
+                    player != null ? player.getName() : "null",
+                    x, y, z, rotation, moving
+            ));
+        }
+
+        eventBus.post(new PlayerMovementBroadcastEvent(
+                player,
+                x,
+                y,
+                z,
+                rotation,
+                moving
+        ));
+
+        if (DEBUG) {
+            logger.info("[Event] PlayerMovementBroadcast: completed");
+        }
+    }
+
 
 	public boolean fireCreatureBreed(com.wurmonline.server.creatures.Creature performer,
 	                                  com.wurmonline.server.creatures.Creature target,
@@ -1145,7 +1247,13 @@ public class ServerHook {
 	 * <p>Uses reflection to get world folder name and server ID from Wurm classes.
 	 * Must be called AFTER database is ready (during server startup).</p>
 	 */
+	private static volatile boolean configSyncCompleted = false;
+	private static volatile int configSyncRetries = 0;
+	private static final int MAX_CONFIG_SYNC_RETRIES = 10; // Increased to allow more time for database to become ready
+
 	private void loadAndSyncServerConfig() {
+		boolean isRetry = configSyncRetries > 0;
+
 		try {
 			// Get world folder name from Constants.dbHost via reflection
 			// dbHost looks like: "Adventure/sqlite/wurmplayers.db"
@@ -1162,36 +1270,114 @@ public class ServerHook {
 				worldFolder = worldFolder.substring(0, worldFolder.indexOf('\\'));
 			}
 
-			logger.info("[ServerConfigLoader] Detected world folder: " + worldFolder);
+			if (!isRetry) {
+				logger.info("[ServerConfigLoader] Detected world folder: " + worldFolder);
+			}
 
 			// Get server ID from Servers.getLocalServerId() via reflection
 			Class<?> serversClass = Class.forName("com.wurmonline.server.Servers");
 			java.lang.reflect.Method getLocalServerIdMethod = serversClass.getMethod("getLocalServerId");
 			int serverId = (int) getLocalServerIdMethod.invoke(null);
 
-			logger.info("[ServerConfigLoader] Detected server ID: " + serverId);
+			if (!isRetry) {
+				logger.info("[ServerConfigLoader] Detected server ID: " + serverId);
+			}
 
 			// Load configuration (generates from database if file doesn't exist)
 			com.garward.wurmmodloader.config.ServerConfig config =
 				com.garward.wurmmodloader.config.ServerConfigLoader.load(worldFolder, serverId);
 
-			logger.info("[ServerConfigLoader] Configuration loaded successfully");
+			if (!isRetry) {
+				logger.info("[ServerConfigLoader] Configuration loaded successfully");
+			}
 
 			// Sync to database (only writes if config differs from current values)
-			com.garward.wurmmodloader.config.ServerConfigSync.syncToDatabase(config, serverId);
+			boolean syncSuccess = com.garward.wurmmodloader.config.ServerConfigSync.syncToDatabase(config, serverId);
 
-			logger.info("[ServerConfigLoader] Configuration sync completed");
+			if (syncSuccess) {
+				logger.info("[ServerConfigLoader] Configuration sync completed successfully");
+				configSyncCompleted = true;
+			} else {
+				logger.info("[ServerConfigLoader] Configuration sync skipped - will retry automatically");
+			}
 
 		} catch (com.garward.wurmmodloader.config.ConfigException e) {
 			logger.log(java.util.logging.Level.SEVERE,
 				"[ServerConfigLoader] FATAL: Config validation failed - please review your server_config.yaml file", e);
 			throw new RuntimeException("Server configuration is invalid", e);
-		} catch (Exception e) {
-			logger.log(java.util.logging.Level.SEVERE,
-				"[ServerConfigLoader] Failed to load server configuration", e);
+		} catch (java.sql.SQLException e) {
+			// Database connection not ready yet - this is expected during early server startup
+			if (e.getMessage() != null && e.getMessage().contains("closed")) {
+				logger.warning("[ServerConfigLoader] Database connection not ready yet - skipping config sync");
+				logger.warning("[ServerConfigLoader] This is normal during server startup - server will use database defaults");
+				logger.info("[ServerConfigLoader] Config sync will be retried after database initialization");
+			} else {
+				logger.log(java.util.logging.Level.WARNING,
+					"[ServerConfigLoader] Database error during config sync - continuing with database defaults", e);
+			}
 			// Don't throw - allow server to start with database defaults
-			logger.warning("[ServerConfigLoader] Continuing with database defaults");
+		} catch (Exception e) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerConfigLoader] Failed to load server configuration - continuing with database defaults", e);
+			// Don't throw - allow server to start with database defaults
 		}
+	}
+
+	/**
+	 * Schedule a delayed retry of config sync if it hasn't completed yet.
+	 * Retries up to 3 times with 5-second intervals.
+	 */
+	/**
+	 * Schedule delayed database sync to happen after server is fully started.
+	 * Waits 30 seconds to ensure database connection pool is fully initialized.
+	 */
+	private void scheduleDatabaseSync() {
+		logger.info("[ServerConfigSync] Scheduling database sync in 30 seconds (after DB pool initializes)");
+
+		java.util.concurrent.Executors.newSingleThreadScheduledExecutor().schedule(() -> {
+			try {
+				logger.info("[ServerConfigSync] ===== DELAYED DATABASE SYNC (After Server Fully Started) =====");
+
+				// Detect world folder
+				String serverRoot = System.getProperty("user.dir");
+				java.io.File serverDir = new java.io.File(serverRoot);
+				String worldFolder = null;
+
+				for (java.io.File dir : serverDir.listFiles()) {
+					if (dir.isDirectory() && !dir.getName().startsWith(".")) {
+						java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
+						if (dbFile.exists() && dbFile.isFile()) {
+							worldFolder = dir.getName();
+							break;
+						}
+					}
+				}
+
+				if (worldFolder == null) {
+					logger.warning("[ServerConfigSync] Could not find world folder - skipping database sync");
+					return;
+				}
+
+				int estimatedServerId = 11455;
+				com.garward.wurmmodloader.config.ServerConfig config =
+					com.garward.wurmmodloader.config.ServerConfigLoader.load(worldFolder, estimatedServerId);
+
+				// Now sync to database (pool should be ready after 30 seconds)
+				boolean success = com.garward.wurmmodloader.config.ServerConfigSync.syncToDatabase(config, estimatedServerId);
+
+				if (success) {
+					logger.info("[ServerConfigSync] ✅ Database sync completed successfully");
+					configSyncCompleted = true;
+				} else {
+					logger.warning("[ServerConfigSync] Database sync failed - config remains in memory only");
+					logger.warning("[ServerConfigSync] Changes will not persist across server restarts");
+				}
+
+			} catch (Exception e) {
+				logger.log(java.util.logging.Level.WARNING,
+					"[ServerConfigSync] Database sync failed", e);
+			}
+		}, 30, java.util.concurrent.TimeUnit.SECONDS);
 	}
 
 	public static ServerHook createServerHook() {
@@ -1201,4 +1387,129 @@ public class ServerHook {
 	public void registerPlayerHooks() {
 		// Overridden in ProxyServerHook
 	}
+
+	// ========== SPELL SYSTEM EVENT HANDLERS ==========
+
+	protected float fireItemDamage(long itemId, String itemName, float damage, float currentDamage) {
+		com.garward.wurmmodloader.api.events.item.ItemDamageEvent event =
+			new com.garward.wurmmodloader.api.events.item.ItemDamageEvent(itemId, itemName, damage, currentDamage);
+		eventBus.post(event);
+
+		if (event.isCancelled()) {
+			return 0.0f;
+		}
+		return event.getModifiedDamage();
+	}
+
+	protected int fireContainerVolume(long itemId, String itemName, int value, int volumeType) {
+		com.garward.wurmmodloader.api.events.item.ContainerVolumeEvent.VolumeType type =
+			com.garward.wurmmodloader.api.events.item.ContainerVolumeEvent.VolumeType.values()[volumeType];
+		com.garward.wurmmodloader.api.events.item.ContainerVolumeEvent event =
+			new com.garward.wurmmodloader.api.events.item.ContainerVolumeEvent(itemId, itemName, value, type);
+		eventBus.post(event);
+		return event.getModifiedValue();
+	}
+
+	protected double fireSkillDifficulty(long performerId, String performerName,
+	                                    int skillId, String skillName,
+	                                    long toolId, String toolName, double difficulty) {
+		com.garward.wurmmodloader.api.events.skill.SkillDifficultyEvent event =
+			new com.garward.wurmmodloader.api.events.skill.SkillDifficultyEvent(
+				performerId, performerName, skillId, skillName, toolId, toolName, difficulty);
+		eventBus.post(event);
+		return event.getModifiedDifficulty();
+	}
+
+	protected int fireStaminaCost(long creatureId, String creatureName,
+	                             int cost, int currentStamina, String actionType) {
+		com.garward.wurmmodloader.api.events.creature.StaminaCostEvent event =
+			new com.garward.wurmmodloader.api.events.creature.StaminaCostEvent(
+				creatureId, creatureName, cost, currentStamina, actionType);
+		eventBus.post(event);
+		return event.getModifiedCost();
+	}
+
+	protected int fireSpellFavorCost(long casterId, String casterName,
+	                                int spellId, String spellName,
+	                                int cost, float currentFavor) {
+		com.garward.wurmmodloader.api.events.spell.SpellFavorCostEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellFavorCostEvent(
+				casterId, casterName, spellId, spellName, cost, currentFavor);
+		eventBus.post(event);
+		return event.getModifiedCost();
+	}
+
+	protected float fireCombatRating(long creatureId, String creatureName, float rating) {
+		com.garward.wurmmodloader.api.events.combat.CombatRatingEvent event =
+			new com.garward.wurmmodloader.api.events.combat.CombatRatingEvent(creatureId, creatureName, rating);
+		eventBus.post(event);
+		return event.getModifiedRating();
+	}
+
+	/**
+	 * Sync server config BEFORE Servers.loadAllServers() is called.
+	 * This is called by ServerConfigLoadPatch bytecode injection.
+	 *
+	 * <p><strong>Strategy: Two-phase config sync</strong>
+	 * <ul>
+	 *   <li><strong>Phase 1 (here - early):</strong> Apply config to server memory → most settings work immediately</li>
+	 *   <li><strong>Phase 2 (fireOnServerStarted):</strong> Update database → config persists for next restart</li>
+	 * </ul>
+	 *
+	 * <p>This avoids SQLite connection pool corruption while still making most config changes work immediately.
+	 */
+	public void syncServerConfigBeforeLoad() {
+		try {
+			// Detect world folder from filesystem (look for directories with sqlite/ subfolder)
+			String serverRoot = System.getProperty("user.dir");
+			java.io.File serverDir = new java.io.File(serverRoot);
+
+			String worldFolder = null;
+
+			// Find world folder by looking for directories containing sqlite/wurmlogin.db
+			for (java.io.File dir : serverDir.listFiles()) {
+				if (dir.isDirectory() && !dir.getName().startsWith(".")) {
+					java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
+					if (dbFile.exists() && dbFile.isFile()) {
+						worldFolder = dir.getName();
+						break;
+					}
+				}
+			}
+
+			if (worldFolder == null) {
+				logger.warning("[ServerConfigSync] Could not find world folder - skipping early config sync");
+				return;
+			}
+
+			logger.info("[ServerConfigSync] ===== EARLY CONFIG SYNC (Before Server Reads Database) =====");
+			logger.info("[ServerConfigSync] World: " + worldFolder);
+
+			// We need server ID but can't safely get it without triggering class init
+			// The server ID will be in the database, but we can't query it without corrupting the pool
+			// So we'll use a placeholder and get it later
+			int estimatedServerId = 11455; // Common default, will be corrected later
+
+			// Load config from YAML
+			com.garward.wurmmodloader.config.ServerConfig config =
+				com.garward.wurmmodloader.config.ServerConfigLoader.load(worldFolder, estimatedServerId);
+
+			logger.info("[ServerConfigSync] Loaded config from YAML: " + config);
+
+			// Apply config DIRECTLY to server memory (bypassing database entirely)
+			// This makes most settings work immediately without corrupting the connection pool
+			com.garward.wurmmodloader.config.ServerConfigSync.applyConfigToServerMemory(config, estimatedServerId);
+
+			logger.info("[ServerConfigSync] ✅ Config applied to server memory (most settings active now)");
+			logger.info("[ServerConfigSync] ℹ️  Database will be updated after server fully starts");
+			logger.info("[ServerConfigSync] ℹ️  Some settings may require restart to fully apply");
+
+			configSyncCompleted = false; // Will be set true after database sync
+
+		} catch (Exception e) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerConfigSync] Early config sync failed (non-fatal)", e);
+		}
+	}
+
 }

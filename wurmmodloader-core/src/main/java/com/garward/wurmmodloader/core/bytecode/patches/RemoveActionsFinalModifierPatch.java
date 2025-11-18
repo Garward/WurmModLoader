@@ -53,24 +53,34 @@ public final class RemoveActionsFinalModifierPatch implements BytecodePatch {
                 ctActions.defrost();
             }
 
-            // Remove 'final' modifier from actionEntrys field
-            CtField actionEntrysField = ctActions.getField("actionEntrys");
+            // Get the actionEntrys field - use getDeclaredField to avoid parent class lookup
+            CtField actionEntrysField = ctActions.getDeclaredField("actionEntrys");
             int oldModifiers = actionEntrysField.getModifiers();
 
-            LOGGER.warning("[BytecodePatch] Actions.actionEntrys old modifiers: " + Modifier.toString(oldModifiers));
-            LOGGER.warning("[BytecodePatch] Is final? " + Modifier.isFinal(oldModifiers));
-            LOGGER.warning("[BytecodePatch] Is static? " + Modifier.isStatic(oldModifiers));
-            LOGGER.warning("[BytecodePatch] Is public? " + Modifier.isPublic(oldModifiers));
+            LOGGER.info("[BytecodePatch] Actions.actionEntrys old modifiers: " + Modifier.toString(oldModifiers));
+            LOGGER.info("[BytecodePatch] Is final? " + Modifier.isFinal(oldModifiers));
+            LOGGER.info("[BytecodePatch] Is static? " + Modifier.isStatic(oldModifiers));
+            LOGGER.info("[BytecodePatch] Is public? " + Modifier.isPublic(oldModifiers));
 
-            // Force remove final modifier regardless
+            // Remove final modifier (even if not detected - bytecode might differ from source)
             int newModifiers = Modifier.clear(oldModifiers, Modifier.FINAL);
             actionEntrysField.setModifiers(newModifiers);
 
-            LOGGER.warning("[BytecodePatch] Actions.actionEntrys NEW modifiers: " + Modifier.toString(newModifiers));
-            LOGGER.warning("[BytecodePatch] REMOVED 'final' modifier from Actions.actionEntrys field");
-            LOGGER.warning("[BytecodePatch] This allows ModActions to safely expand the array");
+            // Verify the change was applied
+            int verifyModifiers = actionEntrysField.getModifiers();
+            boolean stillFinal = Modifier.isFinal(verifyModifiers);
 
-            LOGGER.info("[BytecodePatch] Successfully patched Actions.actionEntrys field modifiers");
+            LOGGER.info("[BytecodePatch] Actions.actionEntrys NEW modifiers: " + Modifier.toString(newModifiers));
+            LOGGER.info("[BytecodePatch] Verification - still final? " + stillFinal);
+
+            if (stillFinal) {
+                LOGGER.warning("[BytecodePatch] WARNING: Field still shows as final after modification!");
+                LOGGER.warning("[BytecodePatch] This may be a Javassist bug or the field wasn't actually final");
+            } else {
+                LOGGER.info("[BytecodePatch] Successfully removed 'final' modifier from Actions.actionEntrys");
+            }
+
+            LOGGER.info("[BytecodePatch] ModActions can now safely expand the actionEntrys array");
         } catch (NotFoundException e) {
             throw new IllegalStateException("Unable to install RemoveActionsFinalModifierPatch", e);
         }

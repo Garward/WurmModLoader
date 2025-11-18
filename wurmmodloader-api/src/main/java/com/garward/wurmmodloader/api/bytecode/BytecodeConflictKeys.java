@@ -30,6 +30,7 @@ public final class BytecodeConflictKeys {
     public static final String COMBAT_DAMAGE = "combat.damage";
     public static final String COMBAT_CRITICAL = "combat.critical";
     public static final String CREATURE_SPAWN = "creature.spawn";
+    public static final String CREATURE_POSITION = "creature.position";
     public static final String COMBAT_ATTACK = "combat.attack";
     public static final String ITEM_EXAMINE = "item.examine";
     public static final String ITEM_ENCHANTMENT_STRINGS = "item.enchantmentStrings";
@@ -64,6 +65,8 @@ public final class BytecodeConflictKeys {
     public static final String MATERIAL_MOVEMENT_BONUS = "material.movementBonus";
     public static final String MATERIAL_PENDULUM_BONUS = "material.pendulumBonus";
     public static final String MATERIAL_SHATTER_BONUS = "material.shatterBonus";
+    public static final String MOVEMENT_BROADCAST = "movement.broadcast";
+    public static final String PLAYER_MOVEMENT_BROADCAST = "movement.player.broadcast";
     public static final String WEAPON_MATERIAL_DAMAGE = "weapon.materialDamage";
     public static final String WEAPON_MATERIAL_ARMOUR_DAMAGE = "weapon.materialArmourDamage";
     public static final String WEAPON_MATERIAL_PARRY = "weapon.materialParry";

@@ -145,6 +145,14 @@ public class ProxyServerHook extends ServerHook {
 	}
 
 	/**
+	 * Fire CreaturePositionUpdatedEvent (called from bytecode hook).
+	 */
+	public static void fireCreaturePositionUpdatedEvent(com.wurmonline.server.creatures.Creature creature,
+	                                                     float x, float y, float z, float rot, long bridgeId) {
+		getInstance().fireCreaturePositionUpdated(creature, x, y, z, rot, bridgeId);
+	}
+
+	/**
 	 * Fire CreatureBreedEvent (called from bytecode hook).
 	 * Returns true if the event was cancelled and breeding should be prevented.
 	 */
@@ -235,6 +243,35 @@ public class ProxyServerHook extends ServerHook {
 	public static boolean fireCropGrowthEvent(int tilex, int tiley, int tile, byte data, byte farmData) {
 		return getInstance().fireCropGrowth(tilex, tiley, tile, data, farmData);
 	}
+	/**
+     * Fire MovementBroadcastEvent (called from bytecode hook).
+     */
+    public static void fireMovementBroadcastEvent(
+            Communicator communicator,
+            long creatureId,
+            float x,
+            float y,
+            int rotation,
+            boolean moving
+    ) {
+        getInstance().fireMovementBroadcast(communicator, creatureId, x, y, rotation, moving);
+    }
+
+
+    /**
+     * Fire PlayerMovementBroadcastEvent (called from bytecode hook).
+     */
+    public static void firePlayerMovementBroadcastEvent(
+            Communicator communicator,
+            float x,
+            float y,
+            float z,
+            float rotation,
+            boolean moving
+    ) {
+        getInstance().firePlayerMovementBroadcast(communicator, x, y, z, rotation, moving);
+    }
+
 
 	/**
 	 * Fire PriestRestrictionCheckEvent (called from bytecode hook in crafting methods).
@@ -582,6 +619,62 @@ public class ProxyServerHook extends ServerHook {
 	                                              com.wurmonline.server.items.Item bodyPart,
 	                                              java.util.List<com.wurmonline.server.behaviours.ActionEntry> menuEntries) {
 		getInstance().fireBodyMenuPopulate(performer, bodyPart, menuEntries);
+	}
+
+	// ========== SPELL SYSTEM EVENTS ==========
+
+	/**
+	 * Fire ItemDamageEvent (called from bytecode hook).
+	 * Returns modified damage amount.
+	 */
+	public static float fireItemDamageEvent(long itemId, String itemName, float damage, float currentDamage) {
+		return getInstance().fireItemDamage(itemId, itemName, damage, currentDamage);
+	}
+
+	/**
+	 * Fire ContainerVolumeEvent (called from bytecode hook).
+	 * Returns modified container volume/size.
+	 */
+	public static int fireContainerVolumeEvent(long itemId, String itemName, int value, int volumeType) {
+		return getInstance().fireContainerVolume(itemId, itemName, value, volumeType);
+	}
+
+	/**
+	 * Fire SkillDifficultyEvent (called from bytecode hook).
+	 * Returns modified difficulty.
+	 */
+	public static double fireSkillDifficultyEvent(long performerId, String performerName,
+	                                              int skillId, String skillName,
+	                                              long toolId, String toolName, double difficulty) {
+		return getInstance().fireSkillDifficulty(performerId, performerName, skillId, skillName,
+		                                         toolId, toolName, difficulty);
+	}
+
+	/**
+	 * Fire StaminaCostEvent (called from bytecode hook).
+	 * Returns modified stamina cost.
+	 */
+	public static int fireStaminaCostEvent(long creatureId, String creatureName,
+	                                       int cost, int currentStamina, String actionType) {
+		return getInstance().fireStaminaCost(creatureId, creatureName, cost, currentStamina, actionType);
+	}
+
+	/**
+	 * Fire SpellFavorCostEvent (called from bytecode hook).
+	 * Returns modified favor cost.
+	 */
+	public static int fireSpellFavorCostEvent(long casterId, String casterName,
+	                                          int spellId, String spellName,
+	                                          int cost, float currentFavor) {
+		return getInstance().fireSpellFavorCost(casterId, casterName, spellId, spellName, cost, currentFavor);
+	}
+
+	/**
+	 * Fire CombatRatingEvent (called from bytecode hook).
+	 * Returns modified combat rating.
+	 */
+	public static float fireCombatRatingEvent(long creatureId, String creatureName, float rating) {
+		return getInstance().fireCombatRating(creatureId, creatureName, rating);
 	}
 
 	public static synchronized ProxyServerHook getInstance() {

@@ -3,6 +3,7 @@ package com.garward.wurmmodloader.config;
 import com.garward.wurmmodloader.core.database.DatabaseConnectionUtil;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -34,13 +35,14 @@ public class ServerConfigSync {
         "NAME=?, MOTD=?, STEAMPW=?, KINGDOM=?, " +
         "PVP=?, EPIC=?, CHALLENGE=?, HOMESERVER=?, RANDOMSPAWNS=?, " +
         "ENTRYSERVER=?, LOGINSERVER=?, ISTEST=?, LOCAL=?, MAPNAME=?, CAHELPGROUP=?, " +
+        "EXTERNALIP=?, EXTERNALPORT=?, INTRASERVERADDRESS=?, INTRASERVERPORT=?, " +
+        "RMIPORT=?, REGISTRATIONPORT=?, INTRASERVERPASSWORD=?, MAXPLAYERS=?, " +
         "SKILLGAINRATE=?, SKILLBASICSTART=?, SKILLMINDLOGICSTART=?, SKILLFIGHTINGSTART=?, " +
         "SKILLBODYCONTROLSTART=?, SKILLOVERALLSTART=?, " +
         "ACTIONTIMER=?, CRMOD=?, HOTADELAY=?, " +
         "MAXCREATURES=?, PERCENT_AGG_CREATURES=?, BREEDING=?, " +
         "TREEGROWTH=?, FIELDGROWTH=?, TUNNELING=?, " +
         "UPKEEP=?, MAXDEED=?, FREEDEEDS=?, TRADERMAX=?, TRADERINIT=?, KINGSMONEY=?, " +
-        "MAXPLAYERS=?, " +
         "SPAWNPOINTJENNX=?, SPAWNPOINTJENNY=?, SPAWNPOINTMOLX=?, SPAWNPOINTMOLY=?, SPAWNPOINTLIBX=?, SPAWNPOINTLIBY=? " +
         "WHERE SERVER=?";
 
@@ -51,9 +53,29 @@ public class ServerConfigSync {
      *
      * @param config The config to sync
      * @param serverId The server ID
+     * @return true if sync completed successfully, false if skipped due to database not ready
      * @throws SQLException if database update fails
      */
-    public static void syncToDatabase(ServerConfig config, int serverId) throws SQLException {
+    public static boolean syncToDatabase(ServerConfig config, int serverId) throws SQLException {
+        // Check if database is ready before attempting sync
+        if (!DatabaseConnectionUtil.isDatabaseReady()) {
+            logger.warning("[ServerConfigSync] Database not ready yet - applying config directly to server memory");
+
+            // Instead of failing, apply the config directly to the running server using reflection
+            // This bypasses the database entirely and sets the values the server already loaded
+            try {
+                applyConfigToServerMemory(config, serverId);
+                logger.info("[ServerConfigSync] Configuration applied directly to server memory");
+                logger.info("[ServerConfigSync] Note: Database values NOT updated - will retry database sync");
+                return false; // Return false so retry continues until database is actually synced
+            } catch (Exception e) {
+                logger.log(java.util.logging.Level.WARNING,
+                    "[ServerConfigSync] Failed to apply config to server memory: " + e.getMessage(), e);
+                logger.info("[ServerConfigSync] Will retry database sync in a few seconds");
+                return false;
+            }
+        }
+
         logger.info("[ServerConfigSync] Syncing config to database for serverId=" + serverId);
 
         List<String> changes = new ArrayList<>();
@@ -62,11 +84,74 @@ public class ServerConfigSync {
         try {
             conn = DatabaseConnectionUtil.getLoginDbConnection();
 
+            // Check if auto-networking is enabled
+            boolean autoNetworking = isAutoNetworkingEnabled(conn);
+            if (autoNetworking) {
+                logger.info("[ServerConfigSync] AUTO_NETWORKING is enabled - skipping network field sync");
+                logger.info("[ServerConfigSync] Wurm will auto-detect: externalIp, externalPort");
+            }
+
             // Read current database values
             ServerConfig currentConfig = readCurrentValues(conn, serverId);
 
-            // Compare and track changes
-            detectChanges(currentConfig, config, changes);
+            // Compare and track changes (skip network fields if auto-networking enabled)
+            detectChanges(currentConfig, config, changes, autoNetworking);
+
+            if (changes.isEmpty()) {
+                logger.info("[ServerConfigSync] No changes detected, database is up to date");
+                return true; // Success - database already matches config
+            }
+
+            // Apply changes
+            logger.info("[ServerConfigSync] Applying " + changes.size() + " changes to database:");
+            for (String change : changes) {
+                logger.info("  - " + change);
+            }
+
+            updateDatabase(conn, config, serverId, autoNetworking);
+            syncServerProperties(conn, config);
+
+            logger.info("[ServerConfigSync] Database sync completed successfully");
+            return true; // Signal success
+
+        } finally {
+            DatabaseConnectionUtil.closeConnection(conn);
+        }
+    }
+
+    /**
+     * Sync config values to database using a DIRECT connection (bypassing connection pool).
+     *
+     * <p>This method creates a fresh SQLite connection directly to the database file,
+     * bypassing DbConnector's connection pool which may have stale connections during early startup.</p>
+     *
+     * @param config The config to sync
+     * @param serverId The server ID
+     * @param dbPath Path to the wurmlogin.db file (e.g., from Constants.dbHost)
+     * @throws SQLException if database update fails
+     */
+    public static void syncToDatabaseDirect(ServerConfig config, int serverId, String dbPath) throws SQLException {
+        logger.info("[ServerConfigSync] Syncing config to database using direct connection (bypassing pool)");
+        logger.info("[ServerConfigSync] Database path: " + dbPath);
+
+        Connection conn = null;
+        try {
+            // Create a fresh SQLite connection directly (bypassing the pool)
+            conn = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
+
+            List<String> changes = new ArrayList<>();
+
+            // Check if auto-networking is enabled
+            boolean autoNetworking = isAutoNetworkingEnabled(conn);
+            if (autoNetworking) {
+                logger.info("[ServerConfigSync] AUTO_NETWORKING is enabled - skipping network field sync");
+            }
+
+            // Read current database values
+            ServerConfig currentConfig = readCurrentValues(conn, serverId);
+
+            // Compare and track changes (skip network fields if auto-networking enabled)
+            detectChanges(currentConfig, config, changes, autoNetworking);
 
             if (changes.isEmpty()) {
                 logger.info("[ServerConfigSync] No changes detected, database is up to date");
@@ -79,12 +164,19 @@ public class ServerConfigSync {
                 logger.info("  - " + change);
             }
 
-            updateDatabase(conn, config, serverId);
+            updateDatabase(conn, config, serverId, autoNetworking);
+            syncServerProperties(conn, config);
 
-            logger.info("[ServerConfigSync] Database sync completed successfully");
+            logger.info("[ServerConfigSync] Database sync completed successfully (direct connection)");
 
         } finally {
-            DatabaseConnectionUtil.closeConnection(conn);
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    logger.warning("[ServerConfigSync] Failed to close direct connection: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -104,7 +196,8 @@ public class ServerConfigSync {
                 throw new SQLException("Server ID " + serverId + " not found in SERVERS table");
             }
 
-            return ServerConfigGenerator.generateFromDatabase(serverId);
+            // Use generateFromResultSet to avoid opening a second database connection
+            return ServerConfigGenerator.generateFromResultSet(rs);
 
         } finally {
             if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
@@ -115,7 +208,7 @@ public class ServerConfigSync {
     /**
      * Detect changes between current and new config.
      */
-    private static void detectChanges(ServerConfig current, ServerConfig newConfig, List<String> changes) {
+    private static void detectChanges(ServerConfig current, ServerConfig newConfig, List<String> changes, boolean skipNetworkFields) {
         // Server identity
         if (!equals(current.server.name, newConfig.server.name)) {
             changes.add("server.name: \"" + current.server.name + "\" → \"" + newConfig.server.name + "\"");
@@ -162,6 +255,34 @@ public class ServerConfigSync {
         if (current.server.caHelpGroup != newConfig.server.caHelpGroup) {
             changes.add("server.caHelpGroup: " + current.server.caHelpGroup + " → " + newConfig.server.caHelpGroup);
         }
+
+        // Network settings (skip if auto-networking is enabled - Wurm manages these automatically)
+        if (!skipNetworkFields) {
+            if (!equals(current.server.externalIp, newConfig.server.externalIp)) {
+                changes.add("server.externalIp: \"" + current.server.externalIp + "\" → \"" + newConfig.server.externalIp + "\"");
+            }
+            if (!equals(current.server.externalPort, newConfig.server.externalPort)) {
+                changes.add("server.externalPort: \"" + current.server.externalPort + "\" → \"" + newConfig.server.externalPort + "\"");
+            }
+            if (!equals(current.server.internalIp, newConfig.server.internalIp)) {
+                changes.add("server.internalIp: \"" + current.server.internalIp + "\" → \"" + newConfig.server.internalIp + "\"");
+            }
+            if (!equals(current.server.internalPort, newConfig.server.internalPort)) {
+                changes.add("server.internalPort: \"" + current.server.internalPort + "\" → \"" + newConfig.server.internalPort + "\"");
+            }
+            if (!equals(current.server.rmiPort, newConfig.server.rmiPort)) {
+                changes.add("server.rmiPort: \"" + current.server.rmiPort + "\" → \"" + newConfig.server.rmiPort + "\"");
+            }
+            if (!equals(current.server.rmiRegPort, newConfig.server.rmiRegPort)) {
+                changes.add("server.rmiRegPort: \"" + current.server.rmiRegPort + "\" → \"" + newConfig.server.rmiRegPort + "\"");
+            }
+            if (!equals(current.server.intraServerPassword, newConfig.server.intraServerPassword)) {
+                changes.add("server.intraServerPassword: [hidden] → [hidden]");
+            }
+            if (current.server.maxPlayers != newConfig.server.maxPlayers) {
+                changes.add("server.maxPlayers: " + current.server.maxPlayers + " → " + newConfig.server.maxPlayers);
+            }
+        } // End skipNetworkFields check
 
         // Skills
         if (current.skills.gainRate != newConfig.skills.gainRate) {
@@ -260,12 +381,57 @@ public class ServerConfigSync {
         if (current.spawns.hotsY != newConfig.spawns.hotsY) {
             changes.add("spawns.hotsY: " + current.spawns.hotsY + " → " + newConfig.spawns.hotsY);
         }
+
+        // Server Properties (SERVERPROPERTIES table)
+        if (current.properties.multiKingdom != newConfig.properties.multiKingdom) {
+            changes.add("properties.multiKingdom: " + current.properties.multiKingdom + " → " + newConfig.properties.multiKingdom);
+        }
+        if (current.properties.epic != newConfig.properties.epic) {
+            changes.add("properties.epic: " + current.properties.epic + " → " + newConfig.properties.epic);
+        }
+        if (current.properties.allowChaos != newConfig.properties.allowChaos) {
+            changes.add("properties.allowChaos: " + current.properties.allowChaos + " → " + newConfig.properties.allowChaos);
+        }
+        if (current.properties.newbieFriendly != newConfig.properties.newbieFriendly) {
+            changes.add("properties.newbieFriendly: " + current.properties.newbieFriendly + " → " + newConfig.properties.newbieFriendly);
+        }
+        if (current.properties.spyPrevention != newConfig.properties.spyPrevention) {
+            changes.add("properties.spyPrevention: " + current.properties.spyPrevention + " → " + newConfig.properties.spyPrevention);
+        }
+        if (current.properties.npcs != newConfig.properties.npcs) {
+            changes.add("properties.npcs: " + current.properties.npcs + " → " + newConfig.properties.npcs);
+        }
+        if (current.properties.endGameItems != newConfig.properties.endGameItems) {
+            changes.add("properties.endGameItems: " + current.properties.endGameItems + " → " + newConfig.properties.endGameItems);
+        }
+        if (current.properties.autoNetworking != newConfig.properties.autoNetworking) {
+            changes.add("properties.autoNetworking: " + current.properties.autoNetworking + " → " + newConfig.properties.autoNetworking);
+        }
+        if (current.properties.enablePnpPortForward != newConfig.properties.enablePnpPortForward) {
+            changes.add("properties.enablePnpPortForward: " + current.properties.enablePnpPortForward + " → " + newConfig.properties.enablePnpPortForward);
+        }
+        if (current.properties.steamQueryPort != newConfig.properties.steamQueryPort) {
+            changes.add("properties.steamQueryPort: " + current.properties.steamQueryPort + " → " + newConfig.properties.steamQueryPort);
+        }
+        if (!equals(current.properties.adminPassword, newConfig.properties.adminPassword)) {
+            changes.add("properties.adminPassword: [hidden] → [hidden]");
+        }
     }
 
     /**
      * Update database with new config values.
+     *
+     * @param conn Database connection
+     * @param config New config values to apply
+     * @param serverId Server ID
+     * @param skipNetworkFields If true, preserves current database network values (when AUTO_NETWORKING is enabled)
      */
-    private static void updateDatabase(Connection conn, ServerConfig config, int serverId) throws SQLException {
+    private static void updateDatabase(Connection conn, ServerConfig config, int serverId, boolean skipNetworkFields) throws SQLException {
+        // Read current values if we need to preserve network fields
+        ServerConfig currentConfig = null;
+        if (skipNetworkFields) {
+            currentConfig = readCurrentValues(conn, serverId);
+        }
         PreparedStatement ps = null;
 
         try {
@@ -291,6 +457,29 @@ public class ServerConfigSync {
             ps.setBoolean(idx++, config.server.local);
             ps.setString(idx++, config.server.mapName);
             ps.setByte(idx++, config.server.caHelpGroup);
+
+            // Network settings (preserve current values if auto-networking is enabled)
+            if (skipNetworkFields && currentConfig != null) {
+                // Use current database values (don't overwrite auto-detected values)
+                ps.setString(idx++, currentConfig.server.externalIp);
+                ps.setString(idx++, currentConfig.server.externalPort);
+                ps.setString(idx++, currentConfig.server.internalIp);
+                ps.setString(idx++, currentConfig.server.internalPort);
+                ps.setString(idx++, currentConfig.server.rmiPort);
+                ps.setString(idx++, currentConfig.server.rmiRegPort);
+                ps.setString(idx++, currentConfig.server.intraServerPassword);
+                ps.setInt(idx++, currentConfig.server.maxPlayers);
+            } else {
+                // Use YAML config values
+                ps.setString(idx++, config.server.externalIp);
+                ps.setString(idx++, config.server.externalPort);
+                ps.setString(idx++, config.server.internalIp);
+                ps.setString(idx++, config.server.internalPort);
+                ps.setString(idx++, config.server.rmiPort);
+                ps.setString(idx++, config.server.rmiRegPort);
+                ps.setString(idx++, config.server.intraServerPassword);
+                ps.setInt(idx++, config.server.maxPlayers);
+            }
 
             // Skills
             ps.setFloat(idx++, config.skills.gainRate);
@@ -323,9 +512,6 @@ public class ServerConfigSync {
             ps.setInt(idx++, config.economy.traders.startingMoney);
             ps.setInt(idx++, config.economy.kingdomStartingMoney);
 
-            // Players
-            ps.setInt(idx++, config.players.maxPlayers);
-
             // Spawn points
             ps.setInt(idx++, config.spawns.jennKellonX);
             ps.setInt(idx++, config.spawns.jennKellonY);
@@ -345,8 +531,127 @@ public class ServerConfigSync {
     }
 
     /**
+     * Sync server properties to SERVERPROPERTIES table.
+     *
+     * <p>Uses INSERT OR REPLACE to update key-value pairs in SERVERPROPERTIES table.</p>
+     */
+    private static void syncServerProperties(Connection conn, ServerConfig config) throws SQLException {
+        PreparedStatement ps = null;
+
+        try {
+            String insertOrReplace = "INSERT OR REPLACE INTO SERVERPROPERTIES (PROPKEY, PROPVAL) VALUES (?, ?)";
+            ps = conn.prepareStatement(insertOrReplace);
+
+            // Sync all properties
+            setProperty(ps, "MULTI_KINGDOM", String.valueOf(config.properties.multiKingdom));
+            setProperty(ps, "EPIC", String.valueOf(config.properties.epic));
+            setProperty(ps, "ALLOWCHAOS", String.valueOf(config.properties.allowChaos));
+            setProperty(ps, "NEWBIEFRIENDLY", String.valueOf(config.properties.newbieFriendly));
+            setProperty(ps, "SPYPREVENTION", String.valueOf(config.properties.spyPrevention));
+            setProperty(ps, "NPCS", String.valueOf(config.properties.npcs));
+            setProperty(ps, "ENDGAMEITEMS", String.valueOf(config.properties.endGameItems));
+            setProperty(ps, "AUTO_NETWORKING", String.valueOf(config.properties.autoNetworking));
+            setProperty(ps, "ENABLE_PNP_PORT_FORWARD", String.valueOf(config.properties.enablePnpPortForward));
+            setProperty(ps, "STEAMQUERYPORT", String.valueOf(config.properties.steamQueryPort));
+            setProperty(ps, "ADMINPASSWORD", config.properties.adminPassword);
+            setProperty(ps, "SERVERPASSWORD", config.server.serverPassword);
+            setProperty(ps, "HOMESERVER_KINGDOM", String.valueOf(config.server.homeServerKingdom));
+
+        } finally {
+            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+        }
+    }
+
+    /**
+     * Helper to set a property in SERVERPROPERTIES table.
+     */
+    private static void setProperty(PreparedStatement ps, String key, String value) throws SQLException {
+        ps.setString(1, key);
+        ps.setString(2, value);
+        ps.executeUpdate();
+    }
+
+    /**
+     * Apply config directly to server's in-memory structures using reflection.
+     * This bypasses the database entirely and modifies the ServerEntry that was already loaded.
+     *
+     * @param config The config to apply
+     * @param serverId The server ID
+     * @throws Exception if reflection fails
+     */
+    public static void applyConfigToServerMemory(ServerConfig config, int serverId) throws Exception {
+        // Get the Servers class
+        Class<?> serversClass = Class.forName("com.wurmonline.server.Servers");
+
+        // Get the localServer static field (ServerEntry instance)
+        java.lang.reflect.Field localServerField = serversClass.getField("localServer");
+        Object localServer = localServerField.get(null);
+
+        if (localServer == null) {
+            throw new IllegalStateException("Servers.localServer is null - server not initialized yet");
+        }
+
+        Class<?> serverEntryClass = localServer.getClass();
+
+        // Apply creature settings
+        setFieldValue(serverEntryClass, localServer, "maxCreatures", config.creatures.maxTotal);
+        setFieldValue(serverEntryClass, localServer, "MAXCREATURES", config.creatures.maxTotal);
+
+        // Apply skill settings
+        setFieldValue(serverEntryClass, localServer, "SKILLGAINRATE", config.skills.gainRate);
+
+        // Apply combat settings
+        setFieldValue(serverEntryClass, localServer, "ACTIONTIMER", config.combat.actionSpeed);
+        setFieldValue(serverEntryClass, localServer, "CRMOD", config.combat.ratingModifier);
+
+        logger.info("[ServerConfigSync] Applied config directly to Servers.localServer via reflection");
+        logger.info("[ServerConfigSync]   - maxCreatures: " + config.creatures.maxTotal);
+        logger.info("[ServerConfigSync]   - skillGainRate: " + config.skills.gainRate);
+        logger.info("[ServerConfigSync]   - actionTimer: " + config.combat.actionSpeed);
+    }
+
+    /**
+     * Set a field value using reflection, ignoring if field doesn't exist.
+     */
+    private static void setFieldValue(Class<?> clazz, Object instance, String fieldName, Object value) {
+        try {
+            java.lang.reflect.Field field = clazz.getField(fieldName);
+            field.set(instance, value);
+        } catch (NoSuchFieldException e) {
+            // Field doesn't exist - that's okay, might be different Wurm version
+            logger.fine("[ServerConfigSync] Field not found: " + fieldName + " (might not exist in this Wurm version)");
+        } catch (Exception e) {
+            logger.warning("[ServerConfigSync] Failed to set field " + fieldName + ": " + e.getMessage());
+        }
+    }
+
+    /**
      * Null-safe string equality.
      */
+    /**
+     * Check if AUTO_NETWORKING is enabled in SERVERPROPERTIES.
+     * When enabled, Wurm auto-detects external IP and we should not override it.
+     */
+    private static boolean isAutoNetworkingEnabled(Connection conn) {
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            ps = conn.prepareStatement("SELECT PROPVAL FROM SERVERPROPERTIES WHERE PROPKEY='AUTO_NETWORKING'");
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                String value = rs.getString("PROPVAL");
+                return "true".equalsIgnoreCase(value) || "1".equals(value);
+            }
+            return false; // Default to false if not found
+        } catch (SQLException e) {
+            logger.warning("[ServerConfigSync] Failed to check AUTO_NETWORKING status: " + e.getMessage());
+            return false; // Assume disabled on error
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
+            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+        }
+    }
+
     private static boolean equals(String a, String b) {
         if (a == null) return b == null;
         return a.equals(b);

@@ -74,19 +74,28 @@ public final class CropHarvestPatch implements BytecodePatch {
             // Find Crops.getCropName() call - it always executes and sets cropString variable
             // We inject right after it, modifying quantity before it's used in the message
             final boolean[] patched = {false};
+            final int[] methodCallCount = {0};
+
             harvestMethod.instrument(new ExprEditor() {
                 @Override
                 public void edit(MethodCall m) throws CannotCompileException {
+                    methodCallCount[0]++;
+
+                    // Debug: Log first few method calls
+                    if (methodCallCount[0] <= 5) {
+                        LOGGER.info("[BytecodePatch] Found method call: " + m.getClassName() + "." + m.getMethodName());
+                    }
+
                     // Find the getCropName() static method call
                     // This happens right before "You managed to get a yield" message
                     if (!patched[0] && m.getMethodName().equals("getCropName") &&
-                        m.getClassName().equals("com.wurmonline.server.crops.Crops")) {
+                        m.getClassName().equals("com.wurmonline.server.behaviours.Crops")) {
                         try {
                             // Call the original method, then inject our event code
                             // The hookCode will modify quantity variable
                             m.replace("{ $_ = $proceed($$); " + hookCode.toString() + " }");
                             patched[0] = true;
-                            LOGGER.fine("Injected CropHarvestEvent after getCropName");
+                            LOGGER.info("[BytecodePatch] Successfully injected CropHarvestEvent after Crops.getCropName()");
                         } catch (Exception e) {
                             throw new CannotCompileException("Failed to inject CropHarvestEvent", e);
                         }
@@ -94,11 +103,14 @@ public final class CropHarvestPatch implements BytecodePatch {
                 }
             });
 
+            LOGGER.info("[BytecodePatch] Scanned " + methodCallCount[0] + " method calls in Terraforming.harvest()");
+
             if (!patched[0]) {
-                LOGGER.warning("[BytecodePatch] CropHarvestPatch could not find injection point - ItemFactory.createItem not found");
-                LOGGER.warning("[BytecodePatch] CropHarvestEvent will not fire - this is not critical but harvest bonuses won't work");
+                LOGGER.warning("[BytecodePatch] CropHarvestPatch could not find injection point - Crops.getCropName() not found");
+                LOGGER.warning("[BytecodePatch] This may indicate the method structure has changed in this Wurm version");
+                LOGGER.warning("[BytecodePatch] CropHarvestEvent will not fire - harvest bonuses won't work");
             } else {
-                LOGGER.info("Registered CropHarvestEvent patch");
+                LOGGER.info("[BytecodePatch] Registered CropHarvestEvent patch successfully");
             }
         } catch (NotFoundException | CannotCompileException e) {
             throw new IllegalStateException("Unable to install CropHarvestPatch", e);

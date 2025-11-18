@@ -52,40 +52,58 @@ public class ServerConfigGenerator {
                 throw new SQLException("Server ID " + serverId + " not found in SERVERS table");
             }
 
-            ServerConfig config = new ServerConfig();
-
-            // Read server identity
-            readServerIdentity(rs, config.server);
-
-            // Read skill settings
-            readSkills(rs, config.skills);
-
-            // Read combat settings
-            readCombat(rs, config.combat);
-
-            // Read creature settings
-            readCreatures(rs, config.creatures);
-
-            // Read world settings
-            readWorld(rs, config.world);
-
-            // Read economy settings
-            readEconomy(rs, config.economy);
-
-            // Read player settings
-            readPlayers(rs, config.players);
-
-            // Read spawn points
-            readSpawnPoints(rs, config.spawns);
-
-            logger.info("[ServerConfigGenerator] Successfully read server settings from database");
-            return config;
+            return generateFromResultSet(rs);
 
         } finally {
             if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
             if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
-            DatabaseConnectionUtil.closeConnection(conn);
+            if (conn != null) try { conn.close(); } catch (SQLException ignored) {}
         }
+    }
+
+    /**
+     * Generate ServerConfig from an existing ResultSet.
+     *
+     * <p>This method does NOT close the ResultSet or its connection.
+     * Useful when you already have a database connection open and want
+     * to avoid opening a second connection.</p>
+     *
+     * @param rs ResultSet positioned at the server row
+     * @return ServerConfig populated with ResultSet values
+     * @throws SQLException if reading fails
+     */
+    public static ServerConfig generateFromResultSet(ResultSet rs) throws SQLException {
+        ServerConfig config = new ServerConfig();
+
+        // Read server identity
+        readServerIdentity(rs, config.server);
+
+        // Read skill settings
+        readSkills(rs, config.skills);
+
+        // Read combat settings
+        readCombat(rs, config.combat);
+
+        // Read creature settings
+        readCreatures(rs, config.creatures);
+
+        // Read world settings
+        readWorld(rs, config.world);
+
+        // Read economy settings
+        readEconomy(rs, config.economy);
+
+        // Read player settings
+        readPlayers(rs, config.players);
+
+        // Read spawn points
+        readSpawnPoints(rs, config.spawns);
+
+        // Read server properties (SERVERPROPERTIES table)
+        readServerProperties(config);
+
+        logger.info("[ServerConfigGenerator] Successfully read server settings from ResultSet");
+        return config;
     }
 
     private static void readServerIdentity(ResultSet rs, ServerConfig.ServerIdentityConfig server) throws SQLException {
@@ -107,6 +125,16 @@ public class ServerConfigGenerator {
         server.local = getBooleanOrDefault(rs, "LOCAL", false);
         server.mapName = getStringOrDefault(rs, "MAPNAME", "");
         server.caHelpGroup = getByteOrDefault(rs, "CAHELPGROUP", (byte) -1);
+
+        // Network configuration
+        server.externalIp = getStringOrDefault(rs, "EXTERNALIP", "127.0.1.1");
+        server.externalPort = getStringOrDefault(rs, "EXTERNALPORT", "3724");
+        server.internalIp = getStringOrDefault(rs, "INTRASERVERADDRESS", "127.0.0.1");
+        server.internalPort = getStringOrDefault(rs, "INTRASERVERPORT", "48020");
+        server.rmiPort = getStringOrDefault(rs, "RMIPORT", "7220");
+        server.rmiRegPort = getStringOrDefault(rs, "REGISTRATIONPORT", "7221");
+        server.intraServerPassword = getStringOrDefault(rs, "INTRASERVERPASSWORD", "");
+        server.maxPlayers = getIntOrDefault(rs, "MAXPLAYERS", 200);
     }
 
     private static void readSkills(ResultSet rs, ServerConfig.SkillsConfig skills) throws SQLException {
@@ -147,7 +175,7 @@ public class ServerConfigGenerator {
     }
 
     private static void readPlayers(ResultSet rs, ServerConfig.PlayersConfig players) throws SQLException {
-        players.maxPlayers = getIntOrDefault(rs, "MAXPLAYERS", 200);
+        // maxPlayers moved to ServerIdentityConfig
         // limitOverridable not stored in database, keep default
     }
 
@@ -158,6 +186,58 @@ public class ServerConfigGenerator {
         spawn.molRehanY = getIntOrDefault(rs, "SPAWNPOINTMOLY", 0);
         spawn.hotsX = getIntOrDefault(rs, "SPAWNPOINTLIBX", 0);
         spawn.hotsY = getIntOrDefault(rs, "SPAWNPOINTLIBY", 0);
+    }
+
+    private static void readServerProperties(ServerConfig config) throws SQLException {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnectionUtil.getLoginDbConnection();
+            ps = conn.prepareStatement("SELECT PROPKEY, PROPVAL FROM SERVERPROPERTIES");
+            rs = ps.executeQuery();
+
+            // Read all properties into a map first
+            java.util.Map<String, String> propMap = new java.util.HashMap<>();
+            while (rs.next()) {
+                String key = rs.getString("PROPKEY");
+                String value = rs.getString("PROPVAL");
+                if (key != null && value != null) {
+                    propMap.put(key, value);
+                }
+            }
+
+            // Map properties to config fields
+            config.properties.multiKingdom = getBooleanFromMap(propMap, "MULTI_KINGDOM", false);
+            config.properties.epic = getBooleanFromMap(propMap, "EPIC", false);
+            config.properties.allowChaos = getBooleanFromMap(propMap, "ALLOWCHAOS", false);
+            config.properties.newbieFriendly = getBooleanFromMap(propMap, "NEWBIEFRIENDLY", true);
+            config.properties.spyPrevention = getBooleanFromMap(propMap, "SPYPREVENTION", false);
+            config.properties.npcs = getBooleanFromMap(propMap, "NPCS", true);
+            config.properties.endGameItems = getBooleanFromMap(propMap, "ENDGAMEITEMS", true);
+            config.properties.autoNetworking = getBooleanFromMap(propMap, "AUTO_NETWORKING", true);
+            config.properties.enablePnpPortForward = getBooleanFromMap(propMap, "ENABLE_PNP_PORT_FORWARD", true);
+            config.properties.steamQueryPort = getIntFromMap(propMap, "STEAMQUERYPORT", 27016);
+            config.properties.adminPassword = propMap.getOrDefault("ADMINPASSWORD", "");
+
+            // Read serverPassword and homeServerKingdom from SERVERPROPERTIES
+            // Note: These are synced to both SERVERS table and SERVERPROPERTIES for persistence
+            config.server.serverPassword = propMap.getOrDefault("SERVERPASSWORD", "");
+            String kingdomStr = propMap.get("HOMESERVER_KINGDOM");
+            if (kingdomStr != null) {
+                try {
+                    config.server.homeServerKingdom = Byte.parseByte(kingdomStr);
+                } catch (NumberFormatException e) {
+                    config.server.homeServerKingdom = 1; // Default to JK
+                }
+            }
+
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
+            if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
+            if (conn != null) try { conn.close(); } catch (SQLException ignored) {}
+        }
     }
 
     // Safe getter methods that return defaults if column doesn't exist
@@ -376,6 +456,24 @@ public class ServerConfigGenerator {
         yaml.append("  caHelpGroup: ").append(config.server.caHelpGroup).append("  # Community Assistant help group (-1 = none)\n");
         yaml.append("\n");
 
+        // Network configuration
+        yaml.append("  # Network Configuration\n");
+        yaml.append("  externalIp: \"").append(escape(config.server.externalIp)).append("\"  # External IP address\n");
+        yaml.append("  externalPort: \"").append(escape(config.server.externalPort)).append("\"  # External port\n");
+        yaml.append("  internalIp: \"").append(escape(config.server.internalIp)).append("\"  # Internal/intra-server IP\n");
+        yaml.append("  internalPort: \"").append(escape(config.server.internalPort)).append("\"  # Internal/intra-server port\n");
+        yaml.append("  rmiPort: \"").append(escape(config.server.rmiPort)).append("\"  # RMI port\n");
+        yaml.append("  rmiRegPort: \"").append(escape(config.server.rmiRegPort)).append("\"  # RMI registry port\n");
+        yaml.append("  intraServerPassword: \"").append(escape(config.server.intraServerPassword)).append("\"  # Intra-server password\n");
+        yaml.append("  maxPlayers: ").append(config.server.maxPlayers).append("  # Maximum concurrent players\n");
+        yaml.append("\n");
+
+        // Authentication
+        yaml.append("  # Authentication\n");
+        yaml.append("  serverPassword: \"").append(escape(config.server.serverPassword)).append("\"  # Player connection password (empty = no password)\n");
+        yaml.append("  homeServerKingdom: ").append(config.server.homeServerKingdom).append("  # Home server kingdom (1=JK, 2=MR, 3=HOTS, 4=Freedom)\n");
+        yaml.append("\n");
+
         // Skills
         yaml.append("# Skill & Progression Settings\n");
         yaml.append("skills:\n");
@@ -432,7 +530,7 @@ public class ServerConfigGenerator {
         // Players
         yaml.append("# Player Settings\n");
         yaml.append("players:\n");
-        yaml.append("  maxPlayers: ").append(config.players.maxPlayers).append("  # Maximum concurrent players\n");
+        yaml.append("  # maxPlayers moved to server.maxPlayers (Network Configuration section)\n");
         yaml.append("  limitOverridable: ").append(config.players.limitOverridable).append("  # Player limit can be overridden by admins\n");
         yaml.append("\n");
 
@@ -449,6 +547,24 @@ public class ServerConfigGenerator {
         yaml.append("  hotsY: ").append(config.spawns.hotsY).append("  # HOTS/Libila spawn Y\n");
 
         return yaml.toString();
+    }
+
+    // Helper methods for reading from SERVERPROPERTIES map
+
+    private static boolean getBooleanFromMap(java.util.Map<String, String> map, String key, boolean defaultValue) {
+        String value = map.get(key);
+        if (value == null) return defaultValue;
+        return "true".equalsIgnoreCase(value) || "1".equals(value);
+    }
+
+    private static int getIntFromMap(java.util.Map<String, String> map, String key, int defaultValue) {
+        String value = map.get(key);
+        if (value == null) return defaultValue;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     /**
