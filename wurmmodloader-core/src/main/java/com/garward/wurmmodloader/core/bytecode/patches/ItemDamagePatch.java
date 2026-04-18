@@ -60,16 +60,12 @@ public class ItemDamagePatch implements BytecodePatch {
 
         setDamageMethod.insertBefore(
             "{ " +
-            "  float damageToAdd = $1; " +
-            "  float modifiedDamage = " + ProxyServerHook.class.getName() + ".fireItemDamageEvent(" +
+            "  $1 = " + ProxyServerHook.class.getName() + ".fireItemDamageEvent(" +
             "    this.getWurmId(), " +
             "    this.getName(), " +
-            "    damageToAdd, " +
+            "    $1, " +
             "    this.getDamage()" +
             "  ); " +
-            "  if (modifiedDamage != damageToAdd) { " +
-            "    $1 = modifiedDamage; " +
-            "  } " +
             "}"
         );
 

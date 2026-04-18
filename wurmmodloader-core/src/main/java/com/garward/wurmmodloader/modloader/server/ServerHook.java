@@ -215,6 +215,16 @@ public class ServerHook {
 		ModComm.serverStarted();
 		ModIntraServer.serverStarted();
 
+		// Initialize WML_SYNC channel for client-server prediction
+		logger.info("[ServerHook] DEBUG: Initializing WML_SYNC channel");
+		com.garward.wurmmodloader.sync.WMLSyncChannel.initialize();
+		logger.info("[ServerHook] DEBUG: WML_SYNC channel initialized");
+
+		// Initialize WML_CAPABILITIES channel for server mod detection
+		logger.info("[ServerHook] DEBUG: Initializing WML_CAPABILITIES channel");
+		com.garward.wurmmodloader.capabilities.WMLCapabilitiesChannel.initialize();
+		logger.info("[ServerHook] DEBUG: WML_CAPABILITIES channel initialized");
+
 		// Initialize capability system (Phase 5.5)
 		logger.info("[ServerHook] DEBUG: Initializing CapabilityManager");
 		com.garward.wurmmodloader.core.capability.CapabilityManager.getInstance().initialize();
@@ -319,6 +329,10 @@ public class ServerHook {
 
 		logger.info("[ServerHook] DEBUG: Firing player login listeners");
 		playerLogin.fire(listener -> listener.onPlayerLogin(player));
+
+		// Send server capabilities to client
+		logger.info("[ServerHook] DEBUG: Sending server capabilities to " + player.getName());
+		com.garward.wurmmodloader.capabilities.WMLCapabilitiesChannel.sendCapabilitiesToPlayer(player);
 
 		// Event testing (if enabled and mode is ON_PLAYER_LOGIN)
 		if (Boolean.getBoolean("wurmmodloader.test.events")) {
@@ -1510,6 +1524,26 @@ public class ServerHook {
 			logger.log(java.util.logging.Level.WARNING,
 				"[ServerConfigSync] Early config sync failed (non-fatal)", e);
 		}
+	}
+
+	// ========== WML_SYNC MODCOMM CHANNEL EVENTS ==========
+
+	/**
+	 * Fire MovementIntentReceivedEvent when client sends movement intent via WML_SYNC channel.
+	 */
+	public void fireMovementIntentReceived(Player player, long seqId, byte inputState) {
+		com.garward.wurmmodloader.api.events.sync.MovementIntentReceivedEvent event =
+			new com.garward.wurmmodloader.api.events.sync.MovementIntentReceivedEvent(player, seqId, inputState);
+		eventBus.post(event);
+	}
+
+	/**
+	 * Fire PredictionStateReceivedEvent when client sends predicted position for debugging.
+	 */
+	public void firePredictionStateReceived(Player player, long seqId, float x, float y, float height) {
+		com.garward.wurmmodloader.api.events.sync.PredictionStateReceivedEvent event =
+			new com.garward.wurmmodloader.api.events.sync.PredictionStateReceivedEvent(player, seqId, x, y, height);
+		eventBus.post(event);
 	}
 
 }

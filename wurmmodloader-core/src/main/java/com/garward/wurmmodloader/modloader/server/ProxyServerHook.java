@@ -71,7 +71,26 @@ public class ProxyServerHook extends ServerHook {
 	// ========================================================================
 
 	/**
-	 * Capture attackers map before die() clears it (called from bytecode hook).
+	 * Capture attackers map from a creature using EventLogic (CLEAN - called from patch).
+	 *
+	 * <p>This method delegates to {@link com.garward.wurmmodloader.core.eventlogic.CreatureDeathEventLogic}
+	 * to handle the reflection-based attacker map extraction.</p>
+	 *
+	 * @param victim The creature about to die
+	 */
+	public static void captureAttackersViaLogic(com.wurmonline.server.creatures.Creature victim) {
+		// Use EventLogic to capture attackers (NO REFLECTION IN HOOK!)
+		java.util.Map<Long, Long> attackersMap =
+			com.garward.wurmmodloader.core.eventlogic.CreatureDeathEventLogic.captureAttackersMap(victim);
+
+		// Store for LootManager if capture succeeded
+		if (attackersMap != null) {
+			CAPTURED_ATTACKERS.put(victim.getWurmId(), attackersMap);
+		}
+	}
+
+	/**
+	 * Capture attackers map before die() clears it (legacy - for direct calls).
 	 */
 	public static void captureAttackers(long creatureId, java.util.Map<Long, Long> attackers) {
 		CAPTURED_ATTACKERS.put(creatureId, attackers);
@@ -109,7 +128,34 @@ public class ProxyServerHook extends ServerHook {
 	}
 
 	/**
-	 * Fire CreatureDeathEvent (called from bytecode hook).
+	 * Fire CreatureDeathEvent with killer determination via EventLogic.
+	 * This is the CLEAN method that bytecode patches should call.
+	 *
+	 * <p>Uses {@link com.garward.wurmmodloader.core.eventlogic.CreatureDeathEventLogic}
+	 * to determine the killer from damage tracking and attacker lists, then fires
+	 * the appropriate event (CreatureDeathEvent or PlayerDeathEvent).</p>
+	 *
+	 * @param victim The creature that died
+	 * @param damageMap Map of attackerId -> total damage dealt (may be null)
+	 */
+	public static void fireCreatureDeathEventWithLogic(
+			com.wurmonline.server.creatures.Creature victim,
+			java.util.Map<Long, Double> damageMap) {
+
+		// Use EventLogic to determine killer (NO LOGIC IN HOOK!)
+		com.wurmonline.server.creatures.Creature killer =
+			com.garward.wurmmodloader.core.eventlogic.CreatureDeathEventLogic.determineKiller(victim, damageMap);
+
+		// Route to appropriate event based on victim type
+		if (victim.isPlayer()) {
+			firePlayerDeathEvent((com.wurmonline.server.players.Player) victim, killer);
+		} else {
+			fireCreatureDeathEvent(victim, killer);
+		}
+	}
+
+	/**
+	 * Fire CreatureDeathEvent (called from bytecode hook or internal routing).
 	 */
 	public static void fireCreatureDeathEvent(com.wurmonline.server.creatures.Creature victim,
 			com.wurmonline.server.creatures.Creature killer) {
@@ -383,6 +429,25 @@ public class ProxyServerHook extends ServerHook {
 			byte material,
 			com.garward.wurmmodloader.api.events.combat.weapon.WeaponStatQueryEvent.StatType type,
 			double baseValue) {
+		return getInstance().fireWeaponStat(weapon, item, material, type, baseValue);
+	}
+
+	/**
+	 * Fire WeaponStatQueryEvent for speed with null-safe material extraction.
+	 * This is the CLEAN method for patches - handles null checking logic.
+	 *
+	 * @param weapon The weapon (may be null)
+	 * @param item The item (may be null)
+	 * @param type The stat type (always SPEED for this method)
+	 * @param baseValue The base value to modify
+	 * @return Modified value from event handlers
+	 */
+	public static double fireWeaponStatEventForSpeed(com.wurmonline.server.combat.Weapon weapon,
+			com.wurmonline.server.items.Item item,
+			com.garward.wurmmodloader.api.events.combat.weapon.WeaponStatQueryEvent.StatType type,
+			double baseValue) {
+		// ✅ NULL CHECKING LOGIC BELONGS HERE, NOT IN PATCH
+		byte material = (item != null) ? item.getMaterial() : (byte)0;
 		return getInstance().fireWeaponStat(weapon, item, material, type, baseValue);
 	}
 
@@ -675,6 +740,24 @@ public class ProxyServerHook extends ServerHook {
 	 */
 	public static float fireCombatRatingEvent(long creatureId, String creatureName, float rating) {
 		return getInstance().fireCombatRating(creatureId, creatureName, rating);
+	}
+
+	// ========== WML_SYNC MODCOMM CHANNEL EVENTS ==========
+
+	/**
+	 * Fire MovementIntentReceivedEvent (called from WMLSyncChannel).
+	 */
+	public static void fireMovementIntentReceivedEvent(com.wurmonline.server.players.Player player,
+	                                                   long seqId, byte inputState) {
+		getInstance().fireMovementIntentReceived(player, seqId, inputState);
+	}
+
+	/**
+	 * Fire PredictionStateReceivedEvent (called from WMLSyncChannel).
+	 */
+	public static void firePredictionStateReceivedEvent(com.wurmonline.server.players.Player player,
+	                                                    long seqId, float x, float y, float height) {
+		getInstance().firePredictionStateReceived(player, seqId, x, y, height);
 	}
 
 	public static synchronized ProxyServerHook getInstance() {

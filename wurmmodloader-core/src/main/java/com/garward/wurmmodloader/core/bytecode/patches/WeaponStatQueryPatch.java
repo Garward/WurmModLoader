@@ -91,9 +91,10 @@ public final class WeaponStatQueryPatch implements BytecodePatch {
 
     private void instrumentBaseSpeed(CtClass ctWeapon) throws NotFoundException, CannotCompileException {
         CtMethod method = ctWeapon.getDeclaredMethod("getBaseSpeedForWeapon");
+        // ✅ CLEAN: No null checking in patch - ProxyServerHook handles it
         String code = String.format(
-            "{ byte _wmlMat = ($1 != null) ? $1.getMaterial() : (byte)0; double _wmlVal = $_; "
-                + "_wmlVal = %s.fireWeaponStatEvent(null, $1, _wmlMat, %s.StatType.SPEED, _wmlVal);"
+            "{ double _wmlVal = $_; "
+                + "_wmlVal = %s.fireWeaponStatEventForSpeed(null, $1, %s.StatType.SPEED, _wmlVal);"
                 + " $_ = (float)_wmlVal; }",
             ProxyServerHook.class.getName(),
             WeaponStatQueryEvent.class.getName()
