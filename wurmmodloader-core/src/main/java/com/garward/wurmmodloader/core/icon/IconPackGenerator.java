@@ -198,12 +198,15 @@ public final class IconPackGenerator {
      * @return array of 7 BufferedImages, or null if loading fails
      */
     private static BufferedImage[] loadVanillaSheets() {
-        // Try multiple possible locations for graphics.jar
-        Path[] possiblePaths = {
-            Paths.get(GRAPHICS_JAR_PATH),
-            Paths.get("../Wurm Unlimited/WurmLauncher/packs/graphics.jar"),
-            Paths.get("/home/garward/.local/share/Steam/steamapps/common/Wurm Unlimited/WurmLauncher/packs/graphics.jar")
-        };
+        // Try multiple possible locations for graphics.jar.
+        // Override via -Dwurm.graphicsJar=<path> if none of the defaults match.
+        String override = System.getProperty("wurm.graphicsJar");
+        Path[] possiblePaths = override != null
+            ? new Path[] { Paths.get(override) }
+            : new Path[] {
+                Paths.get(GRAPHICS_JAR_PATH),
+                Paths.get("../Wurm Unlimited/WurmLauncher/packs/graphics.jar")
+            };
 
         Path graphicsJar = null;
         for (Path p : possiblePaths) {
@@ -455,11 +458,14 @@ public final class IconPackGenerator {
      * @return true if httpserver is available
      */
     public static boolean isHttpServerAvailable() {
+        // HTTP server is now a framework subsystem (always present on the classpath).
+        // Report actual runtime state so callers can skip icon-pack publishing if the
+        // server failed to bind.
         try {
-            // Check if HttpServerMod class is available (compile-time dependency)
-            Class.forName("org.gotti.wurmunlimited.mods.httpserver.HttpServerMod");
-            return true;
-        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            Class<?> implClass = Class.forName("com.garward.wurmmodloader.httpserver.ModHttpServerImpl");
+            Object impl = implClass.getMethod("getInstance").invoke(null);
+            return (Boolean) implClass.getMethod("isRunning").invoke(impl);
+        } catch (ReflectiveOperationException e) {
             return false;
         }
     }

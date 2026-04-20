@@ -1,0 +1,119 @@
+site_name: WurmModLoader (Server)
+site_description: Server-side modding framework for Wurm Unlimited
+site_url: https://garward.github.io/WurmModLoader/
+repo_url: https://github.com/garward/WurmModLoader
+repo_name: garward/WurmModLoader
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+  - awesome-pages
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started/index.md
+  - Guides:
+    - Event Bus: guides/event-bus.md
+    - Extending the Framework: guides/extending-framework.md
+    - Troubleshooting: guides/troubleshooting.md
+    - Legacy Mod Compatibility: guides/legacy-mod-compatibility.md
+    - UI — High-Level API: guides/ui-api.md
+    - UI — API Overview: guides/ui-api-overview.md
+    - UI — Submenus: guides/ui-api-submenus.md
+    - UI — Questions API: guides/questions-api.md
+    - UI — BML Reference: guides/bml-ui.md
+    - UI — Upgrade Tree: guides/upgrade-tree-ui.md
+    - UI — Icon System: guides/icon-system-reference.md
+  - Migration:
+    - Porting Existing Mods: migration/porting-existing-mods.md
+    - Full From-Legacy Guide: migration/from-legacy.md
+  - Reference:
+    - API Surface: reference/api-surface.md
+    - Console Commands: reference/console-commands.md
+    - Code-Index CLIs: reference/index-query-guide.md
+    - UI API Cheatsheet: reference/ui-api-quick-reference.md
+  - Examples:
+    - Common Patterns: examples/COMMON_MOD_PATTERNS.md
+  - Research:
+    - Combat:
+      - DUSKombat Formula: research/combat/duskombat-formula.md
+      - Event-Surface Gap: research/combat/event-surface-gap.md
+      - Mod Cross-Reference: research/combat/mod-crossref.md
+      - Visibility Plan: research/combat/visibility-plan.md
+    - Console / GM:
+      - Commands Research: research/console-gm/commands-research.md
+      - Commands MVP: research/console-gm/commands-mvp.md
+      - Hybrid System: research/console-gm/hybrid-system.md
+    - Creatures:
+      - Hook Surface: research/creatures/hook-surface.md
+      - Pet Class Plan: research/creatures/pet-class-plan.md
+    - Database:
+      - Connection Pattern: research/database/connection-pattern.md
+      - Events Plan: research/database/events-plan.md
+      - Creature Optimization: research/database/creature-optimization.md
+      - Village Structure: research/database/village-structure.md
+      - Zone / Deity Events: research/database/zone-deity-events.md
+    - Client ModLoader:
+      - Plan: research/client-modloader/plan.md
+      - Custom-Menu Progress: research/client-modloader/custom-menu-progress.md
+    - Server Config: research/server-config.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/garward/WurmModLoader

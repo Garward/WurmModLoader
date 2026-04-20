@@ -1,5 +1,6 @@
 package com.garward.wurmmodloader.mods.upgradetree;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -112,8 +113,66 @@ public class UpgradeEffectCalculator {
     }
 
     // ========================================================================
+    // Pet Class Effects
+    // ========================================================================
+
+    /**
+     * Extra pet slots granted by upgrades. Summed onto vanilla's base of 1 by
+     * {@link UpgradeTreeModifiers#getMaxPetSlots(long)}.
+     */
+    public static int getBonusPetSlots(long playerWurmId) {
+        return (int) Math.round(getEffectSum(playerWurmId, "max_pet_slots", 0.0));
+    }
+
+    /** Additive damage multiplier applied to outgoing damage dealt by the player's pets. */
+    public static double getPetDamageMultiplier(long playerWurmId) {
+        return getEffectSum(playerWurmId, "pet_damage_mult", 1.0);
+    }
+
+    /**
+     * Incoming damage multiplier applied to the player's pets (lower = tankier).
+     * 1.0 is no change; 0.75 is 25% damage reduction.
+     */
+    public static double getPetDamageTakenMultiplier(long playerWurmId) {
+        double reduction = getEffectSum(playerWurmId, "pet_damage_taken_reduction", 0.0);
+        return Math.max(0.1, 1.0 - reduction);
+    }
+
+    /**
+     * Creature tiers the player has unlocked for taming. Values come from
+     * {@code tame_tier_unlock} effects with a {@code tier} string parameter.
+     */
+    public static Set<String> getUnlockedTameTiers(long playerWurmId) {
+        return getEffectStringSet(playerWurmId, "tame_tier_unlock", "tier");
+    }
+
+    // ========================================================================
     // Internal Helper Methods
     // ========================================================================
+
+    /**
+     * Collect the union of string parameter values across all effects of a given type.
+     * Used for discrete unlocks (tier names, ability keys, flag-like capabilities).
+     */
+    private static Set<String> getEffectStringSet(long playerWurmId, String effectType, String paramKey) {
+        UpgradeTreeManager manager = UpgradeTreeManager.getInstance();
+        Set<String> playerUpgrades = manager.getPlayerUpgrades(playerWurmId);
+        Set<String> out = new HashSet<>();
+
+        for (String upgradeId : playerUpgrades) {
+            Upgrade upgrade = manager.getUpgrade(upgradeId);
+            if (upgrade == null) continue;
+            for (UpgradeEffect effect : upgrade.getEffects()) {
+                if (effect.getType().equals(effectType)) {
+                    String val = effect.getString(paramKey, null);
+                    if (val != null && !val.isEmpty()) {
+                        out.add(val);
+                    }
+                }
+            }
+        }
+        return out;
+    }
 
     /**
      * Sum all effect values of a given type from player's unlocked upgrades.

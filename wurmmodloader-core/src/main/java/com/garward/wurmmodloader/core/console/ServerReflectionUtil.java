@@ -247,8 +247,8 @@ public class ServerReflectionUtil {
      */
     public static void scheduleShutdown(int minutes, String reason) throws Exception {
         Object server = getServerInstance();
-        Method shutDown = server.getClass().getMethod("shutDown", String.class, int.class);
-        shutDown.invoke(server, reason, minutes);
+        Method startShutdown = server.getClass().getMethod("startShutdown", int.class, String.class);
+        startShutdown.invoke(server, minutes * 60, reason);
     }
 
     /**

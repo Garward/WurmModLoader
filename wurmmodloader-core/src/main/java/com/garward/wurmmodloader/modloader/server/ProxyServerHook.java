@@ -152,6 +152,58 @@ public class ProxyServerHook extends ServerHook {
 		} else {
 			fireCreatureDeathEvent(victim, killer);
 		}
+
+		// If the victim was someone's pet, also fire PetReleasedEvent(DIED).
+		try {
+			if (victim.isDominated() && victim.getDominator() != null) {
+				long ownerId = victim.getDominator().getWurmId();
+				getInstance().firePetReleased(victim, ownerId,
+					com.garward.wurmmodloader.api.events.creature.PetReleasedEvent.Reason.DIED);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+		}
+	}
+
+	// ========================================================================
+	// Taming events (CharmAnimal, Dominate)
+	// ========================================================================
+
+	/** Fire TameAttemptEvent from CharmAnimal.precondition. Returns true if cancelled. */
+	public static boolean fireTameAttemptEventCharm(com.wurmonline.server.creatures.Creature performer,
+	                                                 com.wurmonline.server.creatures.Creature target) {
+		return getInstance().fireTameAttempt(performer, target,
+			com.garward.wurmmodloader.api.events.creature.TameAttemptEvent.Source.CHARM);
+	}
+
+	/** Fire TameAttemptEvent from Dominate.mayDominate. Returns true if cancelled. */
+	public static boolean fireTameAttemptEventDominate(com.wurmonline.server.creatures.Creature performer,
+	                                                    com.wurmonline.server.creatures.Creature target) {
+		return getInstance().fireTameAttempt(performer, target,
+			com.garward.wurmmodloader.api.events.creature.TameAttemptEvent.Source.DOMINATE);
+	}
+
+	/** Fire TameCompleteEvent after CharmAnimal.doEffect. */
+	public static void fireTameCompleteEventCharm(com.wurmonline.server.creatures.Creature performer,
+	                                              com.wurmonline.server.creatures.Creature target,
+	                                              double power) {
+		getInstance().fireTameComplete(performer, target,
+			com.garward.wurmmodloader.api.events.creature.TameAttemptEvent.Source.CHARM, power);
+	}
+
+	/** Fire TameCompleteEvent after Dominate.dominate. */
+	public static void fireTameCompleteEventDominate(com.wurmonline.server.creatures.Creature performer,
+	                                                 com.wurmonline.server.creatures.Creature target,
+	                                                 double power) {
+		getInstance().fireTameComplete(performer, target,
+			com.garward.wurmmodloader.api.events.creature.TameAttemptEvent.Source.DOMINATE, power);
+	}
+
+	/** Fire PetReleasedEvent (any reason). */
+	public static void firePetReleasedEvent(com.wurmonline.server.creatures.Creature pet,
+	                                        long formerOwnerId,
+	                                        com.garward.wurmmodloader.api.events.creature.PetReleasedEvent.Reason reason) {
+		getInstance().firePetReleased(pet, formerOwnerId, reason);
 	}
 
 	/**

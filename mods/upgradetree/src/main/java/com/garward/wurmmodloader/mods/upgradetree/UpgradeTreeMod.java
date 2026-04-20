@@ -1,10 +1,14 @@
 package com.garward.wurmmodloader.mods.upgradetree;
 
+import com.garward.wurmmodloader.api.events.server.CapabilityRegistrationEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStartedEvent;
 import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
 import com.garward.wurmmodloader.api.ui.MenuEntry;
 import com.garward.wurmmodloader.api.ui.MenuTarget;
+import com.garward.wurmmodloader.core.event.EventBus;
 import com.garward.wurmmodloader.core.ui.ContextMenuRegistry;
+import com.garward.wurmmodloader.mods.upgradetree.pets.PetEventHandlers;
+import com.garward.wurmmodloader.mods.upgradetree.pets.PlayerPetsCapability;
 import com.garward.wurmmodloader.mods.upgradetree.ui.UpgradeTreeWindow;
 import com.garward.wurmmodloader.modloader.interfaces.Configurable;
 import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
@@ -52,6 +56,12 @@ public class UpgradeTreeMod implements WurmServerMod, Configurable {
      * Initialize upgrade tree system and register UI.
      */
     @SubscribeEvent
+    public void onCapabilityRegistration(CapabilityRegistrationEvent event) {
+        event.registerPlayerCapability(PlayerPetsCapability.INSTANCE);
+        logger.info("[UpgradeTree] Registered PlayerPets capability");
+    }
+
+    @SubscribeEvent
     public void onServerStarted(ServerStartedEvent event) {
         logger.info("═══════════════════════════════════════════════════════════════");
         logger.info("Upgrade Tree Mod - Initializing");
@@ -74,6 +84,10 @@ public class UpgradeTreeMod implements WurmServerMod, Configurable {
 
             // Register UI using modern API
             registerUI();
+
+            // Wire pet-class event handlers (TameAttempt/TameComplete/PetReleased/CombatDamage)
+            EventBus.getInstance().register(new PetEventHandlers());
+            logger.info("[UpgradeTree] Registered pet-class event handlers");
 
             logger.info("[UpgradeTree] System ready!");
             logger.info("[UpgradeTree] Loaded " + UpgradeTreeManager.getInstance().getAllUpgrades().size() + " upgrades");

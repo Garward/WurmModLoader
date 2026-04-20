@@ -1,7 +1,12 @@
 package com.garward.wurmmodloader.core.capability;
 
 import com.garward.wurmmodloader.api.capability.Capability;
+import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
+import com.garward.wurmmodloader.api.events.player.PlayerLogoutEvent;
+import com.garward.wurmmodloader.api.events.server.CapabilityLoadedEvent;
+import com.garward.wurmmodloader.api.events.server.ServerPollEvent;
 import com.garward.wurmmodloader.api.registry.ResourceLocation;
+import com.garward.wurmmodloader.core.event.EventBus;
 
 import java.nio.file.Paths;
 import java.util.Map;
@@ -43,6 +48,10 @@ public class CapabilityManager {
     private CapabilityDatabase database;
     private boolean initialized = false;
 
+    // Periodic save cadence. ServerPollEvent fires ~5s; 6 ticks ≈ 30s between flushes.
+    private static final int SAVE_EVERY_N_POLLS = 6;
+    private int pollsSinceSave = 0;
+
     private CapabilityManager() {
         // Private constructor for singleton
     }
@@ -66,6 +75,9 @@ public class CapabilityManager {
             String dbPath = Paths.get("mods", "wurmmodloader", "capabilities.db").toString();
             this.database = new CapabilityDatabase(dbPath);
             this.initialized = true;
+
+            // Subscribe to periodic save + logout hooks so disk state tracks memory.
+            EventBus.getInstance().register(this);
 
             logger.info("CapabilityManager initialized with database: " + dbPath);
         } catch (Exception e) {
@@ -208,6 +220,7 @@ public class CapabilityManager {
                     instance = capability.deserialize(serialized);
                     caps.put(capability, instance);
                     logger.fine("Loaded " + entityType + " capability " + capability.getId() + " for ID " + id);
+                    fireLoadedEvent(entityType, id, capability, instance);
                 } catch (Exception e) {
                     logger.log(Level.WARNING, "Failed to deserialize capability, creating default", e);
                     instance = null; // Fall through to create default
@@ -242,6 +255,7 @@ public class CapabilityManager {
                 try {
                     instance = capability.deserialize(serialized);
                     caps.put(capability, instance);
+                    fireLoadedEvent("tile", id, capability, instance);
                 } catch (Exception e) {
                     logger.log(Level.WARNING, "Failed to deserialize tile capability, creating default", e);
                     instance = null;
@@ -258,19 +272,100 @@ public class CapabilityManager {
         return (T) instance;
     }
 
+    private void fireLoadedEvent(String entityType, long id, Capability<?> capability, Object instance) {
+        try {
+            CapabilityLoadedEvent.EntityType type;
+            switch (entityType) {
+                case "player":   type = CapabilityLoadedEvent.EntityType.PLAYER; break;
+                case "creature": type = CapabilityLoadedEvent.EntityType.CREATURE; break;
+                case "item":     type = CapabilityLoadedEvent.EntityType.ITEM; break;
+                case "tile":     type = CapabilityLoadedEvent.EntityType.TILE; break;
+                default: return;
+            }
+            EventBus.getInstance().post(new CapabilityLoadedEvent(type, id, capability, instance));
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Failed to post CapabilityLoadedEvent", e);
+        }
+    }
+
     /**
-     * Save all dirty capabilities to database.
-     * Called periodically by framework (via ServerPollEvent).
+     * Persist every loaded capability to the database.
+     *
+     * <p>Writes are full overwrites: for each cached entity we serialize the
+     * current instance and INSERT OR REPLACE. This is acceptable at the
+     * expected scale (player counts in the dozens, not thousands) and avoids
+     * the broken dirty-tracking design that used to live here.</p>
      */
     public void saveAllDirty() {
         if (!initialized) {
             return;
         }
-
         try {
-            database.flush();
+            long start = System.nanoTime();
+            int written = 0;
+            for (Map.Entry<Long, Map<Capability<?>, Object>> e : playerCapabilityData.entrySet()) {
+                written += writeAll(e.getKey(), e.getValue(), "player");
+            }
+            for (Map.Entry<Long, Map<Capability<?>, Object>> e : creatureCapabilityData.entrySet()) {
+                written += writeAll(e.getKey(), e.getValue(), "creature");
+            }
+            for (Map.Entry<Long, Map<Capability<?>, Object>> e : itemCapabilityData.entrySet()) {
+                written += writeAll(e.getKey(), e.getValue(), "item");
+            }
+            for (Map.Entry<Integer, Map<Capability<?>, Object>> e : tileCapabilityData.entrySet()) {
+                written += writeAll((long) e.getKey(), e.getValue(), "tile");
+            }
+            long elapsed = (System.nanoTime() - start) / 1_000_000;
+            if (written > 0) {
+                logger.fine("Saved " + written + " capabilities in " + elapsed + "ms");
+            }
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Failed to flush capability database", e);
+            logger.log(Level.WARNING, "Failed to persist capabilities", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private int writeAll(long id, Map<Capability<?>, Object> caps, String entityType) {
+        int n = 0;
+        for (Map.Entry<Capability<?>, Object> e : caps.entrySet()) {
+            try {
+                Capability<Object> cap = (Capability<Object>) e.getKey();
+                String serialized = cap.serialize(e.getValue());
+                database.saveCapability(id, cap.getId(), entityType, serialized);
+                n++;
+            } catch (Exception ex) {
+                logger.log(Level.WARNING, "Failed to save " + entityType + " capability "
+                    + e.getKey().getId() + " for id " + id, ex);
+            }
+        }
+        return n;
+    }
+
+    /**
+     * Periodic persistence hook. Fires every {@link #SAVE_EVERY_N_POLLS} server polls.
+     */
+    @SubscribeEvent
+    public void onServerPoll(ServerPollEvent event) {
+        if (!initialized) return;
+        if (++pollsSinceSave < SAVE_EVERY_N_POLLS) return;
+        pollsSinceSave = 0;
+        saveAllDirty();
+    }
+
+    /**
+     * Player logout hook. Flushes and evicts that player's cached capabilities
+     * so hot data doesn't accumulate for offline players.
+     */
+    @SubscribeEvent
+    public void onPlayerLogout(PlayerLogoutEvent event) {
+        if (!initialized) return;
+        try {
+            Object p = event.getPlayer();
+            if (p instanceof com.wurmonline.server.creatures.Creature) {
+                unloadPlayer(((com.wurmonline.server.creatures.Creature) p).getWurmId());
+            }
+        } catch (Throwable t) {
+            logger.log(Level.WARNING, "Capability logout flush failed", t);
         }
     }
 

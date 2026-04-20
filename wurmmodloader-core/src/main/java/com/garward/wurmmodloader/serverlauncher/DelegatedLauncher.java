@@ -137,6 +137,24 @@ public class DelegatedLauncher {
 			System.out.println("[DelegatedLauncher] ServerHook created");
 			LOGGER.info("ServerHook created, all framework hooks registered");
 
+			// Install framework HTTP server subsystem (replaces legacy httpserver mod).
+			// Must be AFTER ServerHook creation (event bus exists) and BEFORE the port
+			// actually binds — binding is deferred to ServerStartedEvent.
+			System.out.println("[DelegatedLauncher] Installing HttpServerSubsystem...");
+			LOGGER.info("Installing HttpServerSubsystem...");
+			com.garward.wurmmodloader.httpserver.HttpServerSubsystem.install();
+
+			// Eagerly initialize console GM router on ServerStartedEvent so the
+			// "type #help" banner prints right after boot instead of lazily on
+			// first keystroke.
+			com.garward.wurmmodloader.core.console.ConsoleGMCommandRouter.installEagerInit();
+
+			// Register each loaded mod with the HTTP subsystem so ModHttpServer.serve(mod, ...)
+			// can resolve the mod's name. Replaces legacy ModListener.modInitialized() path.
+			for (ModEntry<WurmServerMod> mod : wurmMods) {
+				com.garward.wurmmodloader.httpserver.HttpServerSubsystem.register(mod);
+			}
+
 			// Register ServerPacks bridge for icon pack distribution
 			com.garward.wurmmodloader.core.icon.IconPackServerPacksBridge bridge = new com.garward.wurmmodloader.core.icon.IconPackServerPacksBridge();
 			for (ModEntry<WurmServerMod> mod : wurmMods) {

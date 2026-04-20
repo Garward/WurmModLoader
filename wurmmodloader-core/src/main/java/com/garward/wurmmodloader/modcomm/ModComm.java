@@ -50,6 +50,11 @@ public class ModComm {
         }
     }
 
+    /** Public accessor for the legacy compat shim in {@code org.gotti.wurmunlimited.modcomm}. */
+    public static PlayerModConnection getPlayerConnectionPublic(Player player) {
+        return getPlayerConnection(player);
+    }
+
     /**
      * Internal initialization, called from {@link org.gotti.wurmunlimited.modloader.ModLoader#loadModsFromModDir}
      */
@@ -58,9 +63,9 @@ public class ModComm {
         try {
             CtClass ctPlayer = classPool.getCtClass("com.wurmonline.server.players.Player");
 
-            CtField fConnection = new CtField(classPool.get("org.gotti.wurmunlimited.modcomm.PlayerModConnection"), "modConnection", ctPlayer);
+            CtField fConnection = new CtField(classPool.get("com.garward.wurmmodloader.modcomm.PlayerModConnection"), "modConnection", ctPlayer);
             fConnection.setModifiers(Modifier.PUBLIC);
-            ctPlayer.addField(fConnection, "new org.gotti.wurmunlimited.modcomm.PlayerModConnection()");
+            ctPlayer.addField(fConnection, "new com.garward.wurmmodloader.modcomm.PlayerModConnection()");
 
             CtClass ctCommunicator = classPool.getCtClass("com.wurmonline.server.creatures.Communicator");
             ctCommunicator.getMethod("reallyHandle", "(ILjava/nio/ByteBuffer;)V").instrument(new ExprEditor() {
@@ -71,7 +76,7 @@ public class ModComm {
                     if (m.getMethodName().equals("get") && first) {
                         m.replace("$_ = $proceed($$);" +
                                 "if ($_ == " + ModCommConstants.CMD_MODCOMM + ") {" +
-                                "   org.gotti.wurmunlimited.modcomm.ModCommHandler.handlePacket(player, byteBuffer);" +
+                                "   com.garward.wurmmodloader.modcomm.ModCommHandler.handlePacket(player, byteBuffer);" +
                                 "   return;" +
                                 "}");
                         first = false;

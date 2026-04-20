@@ -9,6 +9,37 @@ package com.garward.wurmmodloader.mods.upgradetree;
  */
 public class UpgradeTreeModifiers {
 
+    /** Vanilla cap — one pet unless an upgrade says otherwise. */
+    public static final int VANILLA_PET_SLOTS = 1;
+
+    // ========================================================================
+    // Pet Class Modifiers
+    // ========================================================================
+
+    /**
+     * Total pet slots the player may own. Vanilla base (1) plus any
+     * {@code max_pet_slots} effect values.
+     */
+    public static int getMaxPetSlots(long playerWurmId) {
+        return VANILLA_PET_SLOTS + UpgradeEffectCalculator.getBonusPetSlots(playerWurmId);
+    }
+
+    /** Outgoing damage multiplier applied to the player's pets. */
+    public static double getPetDamageMultiplier(long playerWurmId) {
+        return UpgradeEffectCalculator.getPetDamageMultiplier(playerWurmId);
+    }
+
+    /** Incoming damage multiplier applied to the player's pets. 1.0 is no change. */
+    public static double getPetDamageTakenMultiplier(long playerWurmId) {
+        return UpgradeEffectCalculator.getPetDamageTakenMultiplier(playerWurmId);
+    }
+
+    /** True iff any unlocked upgrade grants {@code tame_tier_unlock} for this tier. */
+    public static boolean canTameTier(long playerWurmId, String tier) {
+        return UpgradeEffectCalculator.getUnlockedTameTiers(playerWurmId).contains(tier);
+    }
+
+
     // ========================================================================
     // Combat Modifiers
     // ========================================================================

@@ -1,0 +1,15 @@
+# Optional local overrides. Put these in ~/.gradle/gradle.properties (recommended —
+# never enters the repo) OR set the corresponding environment variable.
+#
+# The committed gradle.properties at the repo root only carries shared project
+# settings (group, version, dependency versions). Anything personal goes here.
+
+# Path to your Wurm Unlimited Dedicated Server install. Only needed if you want
+# wurmmodloader-core to compile against the optional ServerPacks API for
+# icon-pack registration; the build prints a warning and skips it otherwise.
+#
+# Steam default on Linux:   ~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server
+# Steam default on Windows: C:/Program Files (x86)/Steam/steamapps/common/Wurm Unlimited Dedicated Server
+wurmServerDir=/absolute/path/to/Wurm Unlimited Dedicated Server
+
+# Equivalent environment variable: WURM_SERVER_DIR

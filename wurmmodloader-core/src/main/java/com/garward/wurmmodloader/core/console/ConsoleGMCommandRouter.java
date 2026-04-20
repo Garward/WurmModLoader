@@ -5,6 +5,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
+import com.garward.wurmmodloader.api.events.server.ServerStartedEvent;
+import com.garward.wurmmodloader.core.event.EventBus;
+
 /**
  * Routes console GM commands to appropriate handlers.
  *
@@ -37,6 +41,42 @@ public class ConsoleGMCommandRouter {
     });
 
     private static volatile boolean initialized = false;
+    private static volatile boolean eventSubscribed = false;
+    private static final ConsoleGMCommandRouter EVENT_SINK = new ConsoleGMCommandRouter();
+
+    /**
+     * Register a ServerStartedEvent subscriber that eagerly initializes the router
+     * so the command banner prints right after server boot (instead of lazily on
+     * first keystroke). Idempotent.
+     */
+    public static synchronized void installEagerInit() {
+        if (eventSubscribed) return;
+        EventBus.getInstance().register(EVENT_SINK);
+        eventSubscribed = true;
+    }
+
+    @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) {
+        initialize();
+        printBanner();
+    }
+
+    private static final java.util.concurrent.atomic.AtomicBoolean bannerPrinted =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    private static void printBanner() {
+        if (!bannerPrinted.compareAndSet(false, true)) return;
+        System.out.println();
+        System.out.println("╔══════════════════════════════════════════════════════════════╗");
+        System.out.println("║                                                              ║");
+        System.out.println("║   CONSOLE GM COMMANDS READY                                  ║");
+        System.out.println("║                                                              ║");
+        System.out.println("║   >>  Type  #help  for the full command list             <<  ║");
+        System.out.println("║   >>  Use   #shutdown <minutes> <reason>  to safe-save   <<  ║");
+        System.out.println("║                                                              ║");
+        System.out.println("╚══════════════════════════════════════════════════════════════╝");
+        System.out.println();
+    }
 
     /**
      * Initialize the command processor.
@@ -60,7 +100,6 @@ public class ConsoleGMCommandRouter {
 
         initialized = true;
         System.out.println("[Console GM] Command router initialized");
-        System.out.println("[Console GM] Type #help for available commands");
     }
 
     /**

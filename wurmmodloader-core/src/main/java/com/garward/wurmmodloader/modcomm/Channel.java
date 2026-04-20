@@ -19,6 +19,16 @@ public class Channel {
         this.listener = listener;
     }
 
+    /** Internal id. Exposed for the legacy compat shim in {@code org.gotti.wurmunlimited.modcomm}. */
+    public int getId() {
+        return id;
+    }
+
+    /** Channel name. */
+    public String getName() {
+        return name;
+    }
+
     /**
      * Send message to a player on this channel. Channel must be active for that player.
      *

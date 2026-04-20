@@ -15,8 +15,8 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # === CONFIG ===
-PROJECT_DIR="/home/garward/Scripts/Games/WurmUnlimited/WurmModLoader"
-SERVER_DIR="$HOME/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server"
+PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SERVER_DIR="${WURM_SERVER_DIR:-$HOME/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server}"
 TEMP_EXTRACT="/tmp/wurmmodloader-deploy-$$"
 
 # Find latest distribution ZIP (auto-detect version)
@@ -107,6 +107,18 @@ for jar in "$TEMP_EXTRACT"/*.jar; do
 done
 
 echo ""
+
+# === SEED FRAMEWORK CONFIG (non-destructive) ===
+# Copy the HTTP subsystem config template if user hasn't created one yet.
+# Never overwrite — preserves user edits across deploys.
+HTTP_CFG_SRC="$PROJECT_DIR/docs/reference/wurmmodloader-http.properties.example"
+HTTP_CFG_DEST="$SERVER_DIR/config/wurmmodloader-http.properties"
+if [ -f "$HTTP_CFG_SRC" ] && [ ! -f "$HTTP_CFG_DEST" ]; then
+    mkdir -p "$(dirname "$HTTP_CFG_DEST")"
+    cp "$HTTP_CFG_SRC" "$HTTP_CFG_DEST"
+    echo -e "  ${GREEN}✓${NC} Seeded config/wurmmodloader-http.properties (edit to customize port/address)"
+    COPIED_FILES=$((COPIED_FILES + 1))
+fi
 
 # === DEPLOY MODS ===
 echo -e "${BLUE}======================================================================${NC}"

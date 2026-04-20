@@ -72,4 +72,7 @@ public final class BytecodeConflictKeys {
     public static final String WEAPON_MATERIAL_PARRY = "weapon.materialParry";
     public static final String WEAPON_MATERIAL_BASH = "weapon.materialBash";
     public static final String WEAPON_BASE_SPEED = "weapon.baseSpeed";
+    public static final String TAME_CHARM = "taming.charm";
+    public static final String TAME_DOMINATE = "taming.dominate";
+    public static final String PET_RELEASED = "taming.petReleased";
 }

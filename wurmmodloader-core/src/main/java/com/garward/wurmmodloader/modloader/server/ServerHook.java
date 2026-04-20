@@ -99,6 +99,46 @@ public class ServerHook {
 	 */
 	private static final boolean DEBUG = Boolean.getBoolean("eventDebug");
 
+	/**
+	 * Per-creature event trace. Pass a comma-separated list of wurmIds via
+	 * {@code -DtraceCreatureIds=12345,67890} (or a single id). When any
+	 * creature-bearing fire method involves a matching id, the framework logs
+	 * the event name and participating creature names. Zero-cost when unset.
+	 */
+	private static final java.util.Set<Long> TRACE_CREATURE_IDS = parseTraceIds();
+
+	private static java.util.Set<Long> parseTraceIds() {
+		String prop = System.getProperty("traceCreatureIds", System.getProperty("traceCreatureId", ""));
+		if (prop == null || prop.isEmpty()) {
+			return java.util.Collections.emptySet();
+		}
+		java.util.Set<Long> ids = new java.util.HashSet<>();
+		for (String part : prop.split(",")) {
+			try {
+				ids.add(Long.parseLong(part.trim()));
+			} catch (NumberFormatException ignored) {
+			}
+		}
+		return ids;
+	}
+
+	private static void traceCreature(String eventName, com.wurmonline.server.creatures.Creature... participants) {
+		if (TRACE_CREATURE_IDS.isEmpty() || participants == null) {
+			return;
+		}
+		for (com.wurmonline.server.creatures.Creature c : participants) {
+			if (c != null && TRACE_CREATURE_IDS.contains(c.getWurmId())) {
+				StringBuilder names = new StringBuilder();
+				for (com.wurmonline.server.creatures.Creature p : participants) {
+					if (names.length() > 0) names.append(", ");
+					names.append(p == null ? "null" : p.getName() + "#" + p.getWurmId());
+				}
+				logger.info("[CreatureTrace " + c.getWurmId() + "] " + eventName + " [" + names + "]");
+				return;
+			}
+		}
+	}
+
 	// Rate limiting for high-frequency events (to prevent log spam)
 	private static final java.util.concurrent.ConcurrentHashMap<String, EventCounter> eventCounters =
 		new java.util.concurrent.ConcurrentHashMap<>();
@@ -225,6 +265,9 @@ public class ServerHook {
 		com.garward.wurmmodloader.capabilities.WMLCapabilitiesChannel.initialize();
 		logger.info("[ServerHook] DEBUG: WML_CAPABILITIES channel initialized");
 
+		// Initialize wml.serverinfo channel for server URL auto-discovery
+		com.garward.wurmmodloader.core.serverinfo.ServerInfoChannel.initialize();
+
 		// Initialize capability system (Phase 5.5)
 		logger.info("[ServerHook] DEBUG: Initializing CapabilityManager");
 		com.garward.wurmmodloader.core.capability.CapabilityManager.getInstance().initialize();
@@ -334,6 +377,9 @@ public class ServerHook {
 		logger.info("[ServerHook] DEBUG: Sending server capabilities to " + player.getName());
 		com.garward.wurmmodloader.capabilities.WMLCapabilitiesChannel.sendCapabilitiesToPlayer(player);
 
+		// Send framework-level server info (HTTP URI, version)
+		com.garward.wurmmodloader.core.serverinfo.ServerInfoChannel.sendToPlayer(player);
+
 		// Event testing (if enabled and mode is ON_PLAYER_LOGIN)
 		if (Boolean.getBoolean("wurmmodloader.test.events")) {
 			String modeStr = System.getProperty("wurmmodloader.test.events.mode", "ON_SERVER_START");
@@ -398,6 +444,7 @@ public class ServerHook {
 
 	public void fireCreatureDeath(com.wurmonline.server.creatures.Creature victim,
 	                              com.wurmonline.server.creatures.Creature killer) {
+		traceCreature("CreatureDeathEvent", victim, killer);
 		if (DEBUG) {
 			logger.info(String.format("[Event] CreatureDeathEvent: victim=%s (player=%s), killer=%s (player=%s)",
 				victim.getName(), victim.isPlayer(),
@@ -413,8 +460,48 @@ public class ServerHook {
 		}
 	}
 
+	public boolean fireTameAttempt(com.wurmonline.server.creatures.Creature performer,
+	                                com.wurmonline.server.creatures.Creature target,
+	                                com.garward.wurmmodloader.api.events.creature.TameAttemptEvent.Source source) {
+		traceCreature("TameAttemptEvent", performer, target);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TameAttemptEvent: performer=%s, target=%s, source=%s",
+				performer.getName(), target.getName(), source));
+		}
+		com.garward.wurmmodloader.api.events.creature.TameAttemptEvent event =
+			new com.garward.wurmmodloader.api.events.creature.TameAttemptEvent(performer, target, source);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	public void fireTameComplete(com.wurmonline.server.creatures.Creature performer,
+	                              com.wurmonline.server.creatures.Creature target,
+	                              com.garward.wurmmodloader.api.events.creature.TameAttemptEvent.Source source,
+	                              double power) {
+		traceCreature("TameCompleteEvent", performer, target);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TameCompleteEvent: performer=%s, target=%s, source=%s, power=%.2f",
+				performer.getName(), target.getName(), source, power));
+		}
+		eventBus.post(new com.garward.wurmmodloader.api.events.creature.TameCompleteEvent(
+			performer, target, source, power));
+	}
+
+	public void firePetReleased(com.wurmonline.server.creatures.Creature pet,
+	                             long formerOwnerId,
+	                             com.garward.wurmmodloader.api.events.creature.PetReleasedEvent.Reason reason) {
+		traceCreature("PetReleasedEvent", pet);
+		if (DEBUG) {
+			logger.info(String.format("[Event] PetReleasedEvent: pet=%s, formerOwnerId=%d, reason=%s",
+				pet.getName(), formerOwnerId, reason));
+		}
+		eventBus.post(new com.garward.wurmmodloader.api.events.creature.PetReleasedEvent(
+			pet, formerOwnerId, reason));
+	}
+
 	public String fireCreatureExamine(com.wurmonline.server.creatures.Creature creature,
 	                                  String examineText) {
+		traceCreature("CreatureExamineEvent", creature);
 		// Post modern event
 		com.garward.wurmmodloader.api.events.creature.CreatureExamineEvent event =
 			new com.garward.wurmmodloader.api.events.creature.CreatureExamineEvent(creature, examineText);
@@ -429,6 +516,7 @@ public class ServerHook {
 	                               double damage,
 	                               byte woundType,
 	                               int bodyPart) {
+		traceCreature("CombatDamageEvent", attacker, defender);
 		if (DEBUG) {
 			EventCounter counter = eventCounters.computeIfAbsent("CombatDamageEvent", k -> new EventCounter());
 			if (counter.shouldLog()) {
@@ -453,6 +541,7 @@ public class ServerHook {
 	}
 
 	public void fireCreatureSpawn(com.wurmonline.server.creatures.Creature creature) {
+		traceCreature("CreatureSpawnEvent", creature);
 		if (DEBUG) {
 			logger.info(String.format("[Event] CreatureSpawnEvent: creature=%s (player=%s, template=%s)",
 				creature.getName(), creature.isPlayer(),
@@ -469,6 +558,7 @@ public class ServerHook {
 
 	public void fireCreaturePositionUpdated(com.wurmonline.server.creatures.Creature creature,
 	                                         float x, float y, float z, float rot, long bridgeId) {
+		traceCreature("CreaturePositionUpdatedEvent", creature);
 		if (DEBUG) {
 			logger.info(String.format("[Event] CreaturePositionUpdatedEvent: creature=%s, pos=(%.2f, %.2f, %.2f), rot=%.2f, bridgeId=%d",
 				creature.getName(), x, y, z, rot, bridgeId));
@@ -484,6 +574,7 @@ public class ServerHook {
 	}
 
 	public void fireCreatureDbSave(com.wurmonline.server.creatures.Creature creature) {
+		traceCreature("CreatureDbSaveEvent", creature);
 		if (DEBUG) {
 			logger.info(String.format("[Event] CreatureDbSaveEvent: creature=%s (wurmId=%d)",
 				creature.getName(), creature.getWurmId()));
@@ -505,6 +596,7 @@ public class ServerHook {
 
 	public void fireCreatureDbLoad(com.wurmonline.server.creatures.Creature creature,
 	                                java.sql.ResultSet resultSet) {
+		traceCreature("CreatureDbLoadEvent", creature);
 		if (DEBUG) {
 			logger.info(String.format("[Event] CreatureDbLoadEvent: creature=%s (wurmId=%d)",
 				creature.getName(), creature.getWurmId()));
@@ -680,6 +772,7 @@ public class ServerHook {
 	                                  short breedType,
 	                                  com.wurmonline.server.behaviours.Action action,
 	                                  float counter) {
+		traceCreature("CreatureBreedEvent", performer, target);
 		if (DEBUG) {
 			logger.info(String.format("[Event] CreatureBreedEvent: performer=%s, target=%s, breedType=%d, counter=%.2f",
 				performer.getName(), target.getName(), breedType, counter));
@@ -813,6 +906,7 @@ public class ServerHook {
 	                                           boolean opportunity,
 	                                           float actionCounter,
 	                                           com.wurmonline.server.behaviours.Action action) {
+		traceCreature("CombatAttackEvent", attacker, defender);
 		// Post modern event
 		com.garward.wurmmodloader.api.events.combat.CombatAttackEvent event =
 			new com.garward.wurmmodloader.api.events.combat.CombatAttackEvent(
@@ -821,20 +915,6 @@ public class ServerHook {
 
 		// Return result with cancellation status
 		return new CombatAttackResult(event.isCancelled(), event.getResult());
-	}
-
-	/**
-	 * Result holder for CombatAttackEvent.
-	 * Used to communicate both cancellation status and attack result back to bytecode.
-	 */
-	public static class CombatAttackResult {
-		public final boolean cancelled;
-		public final boolean attackResult;
-
-		public CombatAttackResult(boolean cancelled, boolean attackResult) {
-			this.cancelled = cancelled;
-			this.attackResult = attackResult;
-		}
 	}
 
 	public boolean fireSpecialMoveSend(com.wurmonline.server.creatures.Creature creature) {

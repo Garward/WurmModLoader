@@ -23,8 +23,18 @@ dependencies {
     compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
     compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
 
-    // ServerPacks API (compile-only for icon pack registration)
-    compileOnly(files("/home/garward/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/mods/serverpacks/serverpacks.jar"))
+    // ServerPacks API (compile-only for icon pack registration).
+    // Optional: skipped if WURM_SERVER_DIR / wurmServerDir isn't set or the jar isn't present.
+    val wurmServerDir = (project.findProperty("wurmServerDir") as String?)
+        ?: System.getenv("WURM_SERVER_DIR")
+    if (wurmServerDir != null) {
+        val serverpacksJar = file("$wurmServerDir/mods/serverpacks/serverpacks.jar")
+        if (serverpacksJar.exists()) {
+            compileOnly(files(serverpacksJar))
+        } else {
+            logger.warn("ServerPacks jar not found at $serverpacksJar — icon-pack registration will not compile.")
+        }
+    }
 
     // Test dependencies for Wurm classes
     testImplementation("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")

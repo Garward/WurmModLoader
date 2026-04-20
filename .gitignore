@@ -186,6 +186,12 @@ gen/
 local.properties
 config/local.yaml
 
+# Personal / system-specific overrides — never commit
+gradle.properties.local
+!gradle.properties.example
+CLAUDE.md
+.claude/
+
 # ─────────────── Wurm Unlimited local compile jars ───────────────
 # Do not commit the game’s own jars under any circumstances.
 distribution/server.jar
@@ -197,3 +203,9 @@ server.jar
 build/
 out/
 .gradle/
+
+# Code index JSONs (regenerate with `codeindex regen` / `wurmquery regen`)
+code_index.json
+wurm_server_index.json
+wurm_client_index.json
+folder_index.json

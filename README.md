@@ -11,16 +11,15 @@ WurmModLoader is a modern, extensible modding framework for Wurm Unlimited serve
 
 ## 🎯 Project Status
 
-**Current Phase**: Phase 7 – Event Logic & Diagnostics ✅ COMPLETE
-**Version**: 0.9.0
-**Stability**: ✅ **STABLE** - Release Candidate (Nov 11, 2025)
+**Version**: 0.9.1 — Release Candidate
 
-✅ **Core Infrastructure Complete** – Legacy compatibility + new runtime subsystems
-✅ **Native Launcher & Patcher** – GUI/headless launchers, patched bootstrap, diagnostic flags
-✅ **Event Bus / Registries** – Annotation-driven events with automatic legacy bridge + runtime registries
-✅ **EventLogic Modules** – Data-driven materials + combat timing helpers ready for Armory/DuskCombat workloads
-✅ **Diagnostic Tooling** – Structured logs, patch error dumps, `--continue-on-patch-error` for sweep runs
-✅ **Dual Interface Support** – Both modern and legacy interfaces work seamlessly (v0.9.0+)
+The framework is feature-complete and in the polish phase. See [`Architecture.MD`](Architecture.MD) for the module map and [`PROJECT_STATE.md`](PROJECT_STATE.md) for the current state audit.
+
+- ✅ **Core Infrastructure** — Legacy compatibility + modern runtime subsystems
+- ✅ **Native Launcher & Patcher** — GUI/headless launchers, patched bootstrap, diagnostic flags
+- ✅ **Event Bus / Registries** — 98 annotation-driven events with automatic legacy bridge
+- ✅ **Bytecode patch pipeline** — 57 patches with conflict detection and `--continue-on-patch-error`
+- ✅ **Dual Interface Support** — Modern `@SubscribeEvent` and legacy listeners both work
 
 ## ✨ Features
 
@@ -46,20 +45,29 @@ WurmModLoader is a modern, extensible modding framework for Wurm Unlimited serve
 
 - **Java 17 or later** (GraalVM recommended, Adoptium works great)
 - **Wurm Unlimited Dedicated Server** (version 4596061+)
-- **Wurm server location**: Usually at `~/.local/share/Steam/steamapps/common/Wurm Unlimited/WurmServerLauncher/`
+- **Wurm server location** — defaults:
+  - **Windows:** `C:\Program Files (x86)\Steam\steamapps\common\Wurm Unlimited Dedicated Server\`
+  - **Linux:**   `~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/`
+
+> **Windows users:** every shell command shown in this README has a Windows
+> equivalent. Replace `./build.sh`, `./deploy.sh`, `./build-and-deploy.sh`,
+> and `./gradlew` with `build.bat`, `deploy.bat`, `build-and-deploy.bat`,
+> and `gradlew.bat` respectively. Run them from a regular `cmd.exe` /
+> PowerShell window in the repo root. Set `WURM_SERVER_DIR` if your server
+> lives somewhere other than the Steam default.
 
 ### Installation
 
 1. **Download the latest release**
    ```bash
-   wget https://github.com/garward/WurmModLoader/releases/latest/download/wurmmodloader-1.0.0-SNAPSHOT.zip
-   # Or build from source: ./gradlew dist
+   wget https://github.com/garward/WurmModLoader/releases/latest/download/WurmModloader-Runtime-0.9.1.zip
+   # Or build from source: ./build.sh   (runs ./gradlew clean build dist)
    ```
 
 2. **Extract to your Wurm server directory**
    ```bash
-   cd ~/.local/share/Steam/steamapps/common/Wurm\ Unlimited/WurmServerLauncher/
-   unzip /path/to/WurmModloader-Server-0.9.0
+   cd ~/.local/share/Steam/steamapps/common/Wurm\ Unlimited\ Dedicated\ Server/
+   unzip /path/to/WurmModloader-Runtime-0.9.1.zip
    ```
 
 3. **Launch your server**
@@ -285,6 +293,7 @@ cd WurmModLoader
 - **[NOTICE.md](NOTICE.md)** - Attribution and licenses
 
 ### Technical Documentation
+- **[docs/reference/console-commands.md](docs/reference/console-commands.md)** - `#`-prefixed server console GM commands (safe shutdown, player/item/creature ops)
 - **[MOD_LOADING_DISCOVERY_REPORT.md](MOD_LOADING_DISCOVERY_REPORT.md)** - Deep dive into mod loading architecture
 - **[MODERNIZATION_PLAN_AUDIT.md](MODERNIZATION_PLAN_AUDIT.md)** - Critical analysis of design gaps
 - **[WURMMODLOADER_MODERNIZATION_PLAN.md](WURMMODLOADER_MODERNIZATION_PLAN.md)** - Complete technical roadmap

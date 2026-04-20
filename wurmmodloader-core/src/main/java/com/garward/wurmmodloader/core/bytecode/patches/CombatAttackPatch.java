@@ -54,7 +54,7 @@ public final class CombatAttackPatch implements BytecodePatch {
             StringBuilder code = new StringBuilder();
             code.append("{\n");
             code.append("    try {\n");
-            code.append("        com.garward.wurmmodloader.modloader.server.ServerHook$CombatAttackResult result = ")
+            code.append("        com.garward.wurmmodloader.modloader.server.CombatAttackResult result = ")
                 .append(ProxyServerHook.class.getName())
                 .append(".fireCombatAttackEvent(this.creature, $1, $2, $3, $4, $5);\n");
             code.append("        if (result.cancelled) {\n");

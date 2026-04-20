@@ -25,7 +25,7 @@ import com.wurmonline.server.items.ItemTemplateFactory;
 import com.wurmonline.server.items.ItemTypes;
 import com.wurmonline.server.items.Materials;
 import com.wurmonline.server.skills.SkillList;
-import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
+import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 
 import java.io.IOException;
 import java.util.Locale;

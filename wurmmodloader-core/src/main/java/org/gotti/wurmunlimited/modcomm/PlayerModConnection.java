@@ -1,44 +1,43 @@
 package org.gotti.wurmunlimited.modcomm;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Connection information for a player
+ * Legacy compat wrapper over
+ * {@link com.garward.wurmmodloader.modcomm.PlayerModConnection}. Exists only so
+ * legacy Ago-style mods that reference {@code org.gotti...PlayerModConnection}
+ * keep compiling. State is held by the garward connection.
  */
 public class PlayerModConnection {
-    private boolean active;
-    private byte version;
-    private Set<Channel> channels;
+    private final com.garward.wurmmodloader.modcomm.PlayerModConnection delegate;
 
+    PlayerModConnection(com.garward.wurmmodloader.modcomm.PlayerModConnection delegate) {
+        this.delegate = delegate;
+    }
+
+    /** Default-construct: only used if a legacy caller instantiates directly. */
     public PlayerModConnection() {
-        active = false;
-        version = -1;
+        this.delegate = new com.garward.wurmmodloader.modcomm.PlayerModConnection();
     }
 
-    void activate(byte version, Set<Channel> channels) {
-        this.active = true;
-        this.version = version;
-        this.channels = channels;
-    }
-
-    /**
-     * @return true if player has the client mod launcher loaded and can receive messages
-     */
     public boolean isActive() {
-        return active;
+        return delegate.isActive();
     }
 
-    /**
-     * @return protocol version supported by this player
-     */
     public byte getVersion() {
-        return version;
+        return delegate.getVersion();
     }
 
-    /**
-     * @return set of channel ids active for this player
-     */
     public Set<Channel> getChannels() {
-        return channels;
+        Set<com.garward.wurmmodloader.modcomm.Channel> gw = delegate.getChannels();
+        if (gw == null) return Collections.emptySet();
+        Set<Channel> out = new LinkedHashSet<>(gw.size());
+        for (com.garward.wurmmodloader.modcomm.Channel ch : gw) {
+            Channel legacy = ModComm.idMap.get(ch.getId());
+            if (legacy != null) out.add(legacy);
+        }
+        return out;
     }
 }

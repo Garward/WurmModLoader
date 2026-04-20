@@ -168,7 +168,7 @@ public class OversizedClubMod implements WurmServerMod {
 
 1. **Copy distribution to test server:**
    ```bash
-   cd "/home/garward/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server"
+   cd "<wurm-server-dir>"   # e.g. C:\Program Files (x86)\Steam\steamapps\common\Wurm Unlimited Dedicated Server
    unzip /path/to/oversizedclub-1.0.0.zip
    ```
 

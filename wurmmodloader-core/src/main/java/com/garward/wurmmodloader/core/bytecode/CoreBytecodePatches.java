@@ -17,7 +17,9 @@ import com.garward.wurmmodloader.core.bytecode.patches.CombatSwingSpeedPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CommunicatorChannelPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CommunicatorMessagePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ContainerVolumePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CharmAnimalPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureBreedPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.DominatePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureDeathPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreaturePositionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureSpawnPatch;
@@ -76,6 +78,8 @@ public final class CoreBytecodePatches {
         new BodyPartModActionsPatch(),
         new CreatureDeathPatch(),
         new CreatureBreedPatch(),
+        new CharmAnimalPatch(),
+        new DominatePatch(),
         new CropHarvestPatch(),  // Rewritten to use ExprEditor instead of fragile insertAt()
         new CropGrowthPatch(),
         new CombatAttackPatch(),

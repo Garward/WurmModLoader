@@ -10,6 +10,9 @@ include(
 )
 
 // Example mods
+include("examples:hellomod")
+project(":examples:hellomod").projectDir = file("examples/hellomod")
+
 include("examples:oversizedclub")
 project(":examples:oversizedclub").projectDir = file("examples/oversizedclub")
 

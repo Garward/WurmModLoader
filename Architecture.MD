@@ -1,259 +1,182 @@
-Absolutely — here’s a clean, ready-to-paste **Markdown version** of that architecture guide, fully formatted for a `.md` file:
+# WurmModLoader — Architecture
+
+A map of **where everything is** and **how the pieces connect**. For hands-on guides see [`docs/`](docs/README.md). For current project status see [`PROJECT_STATE.md`](PROJECT_STATE.md). For the canonical mod example see [`examples/oversizedclub/`](examples/oversizedclub/).
 
 ---
 
-```markdown
-# 🎓 WurmModLoader Architecture — Complete Guide
+## What this project is
 
-Let’s walk through everything that’s been built and how it all fits together!
+A from-scratch modloader for **Wurm Unlimited Dedicated Server**, built on top of a fork of Ago's `WurmServerModLauncher`. Not a patch set — a full replacement with a clean event-driven API, a capability system, a bytecode-patch pipeline, and a legacy compatibility bridge so older Ago-era mods still load.
+
+Current scale (regenerate with `codeindex regen` + `wurmquery regen`):
+- **591** Java files, **1,222** classes, **4,495** methods across the framework
+- **57** bytecode patches
+- **98** API event types
+- **5** bundled showcase mods
 
 ---
 
-## 📂 Directory Structure
+## Module map
+
+Multi-module Gradle build (`settings.gradle.kts`). One JAR per module.
+
+| Module | Role | Depends on Wurm? |
+|---|---|---|
+| **`wurmmodloader-api`** | Pure interfaces & event classes that mods compile against. No implementation, no Wurm imports. | No |
+| **`wurmmodloader-core`** | **The engine.** Classloader control, Javassist bytecode pipeline, event bus, mod discovery, lifecycle orchestration, `ServerHook`/`ProxyServerHook`, capability system, ModComm subsystem, HTTP-server subsystem, all direct `com.wurmonline.*` references live here. | Yes |
+| **`wurmmodloader-modsupport`** | Higher-level helper APIs — `CreatureTemplateBuilder`, `ItemTemplateBuilder`, BML UI helpers, loot/vehicle utilities. Optional for mods. | Yes (via core) |
+| **`wurmmodloader-legacy`** | Compatibility shim that bridges the old `org.gotti.wurmunlimited.*` package namespace to the new framework, so Ago-era mods run unchanged. | Yes |
+| **`wurmmodloader-cli`** | picocli-based CLI tooling (mod inspection, diagnostics). | No |
+| `wurmmodloader-patcher` | *Disabled* — client-only JAR patcher. Commented out in `settings.gradle.kts`; source retained for when client modloader work resumes. | — |
+
+**Golden rule:** `com.wurmonline.*` imports are allowed only in `wurmmodloader-core`. Everything else (mods, modsupport helpers) talks to the game through events, the capability system, or reflection-safe wrappers.
+
+---
+
+## Bundled mods (`mods/`)
+
+Each mod is its own Gradle sub-project. Build output lands in `mods/<name>/build/libs/<name>.jar`.
+
+| Mod | Purpose |
+|---|---|
+| `powerscaling` | Power-fantasy scaling: stats, healing v2, metal loot |
+| `soulboundgear` | Gear that binds to the player who attunes it |
+| `upgradetree` | In-world UI for picking upgrade paths |
+| `materialsystem` | Damage types & material behavior overhaul |
+| `eventlister` | Diagnostic mod that prints fired events — useful when exploring the event catalog |
+
+---
+
+## Examples (`examples/`)
+
+| Path | What it shows |
+|---|---|
+| **`oversizedclub/`** | **Canonical tutorial mod.** Heavily commented, intentionally simple mechanic (bigger club = harder hits). Read this first when you're new to the framework. |
+| `templatemod/` | Bare-bones skeleton to copy when starting a new mod |
+| `basic-item-mod/` | Registering a custom item |
+| `custom-creature/` | Defining a custom creature template |
+| `action-system/` | Hooking into the action/interaction system |
+
+---
+
+## Boot sequence
 
 ```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. User runs server start script                           │
+│    →  java -cp wurmmodloader-core.jar:...                  │
+│          com.garward.wurmmodloader.serverlauncher.ServerLauncher
+└────────────────────────────────┬────────────────────────────┘
+                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. ServerLauncher (wurmmodloader-core)                     │
+│    Installs Javassist Loader, delegates javafx/javassist   │
+│    packages, runs DelegatedLauncher through it so class    │
+│    loading is intercepted BEFORE Wurm classes resolve.     │
+└────────────────────────────────┬────────────────────────────┘
+                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. DelegatedLauncher                                       │
+│    • CapabilityHooks.installHooks()                        │
+│    • ServerHook.createServerHook()   ← single Wurm hook    │
+│    • ModLoader.loadModsFromModDir(Paths.get("mods"))       │
+│    • SystemBootstrap.initializeAll()                       │
+│    • Hands off to com.wurmonline.server.ServerLauncher     │
+└────────────────────────────────┬────────────────────────────┘
+                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. Wurm boots. Patched classes load. Mods receive events   │
+│    through the EventBus as gameplay unfolds.               │
+└─────────────────────────────────────────────────────────────┘
+```
 
-WurmModLoader/
-├── wurmmodloader-api/           # Public interfaces mods depend on
-│   └── src/main/java/
-│       ├── com/garward/wurmmodloader/api/
-│       │   ├── event/           # Event system (ServerStartedEvent, etc.)
-│       │   ├── registry/        # Registry system (ResourceLocation, etc.)
-│       │   └── capability/      # Capability system
-│       └── org/gotti/wurmunlimited/modloader/interfaces/
-│           ├── WurmServerMod.java      # Main mod interface
-│           ├── Configurable.java       # Mods with config files
-│           ├── PreInitable.java        # Mods needing early init
-│           ├── Initable.java           # Mods with init phase
-│           └── Versioned.java          # Version info
-│
-├── wurmmodloader-core/          # Framework implementation (THE HEART)
-│   └── src/main/java/com/garward/wurmmodloader/
-│       ├── modloader/
-│       │   ├── ModLoader.java           # 🔥 NEW: Main loader
-│       │   ├── ModDiscovery.java        # 🔥 NEW: Flexible mod discovery
-│       │   └── internal/                # 🔥 NEW: Vendored Ago’s classes
-│       │       ├── ModInfo.java         # Mod metadata
-│       │       ├── ModInstanceBuilder.java  # Creates mod instances
-│       │       ├── DefrostingClassLoader.java
-│       │       ├── ReflectionUtil.java
-│       │       ├── JoinClassLoader.java
-│       │       ├── classhooks/          # Javassist integration
-│       │       │   ├── HookManager.java # Manages bytecode hooks
-│       │       │   ├── HookException.java
-│       │       │   └── ...
-│       │       └── dependency/          # Dependency resolution
-│       │           ├── DependencyResolver.java
-│       │           ├── DependencyProvider.java
-│       │           └── ...
-│       ├── serverlauncher/
-│       │   ├── ServerLauncher.java      # Entry point
-│       │   └── DelegatedLauncher.java   # Boot sequence
-│       ├── core/
-│       │   ├── event/           # EventBus implementation
-│       │   ├── registry/        # Registry implementation
-│       │   ├── bytecode/        # BytecodePatch system
-│       │   └── capability/      # Capability system
-│       └── modcomm/             # Mod communication system
-│
-├── wurmmodloader-modsupport/    # Helper utilities for mods
-│   └── ItemTemplateBuilder, CreatureTemplateBuilder, etc.
-│
-└── wurmmodloader-legacy/        # Backward compatibility shim
-└── Bridges old org.gotti.* package names
+**Mod discovery** (in `ModDiscovery`) tries four strategies in order:
+1. Legacy subfolder (`mods/<name>/<name>.jar` + sibling `.properties`)
+2. Flat properties file
+3. **Modern flat** — `mods/<name>.jar` with embedded properties
+4. Subfolder without `.properties`
 
-````
+**Mod lifecycle:** dependencies resolved via topological sort, then `configure()` → `preInit()` → `init()` — each phase runs across all mods before the next starts.
 
 ---
 
-## 🚀 Boot Sequence (How It All Starts)
+## Key subsystems (where to look)
 
-### 1️⃣ `wurmmodloader.sh` Script
-```bash
-# User runs:
-./wurmmodloader.sh
-# Script does:
-java -cp "wurmmodloader-api.jar:wurmmodloader-core.jar:..." \
-     com.garward.wurmmodloader.serverlauncher.ServerLauncher
-````
+| Subsystem | Where |
+|---|---|
+| **Event definitions** (98 events) | `wurmmodloader-api/src/main/java/com/garward/wurmmodloader/api/events/` |
+| **Event bus** | `wurmmodloader-core/.../core/event/` |
+| **Bytecode patches** (57 patches) | `wurmmodloader-core/.../core/bytecode/patches/` |
+| **`ServerHook` / `ProxyServerHook`** | `wurmmodloader-core/.../core/hooks/` — the single point of contact between the framework and Wurm's server |
+| **Capability system** | `wurmmodloader-core/.../core/capability/` + `CAPABILITY_SYSTEM.md` inside |
+| **ModComm subsystem** (inter-mod packet channels) | `wurmmodloader-core/.../modcomm/` + `wurmmodloader-api/.../api/modcomm/` |
+| **HTTP server subsystem** (graphics-pack delivery, mod HTTP endpoints) | `wurmmodloader-core/.../httpserver/` + `wurmmodloader-api/.../api/httpserver/ModHttpServer.java` — config at `<server>/config/wurmmodloader-http.properties` (alongside vanilla's `logging.properties`; seeded by `deploy.sh`; template at `docs/reference/wurmmodloader-http.properties.example`) |
+| **Console GM commands** (`#`-prefixed stdin commands, safe shutdown) | `wurmmodloader-core/.../core/console/` — `ConsoleGMCommandRouter`, `GMCommandDiscovery`, `GMCommandAutoInvoker`. Full reference: [`docs/reference/console-commands.md`](docs/reference/console-commands.md) |
+| **Mod discovery & loader** | `wurmmodloader-core/.../modloader/` |
+| **Javassist / HookManager** | `wurmmodloader-core/.../modloader/internal/classhooks/` |
+| **Legacy `org.gotti.*` bridge** | `wurmmodloader-legacy/` |
+| **BML UI helpers** | `wurmmodloader-modsupport/.../bml/` (see [`docs/guides/bml-ui.md`](docs/guides/bml-ui.md)) |
 
-### 2️⃣ `ServerLauncher.main()` (wurmmodloader-core)
+---
 
+## How a mod plugs in
+
+A mod is a JAR containing a class implementing `WurmServerMod` (plus optionally `Configurable`, `PreInitable`, `Initable`, `Versioned`).
+
+Modern (recommended) event handling — from `docs/guides/event-bus.md`:
 ```java
-// Location: wurmmodloader-core/.../ServerLauncher.java
-public static void main(String[] args) {
-    Loader loader = HookManager.getInstance().getLoader();
-    loader.delegateLoadingOf("javafx.");
-    loader.delegateLoadingOf("javassist.");
-    loader.run("com.garward.wurmmodloader.serverlauncher.DelegatedLauncher", args);
+public class MyMod implements WurmServerMod {
+    @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) { ... }
 }
 ```
 
-Why?
-We intercept class loading **before Wurm boots**, so Javassist can patch classes.
-
-### 3️⃣ `DelegatedLauncher.main()` (wurmmodloader-core)
-
+Legacy listener-style (still supported via the legacy bridge):
 ```java
-// Location: wurmmodloader-core/.../DelegatedLauncher.java
-public static void main(String[] args) {
-    CapabilityHooks.installHooks();
-    ServerHook serverHook = ServerHook.createServerHook();
-    ModLoader modLoader = new ModLoader();
-    List<ModEntry> mods = modLoader.loadModsFromModDir(Paths.get("mods"));
-    serverHook.addMods(mods);
-    SystemBootstrap.initializeAll();
-    HookManager.getInstance().getLoader()
-               .run("com.wurmonline.server.ServerLauncher", args);
+public class MyMod implements WurmServerMod, ServerStartedListener {
+    @Override public void onServerStarted() { ... }
 }
 ```
 
----
-
-## 🔍 The New Mod Discovery System
-
-**`ModDiscovery.java` – the star of the show**
-
-```java
-public List<ModInfo> discoverMods(Path modDir) throws IOException {
-    discoveredMods.addAll(discoverLegacySubfolderMods(modDir, handledMods));
-    discoveredMods.addAll(discoverFlatPropertiesMods(modDir, handledMods));
-    discoveredMods.addAll(discoverModernFlatMods(modDir, handledMods)); // ← key
-    discoveredMods.addAll(discoverSubfolderWithoutProperties(modDir, handledMods));
-    return discoveredMods;
-}
-```
-
-Phase 3 (Modern Flat):
-
-```java
-private List<ModInfo> discoverModernFlatMods(Path modDir, Set<String> handledMods) {
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(modDir, "*.jar")) {
-        for (Path jarFile : stream) {
-            String fileName = jarFile.getFileName().toString();
-            String modName = extractModNameFromJar(fileName);
-            Properties props = loadPropertiesFromJar(modName, jarFile);
-            if (props.containsKey("classname")) {
-                ModInfo modInfo = loadModFromInfo(modName, null, jarFile, props);
-                mods.add(modInfo);
-            }
-        }
-    }
-    return mods;
-}
-```
+For the full walkthrough, read `examples/oversizedclub/` top to bottom — it's deliberately over-commented for exactly this purpose.
 
 ---
 
-## 🏗 The New ModLoader (Complete Rewrite)
+## Adding a new event type
 
-**`ModLoader.java` – your independent loader**
-
-```java
-public class ModLoader implements Versioned {
-    private final ModDiscovery modDiscovery;
-
-    public List<ModEntry<WurmServerMod>> loadModsFromModDir(Path modDir) {
-        List<ModInfo> unorderedMods = modDiscovery.discoverMods(modDir);
-
-        List<ModEntry> mods = new DependencyResolver()
-            .provided(Collections.singleton("modloader"))
-            .order(unorderedMods)
-            .stream()
-            .map(modInfo -> entryBuilder.createModEntry(modInfo))
-            .collect(Collectors.toList());
-
-        // Lifecycle sequence
-        mods.stream().filter(m -> m instanceof Configurable)
-            .forEach(m -> m.configure(properties));
-
-        this.modcommInit();
-        mods.stream().filter(m -> m instanceof PreInitable)
-            .forEach(m -> m.preInit());
-        this.preInit();
-        mods.stream().filter(m -> m instanceof Initable)
-            .forEach(m -> m.init());
-        this.init();
-
-        return mods;
-    }
-}
-```
+1. If a bytecode patch is needed, add it under `wurmmodloader-core/.../core/bytecode/patches/`
+2. Add the event class under `wurmmodloader-api/.../api/events/`
+3. Install the hook in `ProxyServerHook` (framework-side)
+4. Add a fire method in `ServerHook`
+5. (Optional) Put complex dispatch / resolver / util logic in `wurmmodloader-core/.../core/eventlogic/<area>/`
+6. Build & deploy: `./build-and-deploy.sh`
+7. Regenerate the code index: `codeindex regen`
+8. Convert any mods that should use it
 
 ---
 
-## 📦 Vendored Classes (`internal/`)
+## Development workflow
 
-Classes copied from `modloader-shared-0.18.jar`, giving you full ownership:
+| Task | Command |
+|---|---|
+| Build all modules + distribution zip | `./build.sh` |
+| Deploy (changed JARs only) to live server | `./deploy.sh` |
+| Build + deploy in one shot | `./build-and-deploy.sh` |
+| Search framework code | `codeindex search <term>` / `codeindex pattern event_handlers` |
+| Search vanilla Wurm (decompiled) | `wurmquery search <term>` (server) / `wurmquery client search <term>` |
+| Regen framework index | `codeindex regen` |
+| Regen vanilla indexes | `wurmquery regen server` / `wurmquery regen client` |
+| Check index ages | `codeindex status` / `wurmquery status` |
 
-* `HookManager.java` — manages Javassist ClassPool & Loader
-* `DependencyResolver.java` — topological dependency sort
-* `ModInfo.java` — mod metadata
-* `ModInstanceBuilder.java` — safe instance creation
-* `JoinClassLoader.java`, `ReflectionUtil.java`, `DefrostingClassLoader.java`
-
----
-
-## 🎯 Example: Loading Armoury Mod
-
-1. `/mods/wurmmodloader-armoury-0.8.0.jar`
-2. `ModDiscovery` finds it via modern flat phase
-3. Reads metadata from `META-INF/.../armoury.properties`
-4. Builds `ModInfo` → resolves dependencies → instantiates mod
-5. Lifecycle executes (`configure`, `preInit`, `init`)
-6. Mod active and registered
+Server location: `~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/`
+Server logs: `logs/` and `<WORLDNAME>/Logs/` under the server root.
 
 ---
 
-## 🔧 Status
+## Cross-repo references
 
-✅ Done
-
-* ModDiscovery (flexible discovery)
-* ModLoader (rewritten)
-* ModInfo (ours)
-* Vendored classes
-
-⚠ In Progress
-
-* Clean up vendored syntax issues
-* Remove `modloader-shared` dependency
-
-🚧 Next
-
-* Test subfolder + flat mod loading
-* Validate Armoury mod detection
-* Deploy to live server
-
----
-
-## 📊 Old vs New
-
-| Feature           | Old (Ago)            | New (Modern)               |
-| ----------------- | -------------------- | -------------------------- |
-| Discovery         | Hardcoded subfolders | 4-phase flexible discovery |
-| Flat JARs         | ❌ No                 | ✅ Yes                      |
-| Version stripping | ❌ No                 | ✅ Yes                      |
-| Source control    | External JAR         | Vendored source            |
-| Architecture      | Inheritance          | Composition                |
-| Maintainability   | Read-only            | Full ownership             |
-
----
-
-## 🎓 Key Learnings
-
-1. Javassist runtime patching
-2. ClassLoader control
-3. Dependency resolution
-4. Multi-strategy discovery
-5. Gradle multi-module design
-6. Lifecycle orchestration
-
-You’re now maintaining a **Java application container** — like Spring Boot or OSGi, purpose-built for Wurm mods.
-
-```
-
----
-
-Would you like me to make a **short version** too (for your repo’s top-level `README.md`), summarizing just the key architecture and boot flow?
-```
+| Resource | Path |
+|---|---|
+| Community mods fork (ported mods) | `~/Scripts/Games/WurmUnlimited/WurmModLoader-CommunityMods/` |
+| Decompiled vanilla Wurm source (for bytecode target reference) | `~/Scripts/Games/WurmUnlimited/PowerFantasy/Wurmguide/decompiled/` |
+| Live server runtime | `~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/` |
