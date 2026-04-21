@@ -204,6 +204,14 @@ build/
 out/
 .gradle/
 
+# Local dev tooling (not for upstream)
+tools/
+# Index regeneration scripts live at ~/Scripts/Tools/wurmmodloader-index/
+index_code_index.py
+index_wurm_server.py
+index_wurm_client.py
+query_code_index.py
+
 # Code index JSONs (regenerate with `codeindex regen` / `wurmquery regen`)
 code_index.json
 wurm_server_index.json

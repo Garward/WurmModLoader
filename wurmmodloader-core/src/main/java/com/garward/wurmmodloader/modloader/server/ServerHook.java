@@ -44,6 +44,7 @@ import com.garward.wurmmodloader.api.events.skill.SkillAdvanceEvent;
 import com.garward.wurmmodloader.api.events.player.PlayerDeathEvent;
 import com.garward.wurmmodloader.api.events.server.CapabilityRegistrationEvent;
 import com.garward.wurmmodloader.api.events.server.ServerPollEvent;
+import com.garward.wurmmodloader.api.events.server.ServerFullyReadyEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStartedEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStoppingEvent;
 import com.garward.wurmmodloader.api.events.vehicle.VehicleMountEvent;
@@ -278,10 +279,11 @@ public class ServerHook {
 		eventBus.post(new CapabilityRegistrationEvent());
 		logger.info("[ServerHook] DEBUG: Capability registration complete");
 
-		// Schedule delayed database sync (30 seconds after server start to ensure DB pool is ready)
-		// Note: Memory config was already applied in syncServerConfigBeforeLoad()
-		logger.info("[ServerHook] DEBUG: Scheduling delayed database sync in 30 seconds");
-		scheduleDatabaseSync();
+		// NOTE: DB-dependent config sync now runs from fireOnServerFullyReady(),
+		// which fires when CommandReader.run begins — after the DB pool, Steam,
+		// and all async subsystems have actually settled. The previous "sleep 30s
+		// after ServerStartedEvent" was a workaround for this event firing too
+		// early; ServerFullyReadyEvent makes it unnecessary.
 
 		// Fire legacy listeners
 		logger.info("[ServerHook] DEBUG: Firing legacy serverStarted listeners");
@@ -323,6 +325,18 @@ public class ServerHook {
 	}
 
 	public void fireOnServerShutdown() {
+		// Flush + stop the creature-save batcher *before* anything else so its
+		// scheduled executor doesn't race with DB shutdown. Its flushes open
+		// fresh JDBC connections; if a backend (e.g. embedded Postgres) has
+		// begun shutting down, those connections fail with "database is
+		// shutting down" and we lose the batched deltas.
+		try {
+			com.garward.wurmmodloader.performance.CreatureStatusBatcher.shutdown();
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerHook] CreatureStatusBatcher.shutdown threw", t);
+		}
+
 		// Fire legacy listeners
 		serverShutdown.fire(listener -> listener.onServerShutdown());
 
@@ -1418,60 +1432,69 @@ public class ServerHook {
 	}
 
 	/**
-	 * Schedule a delayed retry of config sync if it hasn't completed yet.
-	 * Retries up to 3 times with 5-second intervals.
+	 * Fired from {@code CommandReaderPatch} insertBefore on
+	 * {@code CommandReader.run} — the true "server fully settled" moment.
+	 * Runs the DB-dependent config sync synchronously (pool is hot by now),
+	 * then posts {@link ServerFullyReadyEvent} for mods to subscribe to.
+	 *
+	 * <p>Previously the sync ran on a 30-second delayed executor because
+	 * {@link ServerStartedEvent} fires before Steam connect / DB pool warmup.
+	 * That workaround is no longer needed.
 	 */
-	/**
-	 * Schedule delayed database sync to happen after server is fully started.
-	 * Waits 30 seconds to ensure database connection pool is fully initialized.
-	 */
-	private void scheduleDatabaseSync() {
-		logger.info("[ServerConfigSync] Scheduling database sync in 30 seconds (after DB pool initializes)");
+	public void fireOnServerFullyReady() {
+		try {
+			runDatabaseConfigSync();
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerConfigSync] Database sync failed", t);
+		}
 
-		java.util.concurrent.Executors.newSingleThreadScheduledExecutor().schedule(() -> {
-			try {
-				logger.info("[ServerConfigSync] ===== DELAYED DATABASE SYNC (After Server Fully Started) =====");
+		try {
+			eventBus.post(new ServerFullyReadyEvent());
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerHook] ServerFullyReadyEvent subscriber threw", t);
+		}
+	}
 
-				// Detect world folder
-				String serverRoot = System.getProperty("user.dir");
-				java.io.File serverDir = new java.io.File(serverRoot);
-				String worldFolder = null;
+	private void runDatabaseConfigSync() throws Exception {
+		logger.info("[ServerConfigSync] ===== DATABASE SYNC (CommandReader ready — pool is live) =====");
 
-				for (java.io.File dir : serverDir.listFiles()) {
-					if (dir.isDirectory() && !dir.getName().startsWith(".")) {
-						java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
-						if (dbFile.exists() && dbFile.isFile()) {
-							worldFolder = dir.getName();
-							break;
-						}
+		String serverRoot = System.getProperty("user.dir");
+		java.io.File serverDir = new java.io.File(serverRoot);
+		String worldFolder = null;
+
+		java.io.File[] children = serverDir.listFiles();
+		if (children != null) {
+			for (java.io.File dir : children) {
+				if (dir.isDirectory() && !dir.getName().startsWith(".")) {
+					java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
+					if (dbFile.exists() && dbFile.isFile()) {
+						worldFolder = dir.getName();
+						break;
 					}
 				}
-
-				if (worldFolder == null) {
-					logger.warning("[ServerConfigSync] Could not find world folder - skipping database sync");
-					return;
-				}
-
-				int estimatedServerId = 11455;
-				com.garward.wurmmodloader.config.ServerConfig config =
-					com.garward.wurmmodloader.config.ServerConfigLoader.load(worldFolder, estimatedServerId);
-
-				// Now sync to database (pool should be ready after 30 seconds)
-				boolean success = com.garward.wurmmodloader.config.ServerConfigSync.syncToDatabase(config, estimatedServerId);
-
-				if (success) {
-					logger.info("[ServerConfigSync] ✅ Database sync completed successfully");
-					configSyncCompleted = true;
-				} else {
-					logger.warning("[ServerConfigSync] Database sync failed - config remains in memory only");
-					logger.warning("[ServerConfigSync] Changes will not persist across server restarts");
-				}
-
-			} catch (Exception e) {
-				logger.log(java.util.logging.Level.WARNING,
-					"[ServerConfigSync] Database sync failed", e);
 			}
-		}, 30, java.util.concurrent.TimeUnit.SECONDS);
+		}
+
+		if (worldFolder == null) {
+			logger.warning("[ServerConfigSync] Could not find world folder - skipping database sync");
+			return;
+		}
+
+		int estimatedServerId = 11455;
+		com.garward.wurmmodloader.config.ServerConfig config =
+			com.garward.wurmmodloader.config.ServerConfigLoader.load(worldFolder, estimatedServerId);
+
+		boolean success = com.garward.wurmmodloader.config.ServerConfigSync.syncToDatabase(config, estimatedServerId);
+
+		if (success) {
+			logger.info("[ServerConfigSync] ✅ Database sync completed successfully");
+			configSyncCompleted = true;
+		} else {
+			logger.warning("[ServerConfigSync] Database sync failed - config remains in memory only");
+			logger.warning("[ServerConfigSync] Changes will not persist across server restarts");
+		}
 	}
 
 	public static ServerHook createServerHook() {
@@ -1531,6 +1554,138 @@ public class ServerHook {
 				casterId, casterName, spellId, spellName, cost, currentFavor);
 		eventBus.post(event);
 		return event.getModifiedCost();
+	}
+
+	protected int fireSpellCastingTime(int spellId, String spellName,
+	                                   long casterId, String casterName,
+	                                   int originalTime) {
+		com.garward.wurmmodloader.api.events.spell.SpellCastingTimeEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellCastingTimeEvent(
+				spellId, spellName, casterId, casterName, originalTime);
+		eventBus.post(event);
+		return event.getModifiedTime();
+	}
+
+	protected long fireSpellCooldown(int spellId, String spellName,
+	                                 long casterId, String casterName,
+	                                 long originalCooldownMs) {
+		com.garward.wurmmodloader.api.events.spell.SpellCooldownEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellCooldownEvent(
+				spellId, spellName, casterId, casterName, originalCooldownMs);
+		eventBus.post(event);
+		return event.getModifiedCooldownMs();
+	}
+
+	protected double fireSpellPower(int spellId, String spellName,
+	                                long casterId, String casterName,
+	                                double originalPower) {
+		com.garward.wurmmodloader.api.events.spell.SpellPowerEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellPowerEvent(
+				spellId, spellName, casterId, casterName, originalPower);
+		eventBus.post(event);
+		return event.getModifiedPower();
+	}
+
+	protected boolean fireSpellCastAttempt(int spellId, String spellName,
+	                                       long casterId, String casterName) {
+		com.garward.wurmmodloader.api.events.spell.SpellCastAttemptEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellCastAttemptEvent(
+				spellId, spellName, casterId, casterName);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	protected boolean fireSpellEffect(int spellId, String spellName,
+	                                  long casterId, String casterName,
+	                                  double power, boolean negative) {
+		com.garward.wurmmodloader.api.events.spell.SpellEffectEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellEffectEvent(
+				spellId, spellName, casterId, casterName, power, negative);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	protected int fireSpellDifficulty(int spellId, String spellName,
+	                                  int originalDifficulty, boolean forItem) {
+		com.garward.wurmmodloader.api.events.spell.SpellDifficultyEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellDifficultyEvent(
+				spellId, spellName, originalDifficulty, forItem);
+		eventBus.post(event);
+		return event.getModifiedDifficulty();
+	}
+
+	protected void fireDeitySpellRegistration(int deityNumber, String deityName,
+	                                          int spellId, String spellName, boolean added) {
+		com.garward.wurmmodloader.api.events.spell.DeitySpellRegistrationEvent event =
+			new com.garward.wurmmodloader.api.events.spell.DeitySpellRegistrationEvent(
+				deityNumber, deityName, spellId, spellName, added);
+		eventBus.post(event);
+	}
+
+	protected boolean fireSacrificeAcceptance(long itemId, int templateId, boolean originalAccepted) {
+		com.garward.wurmmodloader.api.events.priest.SacrificeAcceptanceEvent event =
+			new com.garward.wurmmodloader.api.events.priest.SacrificeAcceptanceEvent(
+				itemId, templateId, originalAccepted);
+		eventBus.post(event);
+		return event.getModifiedAccepted();
+	}
+
+	protected float fireSacrificeFavorValue(int deityNumber, long itemId, int templateId, float originalValue) {
+		com.garward.wurmmodloader.api.events.priest.SacrificeFavorValueEvent event =
+			new com.garward.wurmmodloader.api.events.priest.SacrificeFavorValueEvent(
+				deityNumber, itemId, templateId, originalValue);
+		eventBus.post(event);
+		return event.getModifiedValue();
+	}
+
+	protected float fireSacrificeFavorModifier(int deityNumber, long itemId, int templateId, float originalModifier) {
+		com.garward.wurmmodloader.api.events.priest.SacrificeFavorModifierEvent event =
+			new com.garward.wurmmodloader.api.events.priest.SacrificeFavorModifierEvent(
+				deityNumber, itemId, templateId, originalModifier);
+		eventBus.post(event);
+		return event.getModifiedModifier();
+	}
+
+	protected double fireSpellResist(int spellId, String spellName,
+	                                 long casterId, long targetId,
+	                                 int difficulty, double originalResist) {
+		com.garward.wurmmodloader.api.events.spell.SpellResistEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellResistEvent(
+				spellId, spellName, casterId, targetId, difficulty, originalResist);
+		eventBus.post(event);
+		return event.getModifiedResist();
+	}
+
+	protected boolean fireSpellVisibility(int spellId, String spellName,
+	                                      long casterId, long targetId, String targetType) {
+		com.garward.wurmmodloader.api.events.spell.SpellVisibilityEvent.Target type;
+		try {
+			type = com.garward.wurmmodloader.api.events.spell.SpellVisibilityEvent.Target.valueOf(targetType);
+		} catch (IllegalArgumentException e) {
+			type = com.garward.wurmmodloader.api.events.spell.SpellVisibilityEvent.Target.CREATURE;
+		}
+		com.garward.wurmmodloader.api.events.spell.SpellVisibilityEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellVisibilityEvent(
+				spellId, spellName, casterId, targetId, type);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	protected boolean fireSpellPrecondition(int spellId, String spellName,
+	                                        long casterId, String casterName,
+	                                        long targetId, String targetType,
+	                                        boolean originalAllowed) {
+		com.garward.wurmmodloader.api.events.spell.SpellPreconditionEvent.TargetType type;
+		try {
+			type = com.garward.wurmmodloader.api.events.spell.SpellPreconditionEvent.TargetType.valueOf(targetType);
+		} catch (IllegalArgumentException e) {
+			type = com.garward.wurmmodloader.api.events.spell.SpellPreconditionEvent.TargetType.CREATURE;
+		}
+		com.garward.wurmmodloader.api.events.spell.SpellPreconditionEvent event =
+			new com.garward.wurmmodloader.api.events.spell.SpellPreconditionEvent(
+				spellId, spellName, casterId, casterName, targetId, type, originalAllowed);
+		eventBus.post(event);
+		return event.getModifiedAllowed();
 	}
 
 	protected float fireCombatRating(long creatureId, String creatureName, float rating) {
@@ -1624,6 +1779,74 @@ public class ServerHook {
 		com.garward.wurmmodloader.api.events.sync.PredictionStateReceivedEvent event =
 			new com.garward.wurmmodloader.api.events.sync.PredictionStateReceivedEvent(player, seqId, x, y, height);
 		eventBus.post(event);
+	}
+
+	// ========================================================================
+	// Database backend SPI events
+	// ========================================================================
+
+	/**
+	 * Fire DatabaseBackendSelectionEvent from DbConnector.initialize() so that mods
+	 * have a chance to call DatabaseBackendRegistry.register(...) before vanilla
+	 * factories are built.
+	 */
+	public void fireDatabaseBackendSelection() {
+		if (DEBUG) {
+			logger.info("[Event] DatabaseBackendSelectionEvent: firing");
+		}
+		eventBus.post(new com.garward.wurmmodloader.api.events.database.DatabaseBackendSelectionEvent());
+		if (DEBUG) {
+			logger.info("[Event] DatabaseBackendSelectionEvent: completed");
+		}
+	}
+
+	/**
+	 * Fire DatabaseBackendBootstrapEvent after a backend wins registration and
+	 * before per-schema factories are instantiated. Gives the backend a seam for
+	 * DDL bootstrap (e.g. {@code CREATE DATABASE IF NOT EXISTS}).
+	 */
+	public void fireDatabaseBackendBootstrap(
+			com.garward.wurmmodloader.api.database.DatabaseBackend backend) {
+		if (DEBUG) {
+			logger.info("[Event] DatabaseBackendBootstrapEvent: firing for "
+				+ (backend == null ? "null" : backend.getName()));
+		}
+		eventBus.post(new com.garward.wurmmodloader.api.events.database.DatabaseBackendBootstrapEvent(backend));
+		if (DEBUG) {
+			logger.info("[Event] DatabaseBackendBootstrapEvent: completed");
+		}
+	}
+
+	/**
+	 * Fire DatabaseConnectionOpenedEvent after a ConnectionFactory produces a new JDBC Connection.
+	 */
+	public void fireDatabaseConnectionOpened(com.wurmonline.server.database.WurmDatabaseSchema schema,
+	                                          java.sql.Connection connection) {
+		if (DEBUG) {
+			logger.info(String.format("[Event] DatabaseConnectionOpenedEvent: schema=%s", schema));
+		}
+		eventBus.post(new com.garward.wurmmodloader.api.events.database.DatabaseConnectionOpenedEvent(
+			schema, connection));
+	}
+
+	/**
+	 * Fire DatabaseMigrationStartingEvent before Flyway migration runs.
+	 */
+	public void fireDatabaseMigrationStarting(com.wurmonline.server.database.WurmDatabaseSchema schema) {
+		if (DEBUG) {
+			logger.info(String.format("[Event] DatabaseMigrationStartingEvent: schema=%s", schema));
+		}
+		eventBus.post(new com.garward.wurmmodloader.api.events.database.DatabaseMigrationStartingEvent(schema));
+	}
+
+	/**
+	 * Fire DatabaseMigrationCompletedEvent after Flyway migration succeeds.
+	 */
+	public void fireDatabaseMigrationCompleted(com.wurmonline.server.database.WurmDatabaseSchema schema) {
+		if (DEBUG) {
+			logger.info(String.format("[Event] DatabaseMigrationCompletedEvent: schema=%s", schema));
+		}
+		eventBus.post(new com.garward.wurmmodloader.api.events.database.DatabaseMigrationCompletedEvent(schema));
 	}
 
 }

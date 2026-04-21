@@ -787,6 +787,140 @@ public class ProxyServerHook extends ServerHook {
 	}
 
 	/**
+	 * Fire SpellCastingTimeEvent (called from bytecode hook).
+	 * Returns modified casting time in seconds.
+	 */
+	public static int fireSpellCastingTimeEvent(int spellId, String spellName,
+	                                            long casterId, String casterName,
+	                                            int originalTime) {
+		return getInstance().fireSpellCastingTime(spellId, spellName, casterId, casterName, originalTime);
+	}
+
+	/**
+	 * Fire SpellCooldownEvent (called from bytecode hook).
+	 * Returns modified cooldown duration in ms; 0 or negative = skip cooldown.
+	 */
+	public static long fireSpellCooldownEvent(int spellId, String spellName,
+	                                          long casterId, String casterName,
+	                                          long originalCooldownMs) {
+		return getInstance().fireSpellCooldown(spellId, spellName, casterId, casterName, originalCooldownMs);
+	}
+
+	/**
+	 * Fire SpellPowerEvent (called from bytecode hook).
+	 * Returns modified power (post-trimPower).
+	 */
+	public static double fireSpellPowerEvent(int spellId, String spellName,
+	                                         long casterId, String casterName,
+	                                         double originalPower) {
+		return getInstance().fireSpellPower(spellId, spellName, casterId, casterName, originalPower);
+	}
+
+	/**
+	 * Fire SpellCastAttemptEvent (cancellable, called from bytecode hook).
+	 * Returns true if the cast was cancelled; the caller should short-circuit.
+	 */
+	public static boolean fireSpellCastAttemptEvent(int spellId, String spellName,
+	                                                long casterId, String casterName) {
+		return getInstance().fireSpellCastAttempt(spellId, spellName, casterId, casterName);
+	}
+
+	/**
+	 * Fire SpellEffectEvent (cancellable, called from bytecode hook).
+	 * Returns true if the effect should be skipped.
+	 */
+	public static boolean fireSpellEffectEvent(int spellId, String spellName,
+	                                           long casterId, String casterName,
+	                                           double power, boolean negative) {
+		return getInstance().fireSpellEffect(spellId, spellName, casterId, casterName, power, negative);
+	}
+
+	/**
+	 * Fire SpellDifficultyEvent (called from bytecode hook).
+	 * Returns modified difficulty.
+	 */
+	public static int fireSpellDifficultyEvent(int spellId, String spellName,
+	                                           int originalDifficulty, boolean forItem) {
+		return getInstance().fireSpellDifficulty(spellId, spellName, originalDifficulty, forItem);
+	}
+
+	/**
+	 * Fire DeitySpellRegistrationEvent (notification, called from bytecode hook).
+	 */
+	public static void fireDeitySpellRegistrationEvent(int deityNumber, String deityName,
+	                                                   int spellId, String spellName, boolean added) {
+		getInstance().fireDeitySpellRegistration(deityNumber, deityName, spellId, spellName, added);
+	}
+
+	/**
+	 * Fire SpellPreconditionEvent (called from bytecode hook).
+	 * Returns the (possibly modified) allow flag; mods may override vanilla's decision.
+	 */
+	public static boolean fireSpellPreconditionEvent(int spellId, String spellName,
+	                                                 long casterId, String casterName,
+	                                                 long targetId, String targetType,
+	                                                 boolean originalAllowed) {
+		return getInstance().fireSpellPrecondition(spellId, spellName, casterId, casterName,
+				targetId, targetType, originalAllowed);
+	}
+
+	/**
+	 * Fire SpellResistEvent (called from bytecode hook).
+	 * Returns the (possibly modified) resist roll.
+	 */
+	public static double fireSpellResistEvent(int spellId, String spellName,
+	                                          long casterId, long targetId,
+	                                          int difficulty, double originalResist) {
+		return getInstance().fireSpellResist(spellId, spellName, casterId, targetId,
+				difficulty, originalResist);
+	}
+
+	/**
+	 * Fire SacrificeAcceptanceEvent (called from bytecode hook on MethodsReligion.canBeSacrificed).
+	 */
+	public static boolean fireSacrificeAcceptanceEvent(long itemId, int templateId, boolean originalAccepted) {
+		return getInstance().fireSacrificeAcceptance(itemId, templateId, originalAccepted);
+	}
+
+	/**
+	 * Fire SacrificeFavorValueEvent (called from bytecode hook on MethodsReligion.getFavorValue).
+	 */
+	public static float fireSacrificeFavorValueEvent(int deityNumber, long itemId, int templateId, float originalValue) {
+		return getInstance().fireSacrificeFavorValue(deityNumber, itemId, templateId, originalValue);
+	}
+
+	/**
+	 * Fire SacrificeFavorModifierEvent (called from bytecode hook on MethodsReligion.getFavorModifier).
+	 */
+	public static float fireSacrificeFavorModifierEvent(int deityNumber, long itemId, int templateId, float originalModifier) {
+		return getInstance().fireSacrificeFavorModifier(deityNumber, itemId, templateId, originalModifier);
+	}
+
+	/**
+	 * Filter a vanilla spell list through SpellVisibilityEvent — called from bytecode
+	 * hooks in the Behaviour classes. Fires one event per spell and returns a new
+	 * array omitting cancelled entries. Null-safe: returns the input unchanged if null.
+	 */
+	public static com.wurmonline.server.spells.Spell[] filterSpellVisibility(
+			com.wurmonline.server.spells.Spell[] spells,
+			com.wurmonline.server.creatures.Creature performer,
+			long targetId, String targetType) {
+		if (spells == null || spells.length == 0) return spells;
+		long casterId = performer == null ? -1L : performer.getWurmId();
+		java.util.ArrayList<com.wurmonline.server.spells.Spell> kept =
+				new java.util.ArrayList<com.wurmonline.server.spells.Spell>(spells.length);
+		for (int i = 0; i < spells.length; i++) {
+			com.wurmonline.server.spells.Spell s = spells[i];
+			if (s == null) continue;
+			boolean cancelled = getInstance().fireSpellVisibility(
+					s.number, s.name, casterId, targetId, targetType);
+			if (!cancelled) kept.add(s);
+		}
+		if (kept.size() == spells.length) return spells;
+		return kept.toArray(new com.wurmonline.server.spells.Spell[0]);
+	}
+
+	/**
 	 * Fire CombatRatingEvent (called from bytecode hook).
 	 * Returns modified combat rating.
 	 */
@@ -810,6 +944,89 @@ public class ProxyServerHook extends ServerHook {
 	public static void firePredictionStateReceivedEvent(com.wurmonline.server.players.Player player,
 	                                                    long seqId, float x, float y, float height) {
 		getInstance().firePredictionStateReceived(player, seqId, x, y, height);
+	}
+
+	// ========================================================================
+	// Database backend SPI static fire methods (called from bytecode hooks)
+	// ========================================================================
+
+	private static final java.util.concurrent.atomic.AtomicBoolean DB_BACKEND_SELECTION_FIRED =
+		new java.util.concurrent.atomic.AtomicBoolean(false);
+
+	/**
+	 * Fire DatabaseBackendSelectionEvent (called from bytecode hook in DbConnector.initialize()).
+	 *
+	 * <p>Vanilla calls {@code DbConnector.initialize()} from multiple entry points
+	 * (WurmServerGuiController, Server.startRunning(), refreshConnectionForSchema),
+	 * and the patch's {@code insertBefore} runs ahead of vanilla's {@code isInitialized}
+	 * short-circuit. A single-shot latch here preserves the SPI's "once per process"
+	 * contract — mods get exactly one registration window.</p>
+	 */
+	public static void fireDatabaseBackendSelectionEvent() {
+		if (!DB_BACKEND_SELECTION_FIRED.compareAndSet(false, true)) {
+			return;
+		}
+		getInstance().fireDatabaseBackendSelection();
+	}
+
+	/**
+	 * Fire DatabaseBackendBootstrapEvent (called from DatabaseBackendEventLogic after a backend
+	 * wins registration, before per-schema factories are instantiated).
+	 *
+	 * @param backend the registered {@code DatabaseBackend}; must not be null
+	 */
+	public static void fireDatabaseBackendBootstrapEvent(Object backend) {
+		try {
+			getInstance().fireDatabaseBackendBootstrap(
+				(com.garward.wurmmodloader.api.database.DatabaseBackend) backend);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DatabaseBackendBootstrapEvent", t);
+		}
+	}
+
+	/**
+	 * Fire DatabaseConnectionOpenedEvent (called from bytecode hooks in SqliteConnectionFactory /
+	 * MysqlConnectionFactory createConnection()).
+	 *
+	 * <p>Parameters are typed {@link Object} so patches can pass values without caring about
+	 * classloader visibility; this method casts to the concrete WU types.</p>
+	 */
+	public static void fireDatabaseConnectionOpenedEvent(Object schema, Object connection) {
+		try {
+			getInstance().fireDatabaseConnectionOpened(
+				(com.wurmonline.server.database.WurmDatabaseSchema) schema,
+				(java.sql.Connection) connection);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DatabaseConnectionOpenedEvent", t);
+		}
+	}
+
+	/**
+	 * Fire DatabaseMigrationStartingEvent (called from bytecode hook before migrate()).
+	 */
+	public static void fireDatabaseMigrationStartingEvent(Object schema) {
+		try {
+			getInstance().fireDatabaseMigrationStarting(
+				(com.wurmonline.server.database.WurmDatabaseSchema) schema);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DatabaseMigrationStartingEvent", t);
+		}
+	}
+
+	/**
+	 * Fire DatabaseMigrationCompletedEvent (called from bytecode hook after migrate() succeeds).
+	 */
+	public static void fireDatabaseMigrationCompletedEvent(Object schema) {
+		try {
+			getInstance().fireDatabaseMigrationCompleted(
+				(com.wurmonline.server.database.WurmDatabaseSchema) schema);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DatabaseMigrationCompletedEvent", t);
+		}
 	}
 
 	public static synchronized ProxyServerHook getInstance() {

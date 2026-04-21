@@ -362,28 +362,40 @@ public class ServerConfigSync {
 
 ### Phase 3: Integration Hook
 
-**Location:** Modify `DelegatedLauncher.java` or create new hook in server startup
+**Implementation:** `ServerHook.runDatabaseConfigSync()`, invoked from
+`fireOnServerFullyReady()`.
 
-**Pseudocode:**
-```java
-// During server startup, AFTER wurm.ini is loaded, BEFORE server starts
-public void onServerPreInit() {
-    // 1. Load server_config.yaml
-    ServerConfig config = ServerConfigLoader.load(getCurrentWorldName());
+**Timing — why this matters:** the sync runs at `ServerFullyReadyEvent` time
+(fired from `CommandReader.run` insertBefore), not at `ServerStartedEvent`.
+`ServerStartedEvent` fires too early — async subsystems (Steam connect,
+DB-pool warmup, world load) are still settling, and in-memory
+`ServerEntry` fields are not yet stable for verification. An earlier
+30-second delay-hack in this path was removed once `ServerFullyReadyEvent`
+landed in the framework (see `Architecture.MD` — "Startup event ordering").
 
-    // 2. Validate config
-    ServerConfigLoader.validate(config);
+**Sync flow (current):**
+1. Load YAML via `ServerConfigLoader`.
+2. Open a fresh DB connection per operation (read / update / propsSync /
+   verify). The dialect-rewriter proxy returns connections to the pool on
+   statement close, so reusing a reference across operations can throw
+   "connection closed" under Postgres. Keep each step self-contained.
+3. Sync `SERVERS` columns via UPDATE (skip network fields when
+   `AUTO_NETWORKING=true`).
+4. Sync `SERVERPROPERTIES` key/values via SQLite-native `INSERT OR REPLACE`
+   — `SqlDialectRewriter` translates to Postgres `ON CONFLICT (PROPKEY) DO
+   UPDATE SET PROPVAL = EXCLUDED.PROPVAL` and MySQL `REPLACE INTO`.
+5. Log a 3-way verification table: YAML / DB / Memory columns with ✓/✗
+   markers. Memory values are read via public field (`maxCreatures`) or
+   public getter (`getSkillGainRate`, `getActionTimer`,
+   `getCombatRatingModifier`) — private `ServerEntry` fields need the
+   getter path.
 
-    // 3. Sync to database
-    int serverId = Servers.getLocalServerId();
-    ServerConfigSync.syncToDatabase(config, serverId);
-
-    // 4. Reload server settings from database (standard Wurm behavior)
-    Servers.loadAllServers(true);
-
-    logger.info("[ServerConfig] Configuration synced successfully");
-}
-```
+**Postgres prerequisite:** the `SERVERPROPERTIES.PROPKEY` column needs a
+`UNIQUE` index for the upsert's `ON CONFLICT` clause to resolve. The
+PostgresBackend mod's `SchemaRepair` step backfills this on every boot
+(see that mod's README — "Schema repair") because `SqliteImporter` skips
+`PRIMARY KEY` emission when SQLite allows NULL in the PK column (which
+SERVERPROPERTIES does).
 
 ### Phase 4: Runtime Reload (Optional)
 

@@ -75,4 +75,24 @@ public final class BytecodeConflictKeys {
     public static final String TAME_CHARM = "taming.charm";
     public static final String TAME_DOMINATE = "taming.dominate";
     public static final String PET_RELEASED = "taming.petReleased";
+    public static final String DB_CONNECTOR_INIT = "database.connector.init";
+    public static final String DB_CONNECTION_OPENED = "database.connection.opened";
+    public static final String DB_MIGRATION = "database.migration";
+    public static final String DB_INDEX_MAINTENANCE = "database.index.maintenance";
+    public static final String VANILLAFIX_NEXTINT_GUARDS = "vanillafix.nextIntGuards";
+    public static final String VANILLAFIX_ACTION_TIMER = "vanillafix.actionTimer";
+    public static final String VANILLAFIX_NPC_MOVE_TARGET_GUARD = "vanillafix.npcMoveTargetGuard";
+    public static final String SPELL_CAST_TIME = "spell.castTime";
+    public static final String SPELL_COOLDOWN = "spell.cooldown";
+    public static final String SPELL_POWER = "spell.power";
+    public static final String SPELL_CAST_ATTEMPT = "spell.castAttempt";
+    public static final String SPELL_EFFECT = "spell.effect";
+    public static final String SPELL_DIFFICULTY = "spell.difficulty";
+    public static final String DEITY_SPELL_REGISTRATION = "deity.spellRegistration";
+    public static final String SPELL_PRECONDITION = "spell.precondition";
+    public static final String SPELL_RESIST = "spell.resist";
+    public static final String SPELL_VISIBILITY = "spell.visibility";
+    public static final String SACRIFICE_ACCEPTANCE = "priest.sacrifice.acceptance";
+    public static final String SACRIFICE_FAVOR_VALUE = "priest.sacrifice.favorValue";
+    public static final String SACRIFICE_FAVOR_MODIFIER = "priest.sacrifice.favorModifier";
 }

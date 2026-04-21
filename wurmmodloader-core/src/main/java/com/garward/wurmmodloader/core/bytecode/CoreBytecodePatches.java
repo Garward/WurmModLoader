@@ -25,6 +25,11 @@ import com.garward.wurmmodloader.core.bytecode.patches.CreaturePositionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureSpawnPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CropGrowthPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CropHarvestPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ConnectionFactoryCtorWidenPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.DbConnectionOpenedPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.DbConnectorInitPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.DbIndexManagerMaintenancePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.DbMigrationPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ItemDropPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ItemContainerPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ItemDamagePatch;
@@ -44,6 +49,17 @@ import com.garward.wurmmodloader.core.bytecode.patches.PrayerFaithPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PriestRestrictionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ShieldCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SkillAdvancePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellCastingTimePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellCooldownPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellCastAttemptPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.DeitySpellRegistrationPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellDifficultyPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellEffectPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellPreconditionPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellResistPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SacrificePatches;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellVisibilityPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SpellPowerPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SpecialMoveHandlePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SpecialMoveSendPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerConfigLoadPatch;
@@ -52,6 +68,9 @@ import com.garward.wurmmodloader.core.bytecode.patches.ServerShutdownPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerStartPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.WeaponStatQueryPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.WeaponUsePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.vanillafixes.ActionTimerFix;
+import com.garward.wurmmodloader.core.bytecode.patches.vanillafixes.NpcMoveTargetGuardFix;
+import com.garward.wurmmodloader.core.bytecode.patches.vanillafixes.VanillaNextIntGuardsFix;
 import com.garward.wurmmodloader.core.bytecode.patches.VehicleMountCreaturePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.VehicleMountItemPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.VehicleSpeedPatch;
@@ -113,13 +132,34 @@ public final class CoreBytecodePatches {
         new PlayerSkillLossPatch(),
         new PriestRestrictionPatch(),
         new PrayerFaithPatch(),
+        new SpellCastingTimePatch(),
+        new SpellCooldownPatch(),
+        new SpellPowerPatch(),
+        new SpellCastAttemptPatch(),
+        new SpellEffectPatch(),
+        new SpellDifficultyPatch(),
+        new SpellPreconditionPatch(),
+        new SpellResistPatch(),
+        new SpellVisibilityPatch(),
+        new DeitySpellRegistrationPatch(),
+        new SacrificePatches(),
         new ServerPollPatch(),
         new CommunicatorMessagePatch(),
         new CommunicatorChannelPatch(),
         new VehicleMountCreaturePatch(),
         new VehicleMountItemPatch(),
         new VehicleSpeedPatch(),
-        new MountEquipmentCheckPatch()
+        new MountEquipmentCheckPatch(),
+        // Database backend SPI
+        new ConnectionFactoryCtorWidenPatch(),
+        new DbConnectorInitPatch(),
+        new DbConnectionOpenedPatch(),
+        new DbMigrationPatch(),
+        new DbIndexManagerMaintenancePatch(),
+        // Vanilla bug fixes — non-opinionated, crash-class only. See docs/guides/vanilla-fixes.md
+        new VanillaNextIntGuardsFix(),
+        new NpcMoveTargetGuardFix(),
+        new ActionTimerFix()
     );
 
     private CoreBytecodePatches() {}

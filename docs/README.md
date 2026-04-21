@@ -16,6 +16,7 @@ Day-to-day how-tos for writing mods.
 |---|---|
 | [`guides/event-bus.md`](guides/event-bus.md) | `@SubscribeEvent` annotation-driven event system |
 | [`guides/extending-framework.md`](guides/extending-framework.md) | **Adding new events & bytecode patches to the framework** (five-file recipe) |
+| [`guides/database-backend-spi.md`](guides/database-backend-spi.md) | **Database Backend SPI** — replacing SQLite/MySQL with a custom backend (Postgres, MariaDB) |
 | [`guides/questions-api.md`](guides/questions-api.md) | **Server-side popup windows via `ModQuestion`** (low-level: BML + form callback) |
 | [`guides/bml-ui.md`](guides/bml-ui.md) | BML (Wurm's markup language) UI construction — syntax reference |
 | [`guides/ui-api.md`](guides/ui-api.md) | Full UI API walkthrough |
@@ -34,7 +35,6 @@ Lookup material — not tutorials.
 |---|---|
 | [`reference/api-surface.md`](reference/api-surface.md) | Public API surface summary |
 | [`reference/ui-api-quick-reference.md`](reference/ui-api-quick-reference.md) | UI API cheatsheet |
-| [`reference/index-query-guide.md`](reference/index-query-guide.md) | Using the `codeindex` / `wurmquery` CLIs |
 
 ## Migration
 

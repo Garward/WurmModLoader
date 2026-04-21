@@ -42,8 +42,9 @@ This document defines the **public API surface area** of WurmModLoader. Classes 
 - `WurmMod` - Alternative base interface for mods
 
 **Lifecycle Listener Interfaces:**
-- `ServerStartedListener` - Called when server finishes starting
+- `ServerStartedListener` - Legacy-style hook for `ServerStartedEvent`
   - Methods: `onServerStarted()`
+  - Fires when `ServerLauncher.runServer` returns (core init complete). ⚠️ **Not** the "fully operational" moment — Steam, DB pool warmup, and the console reader are still async. For DB-dependent or pool-dependent post-startup work, use `@SubscribeEvent` on `ServerFullyReadyEvent` (fires when `CommandReader.run` begins; no legacy listener interface).
 
 - `ServerShutdownListener` - Called when server is shutting down
   - Methods: `onServerShutdown()`

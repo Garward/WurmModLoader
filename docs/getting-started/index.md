@@ -457,7 +457,6 @@ what you're actually building.
 | Need | Doc |
 |---|---|
 | What's in the public API | [`reference/api-surface.md`](../reference/api-surface.md) |
-| Search the framework or vanilla code fast | [`reference/index-query-guide.md`](../reference/index-query-guide.md) (`codeindex`, `wurmquery`) |
 
 ### Migration
 

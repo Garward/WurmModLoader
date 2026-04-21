@@ -78,6 +78,15 @@ if exist "%HTTP_CFG_SRC%" if not exist "%HTTP_CFG_DEST%" (
     set /a COPIED+=1
 )
 
+set "VFIX_CFG_SRC=%PROJECT_DIR%\docs\reference\wurmmodloader-vanilla-fixes.properties.example"
+set "VFIX_CFG_DEST=%SERVER_DIR%\config\wurmmodloader-vanilla-fixes.properties"
+if exist "%VFIX_CFG_SRC%" if not exist "%VFIX_CFG_DEST%" (
+    if not exist "%SERVER_DIR%\config" mkdir "%SERVER_DIR%\config"
+    copy /y "%VFIX_CFG_SRC%" "%VFIX_CFG_DEST%" >nul
+    echo  [+] Seeded config\wurmmodloader-vanilla-fixes.properties
+    set /a COPIED+=1
+)
+
 REM Deploy mods
 echo ======================================================================
 echo  Deploying Mods

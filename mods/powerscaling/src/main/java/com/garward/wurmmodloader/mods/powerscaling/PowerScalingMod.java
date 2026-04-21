@@ -751,6 +751,11 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
 
         try {
             long attackerId = event.getLong("attackerId");
+            // Only players have power levels — skip creature attackers silently
+            // (every non-player swing would otherwise throw + log SEVERE).
+            if (PlayerUtil.getPlayer(attackerId) == null) {
+                return;
+            }
             int powerLevel = manager.getPlayerPowerLevel(attackerId);
 
             // Scale damage by 5% per power level

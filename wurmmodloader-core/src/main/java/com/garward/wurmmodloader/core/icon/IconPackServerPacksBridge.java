@@ -38,7 +38,7 @@ public class IconPackServerPacksBridge implements WurmServerMod, ModListener {
             serverPacksInstance = entry.getWurmMod();
 
             serverPackOptions = entry.getModClassLoader()
-                .loadClass("org.gotti.wurmunlimited.mods.serverpacks.api.ServerPacks$ServerPackOptions");
+                .loadClass("com.garward.wurmmodloader.mods.serverpacks.api.ServerPacks$ServerPackOptions");
 
             for (Object enumConstant : serverPackOptions.getEnumConstants()) {
                 String name = enumConstant.toString();

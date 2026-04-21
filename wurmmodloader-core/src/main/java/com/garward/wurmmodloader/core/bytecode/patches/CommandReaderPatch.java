@@ -54,6 +54,19 @@ public class CommandReaderPatch {
 
         CtMethod runMethod = ctClass.getDeclaredMethod("run");
 
+        // CommandReader.run begins here — this is the true "server fully
+        // settled" moment (core init done, Steam connected, DB pool warm,
+        // console accepting input). We do two things here:
+        //   1. Fire ServerFullyReadyEvent (ServerStartedEvent fires earlier,
+        //      from ServerLauncher.runServer insertAfter, before async
+        //      subsystems have settled — see event javadoc).
+        //   2. Print the command-ready banner so it lands at the visual end
+        //      of startup output instead of buried in JUL init spam.
+        runMethod.insertBefore(
+            "com.garward.wurmmodloader.modloader.server.ProxyServerHook.getInstance().fireOnServerFullyReady();" +
+            "com.garward.wurmmodloader.core.console.ConsoleGMCommandRouter.printBanner();"
+        );
+
         // We need to replace the "Unknown command" warning with our GM command check
         // Original code (line 35-39):
         //   if (nextLine.equals("shutdown")) {

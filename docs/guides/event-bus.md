@@ -101,7 +101,8 @@ index, not a reference.
 
 | Event | When it fires | Notes |
 |---|---|---|
-| `ServerStartedEvent` | Server fully started, ready for players | Most "register my stuff" code goes here |
+| `ServerStartedEvent` | `ServerLauncher.runServer` returns — core init done | Register-only work (content, handlers). **NOT** "fully operational" — Steam, DB pool warmup, and the console reader are still async. |
+| `ServerFullyReadyEvent` | `CommandReader.run` begins — truly settled | DB sync, migrations, pool-dependent work. Replaces the old "sleep N seconds after `ServerStartedEvent`" pattern. |
 | `ServerStoppingEvent` | Server is shutting down cleanly | Save state, close connections |
 | `ServerPollEvent` | Every server tick | **Hot path — keep handlers tiny.** Throttle internally. |
 | `CapabilityRegistrationEvent` | Capability registration phase | Register custom item/player/creature data here |

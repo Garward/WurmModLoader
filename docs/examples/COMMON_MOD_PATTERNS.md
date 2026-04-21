@@ -2,6 +2,16 @@
 
 This guide demonstrates common patterns and best practices for developing mods with WurmModLoader.
 
+> **⚠️ Startup-timing note:** Several examples below use
+> `ServerStartedListener.onServerStarted()` (equivalent to the modern
+> `ServerStartedEvent`). That hook fires when `ServerLauncher.runServer`
+> returns — core init is complete, but **Steam, DB pool warmup, and the
+> console reader are still async**. For post-startup work that depends on
+> those (DB migrations, connection-pool use, background schedulers touching
+> the DB), subscribe to `ServerFullyReadyEvent` instead — it fires when
+> `CommandReader.run` begins, after everything has truly settled. See
+> [`../guides/event-bus.md`](../guides/event-bus.md) for the full ordering.
+
 ## Table of Contents
 
 1. [Basic Mod Structure](#basic-mod-structure)

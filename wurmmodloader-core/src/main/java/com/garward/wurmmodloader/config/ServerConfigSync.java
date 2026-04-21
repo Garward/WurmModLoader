@@ -80,43 +80,148 @@ public class ServerConfigSync {
 
         List<String> changes = new ArrayList<>();
 
+        // The Postgres backend's dialect-rewriter proxy returns connections
+        // to the pool after statement/result-set close, so reusing one
+        // `conn` across multiple read/write operations has been observed
+        // to throw "connection closed". Each step below opens its own.
+
+        boolean autoNetworking;
+        ServerConfig currentConfig;
         Connection conn = null;
         try {
             conn = DatabaseConnectionUtil.getLoginDbConnection();
-
-            // Check if auto-networking is enabled
-            boolean autoNetworking = isAutoNetworkingEnabled(conn);
+            autoNetworking = isAutoNetworkingEnabled(conn);
             if (autoNetworking) {
                 logger.info("[ServerConfigSync] AUTO_NETWORKING is enabled - skipping network field sync");
                 logger.info("[ServerConfigSync] Wurm will auto-detect: externalIp, externalPort");
             }
-
-            // Read current database values
-            ServerConfig currentConfig = readCurrentValues(conn, serverId);
-
-            // Compare and track changes (skip network fields if auto-networking enabled)
-            detectChanges(currentConfig, config, changes, autoNetworking);
-
-            if (changes.isEmpty()) {
-                logger.info("[ServerConfigSync] No changes detected, database is up to date");
-                return true; // Success - database already matches config
-            }
-
-            // Apply changes
-            logger.info("[ServerConfigSync] Applying " + changes.size() + " changes to database:");
-            for (String change : changes) {
-                logger.info("  - " + change);
-            }
-
-            updateDatabase(conn, config, serverId, autoNetworking);
-            syncServerProperties(conn, config);
-
-            logger.info("[ServerConfigSync] Database sync completed successfully");
-            return true; // Signal success
-
+            currentConfig = readCurrentValues(conn, serverId);
         } finally {
             DatabaseConnectionUtil.closeConnection(conn);
         }
+
+        detectChanges(currentConfig, config, changes, autoNetworking);
+
+        if (changes.isEmpty()) {
+            logger.info("[ServerConfigSync] No changes detected, database is up to date");
+            logVerification(config, serverId);
+            return true;
+        }
+
+        logger.info("[ServerConfigSync] Applying " + changes.size() + " changes to database:");
+        for (String change : changes) {
+            logger.info("  - " + change);
+        }
+
+        conn = null;
+        try {
+            conn = DatabaseConnectionUtil.getLoginDbConnection();
+            updateDatabase(conn, config, currentConfig, serverId, autoNetworking);
+        } finally {
+            DatabaseConnectionUtil.closeConnection(conn);
+        }
+
+        conn = null;
+        try {
+            conn = DatabaseConnectionUtil.getLoginDbConnection();
+            syncServerProperties(conn, config);
+        } finally {
+            DatabaseConnectionUtil.closeConnection(conn);
+        }
+
+        logger.info("[ServerConfigSync] Database sync completed successfully");
+        logVerification(config, serverId);
+        return true;
+    }
+
+    /**
+     * Proof-of-effect log: re-reads the SERVERS row we just wrote and
+     * reflects into {@code Servers.localServer} for a subset of fields that
+     * Wurm also caches in memory. Logs YAML / DB / Memory side-by-side with
+     * ✓ or ✗ so the first-boot sync can be confirmed end-to-end.
+     *
+     * <p>Called from {@code ServerFullyReadyEvent} time — by then Wurm has
+     * loaded its in-memory {@code ServerEntry} from the DB, so the memory
+     * column reflects what the running server is actually using this boot.
+     */
+    private static void logVerification(ServerConfig yaml, int serverId) {
+        Connection conn = null;
+        try {
+            // Use a fresh connection — the one used for the UPDATE may have
+            // been returned to the pool by the dialect-rewriter proxy, and
+            // reusing it here has been observed to throw "connection closed".
+            conn = DatabaseConnectionUtil.getLoginDbConnection();
+            ServerConfig db = readCurrentValues(conn, serverId);
+            java.util.Map<String, Object> mem = readServerMemoryFields();
+
+            logger.info("[ServerConfigSync] ===== SYNC VERIFICATION (YAML / DB / Memory) =====");
+            row("skills.gainRate",    yaml.skills.gainRate,    db.skills.gainRate,    mem.get("skillGainRate"));
+            row("combat.actionSpeed", yaml.combat.actionSpeed, db.combat.actionSpeed, mem.get("actionTimer"));
+            row("combat.ratingMod",   yaml.combat.ratingModifier, db.combat.ratingModifier, mem.get("combatRatingModifier"));
+            row("creatures.maxTotal", yaml.creatures.maxTotal, db.creatures.maxTotal, mem.get("maxCreatures"));
+            // DB-only (not reflected into a known static field):
+            row("server.name",        yaml.server.name,        db.server.name,        null);
+            row("economy.maxDeedSize", yaml.economy.maxDeedSize, db.economy.maxDeedSize, null);
+            row("world.treeGrowth",   yaml.world.treeGrowth,   db.world.treeGrowth,   null);
+            logger.info("[ServerConfigSync] =================================================");
+        } catch (Throwable t) {
+            logger.log(java.util.logging.Level.WARNING,
+                "[ServerConfigSync] Verification logging failed (non-fatal)", t);
+        } finally {
+            DatabaseConnectionUtil.closeConnection(conn);
+        }
+    }
+
+    private static void row(String name, Object yaml, Object db, Object mem) {
+        boolean yamlDb  = java.util.Objects.equals(String.valueOf(yaml), String.valueOf(db));
+        boolean yamlMem = mem == null || java.util.Objects.equals(String.valueOf(yaml), String.valueOf(mem));
+        String memStr = (mem == null) ? "—" : String.valueOf(mem);
+        String mark = (yamlDb && yamlMem) ? "✓" : "✗";
+        logger.info(String.format("[ServerConfigSync]   %s %-24s  YAML=%s  DB=%s  MEM=%s",
+            mark, name, yaml, db, memStr));
+    }
+
+    private static java.util.Map<String, Object> readServerMemoryFields() {
+        java.util.Map<String, Object> out = new java.util.HashMap<>();
+        try {
+            Class<?> serversClass;
+            try {
+                serversClass = Class.forName("com.wurmonline.server.Servers");
+            } catch (ClassNotFoundException cnf) {
+                ClassLoader ctx = Thread.currentThread().getContextClassLoader();
+                serversClass = Class.forName("com.wurmonline.server.Servers", true, ctx);
+            }
+            Object localServer = serversClass.getField("localServer").get(null);
+            if (localServer == null) {
+                logger.warning("[ServerConfigSync] Servers.localServer is null — memory verification unavailable");
+                return out;
+            }
+            Class<?> entry = localServer.getClass();
+            // Public fields first (maxCreatures), then getters for private fields.
+            for (String f : new String[]{"maxCreatures"}) {
+                try { out.put(f, entry.getField(f).get(localServer)); }
+                catch (NoSuchFieldException nsfe) {
+                    logger.fine("[ServerConfigSync] ServerEntry." + f + " not present on this Wurm version");
+                }
+            }
+            for (String[] g : new String[][]{
+                    {"skillGainRate",        "getSkillGainRate"},
+                    {"actionTimer",          "getActionTimer"},
+                    {"combatRatingModifier", "getCombatRatingModifier"}}) {
+                try { out.put(g[0], entry.getMethod(g[1]).invoke(localServer)); }
+                catch (NoSuchMethodException nsme) {
+                    logger.fine("[ServerConfigSync] ServerEntry." + g[1] + "() not present on this Wurm version");
+                }
+            }
+            if (out.isEmpty()) {
+                logger.warning("[ServerConfigSync] ServerEntry has none of the expected fields; class="
+                    + entry.getName());
+            }
+        } catch (Throwable t) {
+            logger.log(java.util.logging.Level.WARNING,
+                "[ServerConfigSync] Could not read Servers.localServer", t);
+        }
+        return out;
     }
 
     /**
@@ -164,7 +269,7 @@ public class ServerConfigSync {
                 logger.info("  - " + change);
             }
 
-            updateDatabase(conn, config, serverId, autoNetworking);
+            updateDatabase(conn, config, currentConfig, serverId, autoNetworking);
             syncServerProperties(conn, config);
 
             logger.info("[ServerConfigSync] Database sync completed successfully (direct connection)");
@@ -423,15 +528,14 @@ public class ServerConfigSync {
      *
      * @param conn Database connection
      * @param config New config values to apply
+     * @param currentConfig Current DB values (already read by caller; used to preserve network fields when {@code skipNetworkFields} is true). Must be non-null if {@code skipNetworkFields} is true.
      * @param serverId Server ID
      * @param skipNetworkFields If true, preserves current database network values (when AUTO_NETWORKING is enabled)
      */
-    private static void updateDatabase(Connection conn, ServerConfig config, int serverId, boolean skipNetworkFields) throws SQLException {
-        // Read current values if we need to preserve network fields
-        ServerConfig currentConfig = null;
-        if (skipNetworkFields) {
-            currentConfig = readCurrentValues(conn, serverId);
-        }
+    private static void updateDatabase(Connection conn, ServerConfig config, ServerConfig currentConfig, int serverId, boolean skipNetworkFields) throws SQLException {
+        // Reuse the currentConfig the caller already read — reading again on the
+        // same conn fails under the Postgres dialect-rewriter, which returns
+        // connections to the pool after a statement is closed.
         PreparedStatement ps = null;
 
         try {
@@ -539,8 +643,11 @@ public class ServerConfigSync {
         PreparedStatement ps = null;
 
         try {
-            String insertOrReplace = "INSERT OR REPLACE INTO SERVERPROPERTIES (PROPKEY, PROPVAL) VALUES (?, ?)";
-            ps = conn.prepareStatement(insertOrReplace);
+            // SQLite-native form; SqlDialectRewriter translates to
+            // ON CONFLICT (PROPKEY) DO UPDATE ... on Postgres, REPLACE INTO
+            // on MySQL. SQLite passes through.
+            String upsert = "INSERT OR REPLACE INTO SERVERPROPERTIES (PROPKEY, PROPVAL) VALUES (?, ?)";
+            ps = conn.prepareStatement(upsert);
 
             // Sync all properties
             setProperty(ps, "MULTI_KINGDOM", String.valueOf(config.properties.multiKingdom));

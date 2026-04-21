@@ -1,8 +1,6 @@
 package com.garward.wurmmodloader.core.console;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
@@ -33,12 +31,8 @@ import com.garward.wurmmodloader.core.event.EventBus;
  */
 public class ConsoleGMCommandRouter {
 
-    private static final ConcurrentLinkedQueue<String> commandQueue = new ConcurrentLinkedQueue<>();
-    private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "ConsoleGM-Executor");
-        t.setDaemon(true);
-        return t;
-    });
+    private static final LinkedBlockingQueue<String> commandQueue = new LinkedBlockingQueue<>();
+    private static volatile Thread consumerThread;
 
     private static volatile boolean initialized = false;
     private static volatile boolean eventSubscribed = false;
@@ -57,14 +51,23 @@ public class ConsoleGMCommandRouter {
 
     @SubscribeEvent
     public void onServerStarted(ServerStartedEvent event) {
+        // Eagerly start the consumer thread so commands queued before the first
+        // keystroke are ready to run. Banner printing is deferred to
+        // CommandReaderPatch — it prints when the console reader loop actually
+        // begins, which is the true "ready to accept input" moment.
         initialize();
-        printBanner();
     }
 
     private static final java.util.concurrent.atomic.AtomicBoolean bannerPrinted =
             new java.util.concurrent.atomic.AtomicBoolean(false);
 
-    private static void printBanner() {
+    /**
+     * Print the command-ready banner. Idempotent — subsequent calls are no-ops.
+     * Called from {@code CommandReaderPatch} at the top of {@code CommandReader.run},
+     * guaranteeing the banner prints when the console is actually accepting input
+     * (not just when the server core has finished booting).
+     */
+    public static void printBanner() {
         if (!bannerPrinted.compareAndSet(false, true)) return;
         System.out.println();
         System.out.println("╔══════════════════════════════════════════════════════════════╗");
@@ -81,7 +84,12 @@ public class ConsoleGMCommandRouter {
     /**
      * Initialize the command processor.
      *
-     * <p>Starts a background thread that processes queued commands safely.</p>
+     * <p>Starts a dedicated daemon thread that blocks on the command queue
+     * and executes commands as they arrive. Using a blocking consumer instead
+     * of a ScheduledExecutorService avoids the documented {@code scheduleAtFixedRate}
+     * footgun where any uncaught {@code Throwable} silently suppresses all
+     * future executions — that previously caused the CLI to stop responding
+     * to {@code #} commands after idle time, requiring a force-close.</p>
      */
     public static synchronized void initialize() {
         if (initialized) return;
@@ -89,17 +97,34 @@ public class ConsoleGMCommandRouter {
         // Auto-discover GM commands from Communicator
         GMCommandDiscovery.discoverCommands();
 
-        // Process command queue every 100ms
-        executor.scheduleAtFixedRate(() -> {
-            try {
-                processQueuedCommands();
-            } catch (Exception e) {
-                System.out.println("[Console GM] Error processing command queue: " + e.getMessage());
-            }
-        }, 100, 100, TimeUnit.MILLISECONDS);
+        consumerThread = new Thread(ConsoleGMCommandRouter::consumeLoop, "ConsoleGM-Consumer");
+        consumerThread.setDaemon(true);
+        consumerThread.start();
 
         initialized = true;
         System.out.println("[Console GM] Command router initialized");
+    }
+
+    /**
+     * Blocking consumer loop. Survives any {@link Throwable} thrown by a
+     * command handler — only {@link InterruptedException} exits the loop.
+     */
+    private static void consumeLoop() {
+        while (true) {
+            String command;
+            try {
+                command = commandQueue.take();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            try {
+                executeCommand(command);
+            } catch (Throwable t) {
+                System.out.println("[Console GM] Handler crashed on: " + command
+                        + " — " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            }
+        }
     }
 
     /**
@@ -120,18 +145,6 @@ public class ConsoleGMCommandRouter {
         }
 
         commandQueue.offer(command.trim());
-    }
-
-    /**
-     * Process all queued commands.
-     *
-     * <p>Runs on dedicated executor thread, safe from blocking main operations.</p>
-     */
-    private static void processQueuedCommands() {
-        String command;
-        while ((command = commandQueue.poll()) != null) {
-            executeCommand(command);
-        }
     }
 
     /**
@@ -1211,15 +1224,16 @@ public class ConsoleGMCommandRouter {
         if (!initialized) return;
 
         System.out.println("[Console GM] Shutting down command router...");
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
+        Thread t = consumerThread;
+        if (t != null) {
+            t.interrupt();
+            try {
+                t.join(TimeUnit.SECONDS.toMillis(5));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
         }
-
+        consumerThread = null;
         initialized = false;
     }
 }

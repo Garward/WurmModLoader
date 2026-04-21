@@ -108,6 +108,29 @@ done
 
 echo ""
 
+# === SYNC FRAMEWORK JARS TO COMMUNITYMODS/libs ===
+# Keeps the sibling CommunityMods repo building against the freshly-built
+# framework. Silently skipped if the repo isn't present.
+COMMUNITY_LIBS="${WURMMODLOADER_COMMUNITY_DIR:-$PROJECT_DIR/../WurmModLoader-CommunityMods}/libs"
+if [ -d "$COMMUNITY_LIBS" ]; then
+    echo -e "${BLUE}======================================================================${NC}"
+    echo -e "${YELLOW}🔗 Syncing Framework JARs to CommunityMods/libs${NC}"
+    echo -e "${BLUE}======================================================================${NC}"
+    for module in wurmmodloader-api wurmmodloader-core wurmmodloader-legacy wurmmodloader-modsupport; do
+        # Pick the main (non-sources, non-javadoc) jar
+        src_jar=$(ls "$PROJECT_DIR/$module/build/libs/"${module}-*.jar 2>/dev/null \
+            | grep -v -- '-sources\.jar$' | grep -v -- '-javadoc\.jar$' | head -1)
+        if [ -n "$src_jar" ] && [ -f "$src_jar" ]; then
+            dest_jar="$COMMUNITY_LIBS/$(basename "$src_jar")"
+            copy_if_changed "$src_jar" "$dest_jar" "CommunityLib: $(basename "$src_jar")"
+        else
+            echo -e "  ${RED}✗${NC} CommunityLib: $module - source jar not found"
+            ERRORS=$((ERRORS + 1))
+        fi
+    done
+    echo ""
+fi
+
 # === SEED FRAMEWORK CONFIG (non-destructive) ===
 # Copy the HTTP subsystem config template if user hasn't created one yet.
 # Never overwrite — preserves user edits across deploys.
@@ -117,6 +140,15 @@ if [ -f "$HTTP_CFG_SRC" ] && [ ! -f "$HTTP_CFG_DEST" ]; then
     mkdir -p "$(dirname "$HTTP_CFG_DEST")"
     cp "$HTTP_CFG_SRC" "$HTTP_CFG_DEST"
     echo -e "  ${GREEN}✓${NC} Seeded config/wurmmodloader-http.properties (edit to customize port/address)"
+    COPIED_FILES=$((COPIED_FILES + 1))
+fi
+
+VFIX_CFG_SRC="$PROJECT_DIR/docs/reference/wurmmodloader-vanilla-fixes.properties.example"
+VFIX_CFG_DEST="$SERVER_DIR/config/wurmmodloader-vanilla-fixes.properties"
+if [ -f "$VFIX_CFG_SRC" ] && [ ! -f "$VFIX_CFG_DEST" ]; then
+    mkdir -p "$(dirname "$VFIX_CFG_DEST")"
+    cp "$VFIX_CFG_SRC" "$VFIX_CFG_DEST"
+    echo -e "  ${GREEN}✓${NC} Seeded config/wurmmodloader-vanilla-fixes.properties (edit to toggle fixes / tune timer caps)"
     COPIED_FILES=$((COPIED_FILES + 1))
 fi
 

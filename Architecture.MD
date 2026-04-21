@@ -90,6 +90,37 @@ Each mod is its own Gradle sub-project. Build output lands in `mods/<name>/build
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Startup event ordering (the actual sequence)
+
+This trips people up, so the ordering is spelled out here. The names are
+historical — `ServerStartedEvent` is NOT the "server is fully operational"
+moment; it fires before several async subsystems finish. Use
+`ServerFullyReadyEvent` for anything that depends on a hot DB pool, Steam
+being connected, or the console reader being live.
+
+```
+  mod preInit / init
+     ↓
+  World load + DB pool initialization begins
+     ↓
+  ServerLauncher.runServer returns
+     ↓
+  Legacy ServerStartedListener.onServerStarted() fires
+  ServerStartedEvent fires                         ← core init complete
+     ↓
+  Steam connect, DB pool warmup, misc async subsystems settle
+     ↓
+  CommandReader.run begins (console accepts input)
+  ServerFullyReadyEvent fires                      ← truly ready
+     └── framework DB config sync runs here
+```
+
+| Event | When | Use for |
+|---|---|---|
+| `ServerStartedEvent` | `ServerLauncher.runServer` returns | World + mods initialized. Safe for register-only work that doesn't touch DB pool / Steam / console. |
+| `ServerFullyReadyEvent` | `CommandReader.run` begins | DB-dependent sync, migrations, pool warmup checks, any post-boot work that historically needed a "sleep N seconds after ServerStarted" workaround. |
+
+
 **Mod discovery** (in `ModDiscovery`) tries four strategies in order:
 1. Legacy subfolder (`mods/<name>/<name>.jar` + sibling `.properties`)
 2. Flat properties file
