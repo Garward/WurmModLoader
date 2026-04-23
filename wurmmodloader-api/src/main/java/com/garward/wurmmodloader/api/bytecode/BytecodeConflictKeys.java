@@ -10,6 +10,7 @@ public final class BytecodeConflictKeys {
 
     private BytecodeConflictKeys() {}
 
+    public static final String SERVER_LIFECYCLE_PRE_INIT = "server.lifecycle.preInit";
     public static final String SERVER_LIFECYCLE_START = "server.lifecycle.start";
     public static final String SERVER_LIFECYCLE_SHUTDOWN = "server.lifecycle.shutdown";
     public static final String SERVER_LIFECYCLE_ITEM_TEMPLATES = "server.lifecycle.itemTemplates";
@@ -95,4 +96,41 @@ public final class BytecodeConflictKeys {
     public static final String SACRIFICE_ACCEPTANCE = "priest.sacrifice.acceptance";
     public static final String SACRIFICE_FAVOR_VALUE = "priest.sacrifice.favorValue";
     public static final String SACRIFICE_FAVOR_MODIFIER = "priest.sacrifice.favorModifier";
+    public static final String TRADE_INITIATE = "trade.initiate";
+    public static final String TRADE_PERMISSION_CHECK = "trade.permissionCheck";
+    public static final String TRADE_BALANCE = "trade.balance";
+    public static final String ITEM_MOVE_CHECK = "item.moveCheck";
+    public static final String VILLAGE_EXPANSION_CHECK = "village.expansionCheck";
+    public static final String TERRAIN_MODIFICATION = "terrain.modification";
+    public static final String GUARDPLAN_POLL = "village.guardPlanPoll";
+    public static final String STRUCTURE_PLANNING_CHECK = "structure.planningCheck";
+    public static final String QUESTION_ANSWER = "player.questionAnswer";
+    public static final String SACRIFICE_POST = "priest.sacrifice.post";
+    public static final String CONTAINER_INSERTION_CHECK = "item.containerInsertionCheck";
+    public static final String TRELLIS_PRUNING = "farming.trellisPruning";
+    public static final String FAITH_GAIN_RESET = "priest.faithGainReset";
+    public static final String CREATURE_MOVEMENT_SPEED = "creature.movementSpeed";
+    public static final String CREATURE_TEMPLATE_COLOR = "creature.templateColor";
+    public static final String TERRAIN_FLATTEN = "terrain.flatten";
+    public static final String TERRAIN_PACK = "terrain.pack";
+    public static final String TERRAIN_CULTIVATE = "terrain.cultivate";
+    public static final String CAVE_MINE = "terrain.caveMine";
+    public static final String ACTION_ALLOWED_ON_VEHICLE = "actions.allowedOnVehicle";
+    public static final String CAVE_TILE_ACTION = "terrain.caveTileAction";
+    public static final String CAVE_TILE_GET_BEHAVIOURS = "terrain.caveTileGetBehaviours";
+    public static final String SURFACE_ROCK_ACTION = "terrain.surfaceRockAction";
+    public static final String SURFACE_ROCK_GET_BEHAVIOURS = "terrain.surfaceRockGetBehaviours";
+    public static final String DIRT_DESTINATION_RESOLVE = "farming.dirtDestinationResolve";
+    public static final String DIRT_SOURCE_RESOLVE = "farming.dirtSourceResolve";
+    public static final String DIG_CAPACITY_OVERRIDE = "farming.digCapacityOverride";
+    public static final String ACTION_PERFORM_REQUEST = "actions.performRequest";
+    public static final String ACTION_MENU_BUILD = "actions.menuBuild";
+    public static final String TILE_MENU_BUILD = "actions.tileMenuBuild";
+    public static final String ITEM_MENU_BUILD = "actions.itemMenuBuild";
+    public static final String TILE_DIRT_CONSUME = "farming.tileDirtConsume";
+    public static final String PLANTER_ITEM_ACCEPT = "farming.planterItemAccept";
+    public static final String BULK_STACK_NAME = "item.bulkStackName";
+    public static final String STRUCTURE_GATE_WALL_PLAN = "structure.gate.wallPlan";
+    public static final String STRUCTURE_GATE_FLOOR_PLAN = "structure.gate.floorPlan";
+    public static final String STRUCTURE_GATE_FLOOR_LEVEL = "structure.gate.floorLevel";
 }

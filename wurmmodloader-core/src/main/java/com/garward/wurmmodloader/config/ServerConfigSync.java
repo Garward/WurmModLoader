@@ -100,6 +100,23 @@ public class ServerConfigSync {
             DatabaseConnectionUtil.closeConnection(conn);
         }
 
+        // Spawn coords are owned by WorldSeedBootstrap (runs at PreInit, earlier
+        // than this sync). Treat yaml all-zeros as "unset — defer to DB" so the
+        // sync doesn't clobber the seeder's writes back to (0,0). Users who want
+        // a specific spawn just set a non-zero value in yaml.
+        if (allSpawnsZero(config)) {
+            logger.info("[ServerConfigSync] spawns.* are all 0 in yaml — treating as unset, "
+                + "preserving DB values ("
+                + currentConfig.spawns.jennKellonX + "," + currentConfig.spawns.jennKellonY + ") "
+                + "(owned by WorldSeedBootstrap).");
+            config.spawns.jennKellonX = currentConfig.spawns.jennKellonX;
+            config.spawns.jennKellonY = currentConfig.spawns.jennKellonY;
+            config.spawns.molRehanX   = currentConfig.spawns.molRehanX;
+            config.spawns.molRehanY   = currentConfig.spawns.molRehanY;
+            config.spawns.hotsX       = currentConfig.spawns.hotsX;
+            config.spawns.hotsY       = currentConfig.spawns.hotsY;
+        }
+
         detectChanges(currentConfig, config, changes, autoNetworking);
 
         if (changes.isEmpty()) {
@@ -170,6 +187,12 @@ public class ServerConfigSync {
         } finally {
             DatabaseConnectionUtil.closeConnection(conn);
         }
+    }
+
+    private static boolean allSpawnsZero(ServerConfig c) {
+        return c.spawns.jennKellonX == 0 && c.spawns.jennKellonY == 0
+            && c.spawns.molRehanX == 0   && c.spawns.molRehanY == 0
+            && c.spawns.hotsX == 0       && c.spawns.hotsY == 0;
     }
 
     private static void row(String name, Object yaml, Object db, Object mem) {

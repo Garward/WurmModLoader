@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 
 import org.gotti.wurmunlimited.modloader.ModLoader;
 import com.garward.wurmmodloader.modloader.internal.classhooks.HookManager;
-import org.gotti.wurmunlimited.modloader.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
 import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
 import org.gotti.wurmunlimited.modloader.server.ServerHook;
 

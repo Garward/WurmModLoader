@@ -166,7 +166,11 @@ tasks.register<Zip>("dist") {
     }
 
     from("distribution/scripts") {
-        include("wurmmodloader.sh", "wurmmodloader.bat")
+        include(
+            "wurmmodloader.sh", "wurmmodloader.bat",
+            "wurmmodloader-rebuild-dbs.sh", "wurmmodloader-rebuild-dbs.bat",
+            "wurmmodloader-create-world.sh", "wurmmodloader-create-world.bat"
+        )
         fileMode = Integer.parseInt("755", 8)
         into(".")
     }

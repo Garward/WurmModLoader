@@ -290,6 +290,7 @@ cd WurmModLoader
 
 ### Getting Started
 - **[README.md](README.md)** - This file (installation and quick start)
+- **[docs/guides/custom-map-setup.md](docs/guides/custom-map-setup.md)** - **Running a custom map?** Read this first. Fixes the "all NPC towns in the NW corner" papercut; covers the world-seed bootstrap and its `config/wurmmodloader-world-seed.yaml` file.
 - **[NOTICE.md](NOTICE.md)** - Attribution and licenses
 
 ### Technical Documentation

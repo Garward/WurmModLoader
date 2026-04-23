@@ -440,7 +440,7 @@ public class ServerConfigGenerator {
         yaml.append("  name: \"").append(escape(config.server.name)).append("\"\n");
         yaml.append("  motd: \"").append(escape(config.server.motd)).append("\"\n");
         yaml.append("  steamPassword: \"").append(escape(config.server.steamPassword)).append("\"\n");
-        yaml.append("  kingdom: ").append(config.server.kingdom).append("  # 1=Freedom, 2=Mol-Rehan, 3=JK, 4=HOTS\n");
+        yaml.append("  kingdom: ").append(config.server.kingdom).append("  # 1=JK, 2=MR, 3=HOTS, 4=Freedom\n");
         yaml.append("\n");
         yaml.append("  # Server Type Flags\n");
         yaml.append("  pvp: ").append(config.server.pvp).append("\n");
@@ -545,6 +545,23 @@ public class ServerConfigGenerator {
         yaml.append("  molRehanY: ").append(config.spawns.molRehanY).append("  # Mol-Rehan spawn Y\n");
         yaml.append("  hotsX: ").append(config.spawns.hotsX).append("  # HOTS/Libila spawn X\n");
         yaml.append("  hotsY: ").append(config.spawns.hotsY).append("  # HOTS/Libila spawn Y\n");
+        yaml.append("\n");
+
+        // Server Properties (SERVERPROPERTIES table)
+        yaml.append("# Advanced Server Properties (SERVERPROPERTIES table)\n");
+        yaml.append("# These toggles override SERVERS-table defaults and control network / kingdom behavior.\n");
+        yaml.append("properties:\n");
+        yaml.append("  multiKingdom: ").append(config.properties.multiKingdom).append("  # false = Freedom (PvE), true = kingdoms enabled (PvP)\n");
+        yaml.append("  epic: ").append(config.properties.epic).append("  # Epic cluster mission system\n");
+        yaml.append("  allowChaos: ").append(config.properties.allowChaos).append("  # Allow Libila/HOTS kingdom (PvP only)\n");
+        yaml.append("  newbieFriendly: ").append(config.properties.newbieFriendly).append("  # Newbie protection + starter gear + tutorial\n");
+        yaml.append("  spyPrevention: ").append(config.properties.spyPrevention).append("  # Hide skills/stats from other players\n");
+        yaml.append("  npcs: ").append(config.properties.npcs).append("  # Enable traders, guards, spirit templars, etc.\n");
+        yaml.append("  endGameItems: ").append(config.properties.endGameItems).append("  # Enable artifacts, dragon armor, etc.\n");
+        yaml.append("  autoNetworking: ").append(config.properties.autoNetworking).append("  # true = Wurm auto-detects externalIp/Port (OVERRIDES yaml values); false = yaml server.externalIp wins\n");
+        yaml.append("  enablePnpPortForward: ").append(config.properties.enablePnpPortForward).append("  # Auto-configure router via UPnP\n");
+        yaml.append("  steamQueryPort: ").append(config.properties.steamQueryPort).append("  # Steam server browser port\n");
+        yaml.append("  adminPassword: \"").append(escape(config.properties.adminPassword)).append("\"  # GM console admin password\n");
 
         return yaml.toString();
     }

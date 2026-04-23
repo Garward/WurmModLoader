@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 
 // Use modern interfaces
 import org.gotti.wurmunlimited.modloader.interfaces.MessagePolicy;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
 import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 
 import com.garward.wurmmodloader.api.events.base.EventPriority;
@@ -242,6 +242,27 @@ public class ServerHook {
 		});
 	}
 
+	/**
+	 * Fired at the top of {@code Villages.loadVillages()} via bytecode patch.
+	 * Zones DB connection is open, no village state in memory yet. This is
+	 * the seeding/repair hook.
+	 */
+	public void fireOnServerPreInit() {
+		logger.info("[ServerHook] ServerPreInit — running core seeders, then posting event");
+		try {
+			com.garward.wurmmodloader.core.worldseed.WorldSeedBootstrap.run();
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.SEVERE,
+				"[ServerHook] WorldSeedBootstrap threw", t);
+		}
+		try {
+			eventBus.post(new com.garward.wurmmodloader.api.events.server.ServerPreInitEvent());
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.SEVERE,
+				"[ServerHook] ServerPreInitEvent subscriber threw", t);
+		}
+	}
+
 	public void fireOnServerStarted() {
 		logger.info("[ServerHook] DEBUG: Bootstrapping runtime registries");
 		SystemBootstrap.initializeAll();
@@ -292,6 +313,33 @@ public class ServerHook {
 		// Post modern event
 		logger.info("[ServerHook] DEBUG: Posting ServerStartedEvent");
 		eventBus.post(new ServerStartedEvent());
+
+		// Run vanilla-API village creation (configurable; off = mods materialize via event).
+		try {
+			com.garward.wurmmodloader.core.worldseed.WorldSeedCompletionHandler.run();
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerHook] WorldSeedCompletionHandler threw", t);
+		}
+
+		// Post WorldSeededEvent carrying the PreInit-decided seed outcome (if any).
+		try {
+			com.garward.wurmmodloader.api.events.server.WorldSeedResult seedResult =
+				com.garward.wurmmodloader.api.worldseed.WorldSeedAPI.getResult();
+			if (seedResult == null) {
+				// Seeder didn't run (PreInit hook missing?) — publish a FAILED_INFRASTRUCTURE sentinel
+				// so subscribers still fire and can branch on outcome.
+				seedResult = new com.garward.wurmmodloader.api.events.server.WorldSeedResult(
+					com.garward.wurmmodloader.api.events.server.WorldSeedResult.Outcome.FAILED_INFRASTRUCTURE,
+					0, 0, 0, 0, 0);
+				com.garward.wurmmodloader.api.worldseed.WorldSeedAPI.publish(seedResult);
+			}
+			logger.info("[ServerHook] Posting WorldSeededEvent: " + seedResult);
+			eventBus.post(new com.garward.wurmmodloader.api.events.server.WorldSeededEvent(seedResult));
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerHook] WorldSeededEvent dispatch threw", t);
+		}
 
 		// Register event test command handler (/framework testEvents)
 		try {
@@ -1359,6 +1407,11 @@ public class ServerHook {
 	private static volatile int configSyncRetries = 0;
 	private static final int MAX_CONFIG_SYNC_RETRIES = 10; // Increased to allow more time for database to become ready
 
+	// start=<WorldName> is captured by DelegatedLauncher into the system property
+	// "wurmmodloader.launchWorldFolder" before CapabilityHooks runs. We deliberately
+	// avoid a setter on this class — class-loading ServerHook that early would
+	// freeze Player before bytecode patches can apply.
+
 	private void loadAndSyncServerConfig() {
 		boolean isRetry = configSyncRetries > 0;
 
@@ -1460,18 +1513,38 @@ public class ServerHook {
 	private void runDatabaseConfigSync() throws Exception {
 		logger.info("[ServerConfigSync] ===== DATABASE SYNC (CommandReader ready — pool is live) =====");
 
-		String serverRoot = System.getProperty("user.dir");
-		java.io.File serverDir = new java.io.File(serverRoot);
+		// Use Constants.dbHost — the authoritative active-world pointer Wurm
+		// itself reads against. Directory scanning picks the wrong world when
+		// multiple sqlite scaffolds exist side by side.
 		String worldFolder = null;
+		try {
+			Class<?> constantsClass = Class.forName("com.wurmonline.server.Constants");
+			java.lang.reflect.Field dbHostField = constantsClass.getField("dbHost");
+			String dbHost = (String) dbHostField.get(null);
+			if (dbHost != null) {
+				worldFolder = dbHost;
+				int slash = worldFolder.indexOf('/');
+				if (slash >= 0) worldFolder = worldFolder.substring(0, slash);
+				int back = worldFolder.indexOf('\\');
+				if (back >= 0) worldFolder = worldFolder.substring(0, back);
+			}
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerConfigSync] Could not read Constants.dbHost — falling back to directory scan", t);
+		}
 
-		java.io.File[] children = serverDir.listFiles();
-		if (children != null) {
-			for (java.io.File dir : children) {
-				if (dir.isDirectory() && !dir.getName().startsWith(".")) {
-					java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
-					if (dbFile.exists() && dbFile.isFile()) {
-						worldFolder = dir.getName();
-						break;
+		if (worldFolder == null || worldFolder.isEmpty()) {
+			String serverRoot = System.getProperty("user.dir");
+			java.io.File serverDir = new java.io.File(serverRoot);
+			java.io.File[] children = serverDir.listFiles();
+			if (children != null) {
+				for (java.io.File dir : children) {
+					if (dir.isDirectory() && !dir.getName().startsWith(".")) {
+						java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
+						if (dbFile.exists() && dbFile.isFile()) {
+							worldFolder = dir.getName();
+							break;
+						}
 					}
 				}
 			}
@@ -1482,11 +1555,22 @@ public class ServerHook {
 			return;
 		}
 
-		int estimatedServerId = 11455;
-		com.garward.wurmmodloader.config.ServerConfig config =
-			com.garward.wurmmodloader.config.ServerConfigLoader.load(worldFolder, estimatedServerId);
+		logger.info("[ServerConfigSync] Active world: " + worldFolder);
 
-		boolean success = com.garward.wurmmodloader.config.ServerConfigSync.syncToDatabase(config, estimatedServerId);
+		int serverId;
+		try {
+			Class<?> serversClass = Class.forName("com.wurmonline.server.Servers");
+			serverId = (int) serversClass.getMethod("getLocalServerId").invoke(null);
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerConfigSync] Could not read Servers.getLocalServerId() — falling back to 11455", t);
+			serverId = 11455;
+		}
+
+		com.garward.wurmmodloader.config.ServerConfig config =
+			com.garward.wurmmodloader.config.ServerConfigLoader.load(worldFolder, serverId);
+
+		boolean success = com.garward.wurmmodloader.config.ServerConfigSync.syncToDatabase(config, serverId);
 
 		if (success) {
 			logger.info("[ServerConfigSync] ✅ Database sync completed successfully");
@@ -1715,13 +1799,49 @@ public class ServerHook {
 
 			String worldFolder = null;
 
-			// Find world folder by looking for directories containing sqlite/wurmlogin.db
-			for (java.io.File dir : serverDir.listFiles()) {
-				if (dir.isDirectory() && !dir.getName().startsWith(".")) {
-					java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
-					if (dbFile.exists() && dbFile.isFile()) {
-						worldFolder = dir.getName();
-						break;
+			// 1. Authoritative: start=<WorldName> captured by DelegatedLauncher before
+			//    WU had a chance to parse its own args. Avoids filesystem guessing
+			//    and is immune to stale 'currentdir' markers from prior crashed boots.
+			String launched = System.getProperty("wurmmodloader.launchWorldFolder");
+			if (launched != null && !launched.isEmpty()) {
+				java.io.File candidate = new java.io.File(serverDir, launched);
+				java.io.File dbFile = new java.io.File(candidate, "sqlite/wurmlogin.db");
+				if (candidate.isDirectory() && dbFile.exists()) {
+					worldFolder = launched;
+					logger.info("[ServerConfigSync] Using launch arg start=" + launched);
+				} else {
+					logger.warning("[ServerConfigSync] start=" + launched
+						+ " given but folder/db missing — falling back to markers");
+				}
+			}
+
+			// 2. Fallback: folder WU itself flagged current via 'currentdir' marker.
+			if (worldFolder == null) {
+				for (java.io.File dir : serverDir.listFiles()) {
+					if (dir.isDirectory() && !dir.getName().startsWith(".")) {
+						java.io.File marker = new java.io.File(dir, "currentdir");
+						java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
+						if (marker.exists() && dbFile.exists()) {
+							worldFolder = dir.getName();
+							break;
+						}
+					}
+				}
+			}
+
+			// Fallback: no currentdir marker found — pick first directory with a
+			// wurmlogin.db so older worlds (pre-GameFolder era) still sync.
+			if (worldFolder == null) {
+				for (java.io.File dir : serverDir.listFiles()) {
+					if (dir.isDirectory() && !dir.getName().startsWith(".")) {
+						java.io.File dbFile = new java.io.File(dir, "sqlite/wurmlogin.db");
+						if (dbFile.exists() && dbFile.isFile()) {
+							worldFolder = dir.getName();
+							logger.warning("[ServerConfigSync] No 'currentdir' marker found on any world folder — "
+								+ "falling back to first match: " + worldFolder
+								+ ". This may load the wrong world's config if you have multiple worlds.");
+							break;
+						}
 					}
 				}
 			}
@@ -1847,6 +1967,598 @@ public class ServerHook {
 			logger.info(String.format("[Event] DatabaseMigrationCompletedEvent: schema=%s", schema));
 		}
 		eventBus.post(new com.garward.wurmmodloader.api.events.database.DatabaseMigrationCompletedEvent(schema));
+	}
+
+	// ========================================================================
+	// Trade / Village / ItemMove event dispatchers
+	// ========================================================================
+
+	/**
+	 * Fires TradeInitiateEvent then NpcTradePermissionCheckEvent from the NPC's
+	 * startTrading entry. Returns true if the trade should be aborted.
+	 *
+	 * <p>The "player" side is resolved as the other party on the current Trade.
+	 * If the deny-reason on the permission event is set, the player receives an
+	 * alert message.</p>
+	 */
+	public boolean fireTradeSessionStart(com.wurmonline.server.creatures.Creature npc) {
+		com.wurmonline.server.items.Trade trade = npc.getTrade();
+		com.wurmonline.server.creatures.Creature player = null;
+		if (trade != null) {
+			com.wurmonline.server.creatures.Creature c1 = trade.creatureOne;
+			com.wurmonline.server.creatures.Creature c2 = trade.creatureTwo;
+			player = (c1 != null && c1 != npc) ? c1 : c2;
+		}
+
+		com.garward.wurmmodloader.api.events.trade.TradeInitiateEvent initEvent =
+			new com.garward.wurmmodloader.api.events.trade.TradeInitiateEvent(npc, player);
+		eventBus.post(initEvent);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TradeInitiateEvent: npc=%s player=%s cancelled=%s",
+				npc.getName(), player == null ? "null" : player.getName(), initEvent.isCancelled()));
+		}
+		if (initEvent.isCancelled()) {
+			return true;
+		}
+
+		com.garward.wurmmodloader.api.events.trade.NpcTradePermissionCheckEvent permEvent =
+			new com.garward.wurmmodloader.api.events.trade.NpcTradePermissionCheckEvent(npc, player);
+		eventBus.post(permEvent);
+		if (DEBUG) {
+			logger.info(String.format("[Event] NpcTradePermissionCheckEvent: npc=%s player=%s cancelled=%s reason=%s",
+				npc.getName(), player == null ? "null" : player.getName(),
+				permEvent.isCancelled(), permEvent.getDenyReason()));
+		}
+		if (permEvent.isCancelled()) {
+			if (player != null && permEvent.getDenyReason() != null) {
+				try {
+					player.getCommunicator().sendAlertServerMessage(permEvent.getDenyReason());
+				} catch (Exception ignore) {}
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Fires TradeBalanceEvent. Returns true to skip the vanilla balance pass.
+	 */
+	public boolean fireTradeBalance(com.wurmonline.server.creatures.TradeHandler handler) {
+		com.garward.wurmmodloader.api.events.trade.TradeBalanceEvent event =
+			new com.garward.wurmmodloader.api.events.trade.TradeBalanceEvent(handler);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TradeBalanceEvent: cancelled=%s", event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires ItemMoveCheckEvent. Returns true if the move should be rejected.
+	 * On cancel with a deny-reason, the mover receives an alert.
+	 */
+	public boolean fireItemMoveCheck(com.wurmonline.server.items.Item item,
+	                                 com.wurmonline.server.creatures.Creature mover,
+	                                 long targetId,
+	                                 boolean lastMove) {
+		com.garward.wurmmodloader.api.events.item.ItemMoveCheckEvent event =
+			new com.garward.wurmmodloader.api.events.item.ItemMoveCheckEvent(item, mover, targetId, lastMove);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] ItemMoveCheckEvent: item=%s target=%d cancelled=%s reason=%s",
+				item == null ? "null" : item.getName(), targetId, event.isCancelled(), event.getDenyReason()));
+		}
+		if (event.isCancelled()) {
+			if (mover != null && event.getDenyReason() != null) {
+				try {
+					mover.getCommunicator().sendAlertServerMessage(event.getDenyReason());
+				} catch (Exception ignore) {}
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Fires VillageExpansionCheckEvent. Returns true to abort the foundation/
+	 * expansion. Uses reflection to read the private {@code expanding} flag.
+	 */
+	public boolean fireVillageExpansionCheck(com.wurmonline.server.questions.VillageFoundationQuestion question) {
+		boolean expanding = false;
+		try {
+			java.lang.reflect.Field f = question.getClass().getDeclaredField("expanding");
+			f.setAccessible(true);
+			expanding = f.getBoolean(question);
+		} catch (NoSuchFieldException | IllegalAccessException ignore) {}
+
+		com.garward.wurmmodloader.api.events.village.VillageExpansionCheckEvent event =
+			new com.garward.wurmmodloader.api.events.village.VillageExpansionCheckEvent(question, expanding);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] VillageExpansionCheckEvent: expanding=%s cancelled=%s",
+				expanding, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires TerrainModificationEvent. Returns true to cancel the dig.
+	 */
+	public boolean fireTerrainModification(com.wurmonline.server.creatures.Creature performer,
+	                                       com.wurmonline.server.items.Item tool,
+	                                       int tileX, int tileY, int tile,
+	                                       float counter, boolean corner) {
+		com.garward.wurmmodloader.api.events.structure.TerrainModificationEvent event =
+			new com.garward.wurmmodloader.api.events.structure.TerrainModificationEvent(
+				performer, tool, tileX, tileY, tile, counter, corner);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TerrainModificationEvent: tile=(%d,%d) cancelled=%s",
+				tileX, tileY, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires GuardPlanPollEvent. Returns true to skip the vanilla upkeep drain.
+	 */
+	public boolean fireGuardPlanPoll(com.wurmonline.server.villages.GuardPlan plan) {
+		com.garward.wurmmodloader.api.events.village.GuardPlanPollEvent event =
+			new com.garward.wurmmodloader.api.events.village.GuardPlanPollEvent(plan);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] GuardPlanPollEvent: cancelled=%s", event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires StructurePlanningCheckEvent. Returns true to deny placement; sends
+	 * the deny-reason to the performer as an alert if set.
+	 */
+	public boolean fireStructurePlanningCheck(com.wurmonline.server.creatures.Creature performer,
+	                                          com.wurmonline.server.items.Item tool,
+	                                          int tileX, int tileY, int tile) {
+		com.garward.wurmmodloader.api.events.structure.StructurePlanningCheckEvent event =
+			new com.garward.wurmmodloader.api.events.structure.StructurePlanningCheckEvent(
+				performer, tool, tileX, tileY, tile);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] StructurePlanningCheckEvent: tile=(%d,%d) cancelled=%s reason=%s",
+				tileX, tileY, event.isCancelled(), event.getDenyReason()));
+		}
+		if (event.isCancelled()) {
+			if (performer != null && event.getDenyReason() != null) {
+				try {
+					performer.getCommunicator().sendAlertServerMessage(event.getDenyReason());
+				} catch (Exception ignore) {}
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Fires StructureGateCheckEvent. Returns true when a listener bypassed the gate.
+	 */
+	public boolean fireStructureGateCheck(com.wurmonline.server.creatures.Creature performer,
+	                                      com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent.Subject subject,
+	                                      com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent.Phase phase,
+	                                      int heightOffset) {
+		com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent event =
+			new com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent(
+				performer, subject, phase, heightOffset);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] StructureGateCheckEvent: subject=%s phase=%s bypass=%s",
+				subject, phase, event.isBypassed()));
+		}
+		return event.isBypassed();
+	}
+
+	/**
+	 * Fires QuestionAnswerEvent. Returns true to skip the vanilla
+	 * {@code Question.answer(Properties)} dispatch.
+	 */
+	public boolean fireQuestionAnswer(com.wurmonline.server.questions.Question question,
+	                                  java.util.Properties answers) {
+		com.garward.wurmmodloader.api.events.player.QuestionAnswerEvent event =
+			new com.garward.wurmmodloader.api.events.player.QuestionAnswerEvent(question, answers);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] QuestionAnswerEvent: type=%s cancelled=%s",
+				question == null ? "null" : question.getClass().getSimpleName(), event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires SacrificePostEvent (observer-only, non-cancellable) after
+	 * {@code MethodsReligion.sacrifice} resolves.
+	 */
+	public void fireSacrificePost(com.wurmonline.server.behaviours.Action action,
+	                              com.wurmonline.server.creatures.Creature performer,
+	                              com.wurmonline.server.items.Item altar,
+	                              boolean done) {
+		com.garward.wurmmodloader.api.events.priest.SacrificePostEvent event =
+			new com.garward.wurmmodloader.api.events.priest.SacrificePostEvent(action, performer, altar, done);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] SacrificePostEvent: performer=%s done=%s",
+				performer == null ? "null" : performer.getName(), done));
+		}
+	}
+
+	/**
+	 * Fires ContainerInsertionCheckEvent. Returns true to reject the insertion.
+	 */
+	public boolean fireContainerInsertionCheck(com.wurmonline.server.items.Item container,
+	                                           com.wurmonline.server.items.Item incoming,
+	                                           boolean testItemCount) {
+		com.garward.wurmmodloader.api.events.item.ContainerInsertionCheckEvent event =
+			new com.garward.wurmmodloader.api.events.item.ContainerInsertionCheckEvent(
+				container, incoming, testItemCount);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] ContainerInsertionCheckEvent: container=%s incoming=%s cancelled=%s",
+				container == null ? "null" : container.getName(),
+				incoming == null ? "null" : incoming.getName(),
+				event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires TrellisPruningEvent. Returns true to abort the prune.
+	 */
+	public boolean fireTrellisPruning(com.wurmonline.server.behaviours.Action action,
+	                                  com.wurmonline.server.creatures.Creature performer,
+	                                  com.wurmonline.server.items.Item sickle,
+	                                  com.wurmonline.server.items.Item trellis,
+	                                  float counter) {
+		com.garward.wurmmodloader.api.events.farming.TrellisPruningEvent event =
+			new com.garward.wurmmodloader.api.events.farming.TrellisPruningEvent(
+				action, performer, sickle, trellis, counter);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TrellisPruningEvent: performer=%s cancelled=%s",
+				performer == null ? "null" : performer.getName(), event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires FaithGainResetEvent. Returns true to skip the vanilla reset.
+	 */
+	public boolean fireFaithGainReset() {
+		com.garward.wurmmodloader.api.events.priest.FaithGainResetEvent event =
+			new com.garward.wurmmodloader.api.events.priest.FaithGainResetEvent();
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] FaithGainResetEvent: cancelled=%s", event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires CreatureMovementSpeedEvent. Returns the (possibly modified) speed.
+	 */
+	public float fireCreatureMovementSpeed(com.wurmonline.server.creatures.Creature creature, float speed) {
+		com.garward.wurmmodloader.api.events.creature.CreatureMovementSpeedEvent event =
+			new com.garward.wurmmodloader.api.events.creature.CreatureMovementSpeedEvent(creature, speed);
+		eventBus.post(event);
+		return event.getSpeed();
+	}
+
+	/**
+	 * Fires CreatureTemplateColorEvent. Returns the (possibly modified) color value.
+	 */
+	public int fireCreatureTemplateColor(com.wurmonline.server.creatures.CreatureTemplate template,
+	                                     com.garward.wurmmodloader.api.events.creature.CreatureTemplateColorEvent.Channel channel,
+	                                     int value) {
+		com.garward.wurmmodloader.api.events.creature.CreatureTemplateColorEvent event =
+			new com.garward.wurmmodloader.api.events.creature.CreatureTemplateColorEvent(template, channel, value);
+		eventBus.post(event);
+		return event.getValue();
+	}
+
+	/**
+	 * Fires TerrainFlattenEvent. Returns true to cancel the flatten.
+	 */
+	public boolean fireTerrainFlatten(com.wurmonline.server.creatures.Creature performer,
+	                                  com.wurmonline.server.items.Item tool,
+	                                  int tile, int tileX, int tileY,
+	                                  float counter,
+	                                  com.wurmonline.server.behaviours.Action action) {
+		com.garward.wurmmodloader.api.events.structure.TerrainFlattenEvent event =
+			new com.garward.wurmmodloader.api.events.structure.TerrainFlattenEvent(
+				performer, tool, tile, tileX, tileY, counter, action);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TerrainFlattenEvent: tile=(%d,%d) cancelled=%s",
+				tileX, tileY, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires TerrainPackEvent. Returns true to cancel the pack.
+	 */
+	public boolean fireTerrainPack(com.wurmonline.server.creatures.Creature performer,
+	                               com.wurmonline.server.items.Item tool,
+	                               int tileX, int tileY, boolean onSurface,
+	                               int tile, float counter,
+	                               com.wurmonline.server.behaviours.Action action) {
+		com.garward.wurmmodloader.api.events.structure.TerrainPackEvent event =
+			new com.garward.wurmmodloader.api.events.structure.TerrainPackEvent(
+				performer, tool, tileX, tileY, onSurface, tile, counter, action);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TerrainPackEvent: tile=(%d,%d) cancelled=%s",
+				tileX, tileY, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires TerrainCultivateEvent. Returns true to cancel the cultivate.
+	 */
+	public boolean fireTerrainCultivate(com.wurmonline.server.creatures.Creature performer,
+	                                    com.wurmonline.server.items.Item tool,
+	                                    int tileX, int tileY, boolean onSurface,
+	                                    int tile, float counter) {
+		com.garward.wurmmodloader.api.events.farming.TerrainCultivateEvent event =
+			new com.garward.wurmmodloader.api.events.farming.TerrainCultivateEvent(
+				performer, tool, tileX, tileY, onSurface, tile, counter);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] TerrainCultivateEvent: tile=(%d,%d) cancelled=%s",
+				tileX, tileY, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires CaveMineEvent. Returns true to cancel the mine action
+	 * (cancel returns true from mine() — action-loop done/abort semantics).
+	 */
+	public boolean fireCaveMine(com.wurmonline.server.behaviours.Action action,
+	                            com.wurmonline.server.creatures.Creature performer,
+	                            com.wurmonline.server.items.Item source,
+	                            int tileX, int tileY, short mineAction,
+	                            float counter, int dir,
+	                            com.wurmonline.math.TilePos digTilePos) {
+		com.garward.wurmmodloader.api.events.structure.CaveMineEvent event =
+			new com.garward.wurmmodloader.api.events.structure.CaveMineEvent(
+				action, performer, source, tileX, tileY, mineAction, counter, dir, digTilePos);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] CaveMineEvent: tile=(%d,%d) mineAction=%d cancelled=%s",
+				tileX, tileY, mineAction, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires ActionAllowedOnVehicleEvent. Returns the possibly-overridden verdict.
+	 */
+	public boolean fireActionAllowedOnVehicle(short action, boolean vanillaAllowed) {
+		com.garward.wurmmodloader.api.events.action.ActionAllowedOnVehicleEvent event =
+			new com.garward.wurmmodloader.api.events.action.ActionAllowedOnVehicleEvent(action, vanillaAllowed);
+		eventBus.post(event);
+		return event.isAllowed();
+	}
+
+	/**
+	 * Fires CaveTileActionEvent. Returns true to cancel (action-loop done/abort).
+	 */
+	public boolean fireCaveTileAction(com.wurmonline.server.behaviours.Action action,
+	                                  com.wurmonline.server.creatures.Creature performer,
+	                                  com.wurmonline.server.items.Item source,
+	                                  int tileX, int tileY, boolean onSurface, int heightOffset,
+	                                  int tile, int dir, short actionShort, float counter) {
+		com.garward.wurmmodloader.api.events.structure.CaveTileActionEvent event =
+			new com.garward.wurmmodloader.api.events.structure.CaveTileActionEvent(
+				action, performer, source, tileX, tileY, onSurface, heightOffset,
+				tile, dir, actionShort, counter);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] CaveTileActionEvent: tile=(%d,%d) action=%d cancelled=%s",
+				tileX, tileY, actionShort, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires CaveTileGetBehavioursEvent. Listeners mutate the live entries list.
+	 */
+	public void fireCaveTileGetBehaviours(com.wurmonline.server.creatures.Creature performer,
+	                                      com.wurmonline.server.items.Item source,
+	                                      int tileX, int tileY, boolean onSurface, int tile, int dir,
+	                                      java.util.List<com.wurmonline.server.behaviours.ActionEntry> entries) {
+		com.garward.wurmmodloader.api.events.structure.CaveTileGetBehavioursEvent event =
+			new com.garward.wurmmodloader.api.events.structure.CaveTileGetBehavioursEvent(
+				performer, source, tileX, tileY, onSurface, tile, dir, entries);
+		eventBus.post(event);
+	}
+
+	/**
+	 * Fires SurfaceRockActionEvent. Returns true to cancel (action-loop done/abort).
+	 */
+	public boolean fireSurfaceRockAction(com.wurmonline.server.behaviours.Action action,
+	                                     com.wurmonline.server.creatures.Creature performer,
+	                                     com.wurmonline.server.items.Item source,
+	                                     int tileX, int tileY, boolean onSurface, int heightOffset,
+	                                     int tile, short actionShort, float counter) {
+		com.garward.wurmmodloader.api.events.structure.SurfaceRockActionEvent event =
+			new com.garward.wurmmodloader.api.events.structure.SurfaceRockActionEvent(
+				action, performer, source, tileX, tileY, onSurface, heightOffset,
+				tile, actionShort, counter);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] SurfaceRockActionEvent: tile=(%d,%d) action=%d cancelled=%s",
+				tileX, tileY, actionShort, event.isCancelled()));
+		}
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires SurfaceRockGetBehavioursEvent. Listeners mutate the live entries list.
+	 */
+	public void fireSurfaceRockGetBehaviours(com.wurmonline.server.creatures.Creature performer,
+	                                         com.wurmonline.server.items.Item source,
+	                                         int tileX, int tileY, boolean onSurface, int tile,
+	                                         java.util.List<com.wurmonline.server.behaviours.ActionEntry> entries) {
+		com.garward.wurmmodloader.api.events.structure.SurfaceRockGetBehavioursEvent event =
+			new com.garward.wurmmodloader.api.events.structure.SurfaceRockGetBehavioursEvent(
+				performer, source, tileX, tileY, onSurface, tile, entries);
+		eventBus.post(event);
+	}
+
+	/**
+	 * Fires DirtDestinationResolveEvent and returns the (possibly replaced)
+	 * target item. Returning {@code null} means "use vanillaTarget".
+	 */
+	public com.wurmonline.server.items.Item fireDirtDestinationResolve(
+			com.wurmonline.server.items.Item dirt,
+			com.wurmonline.server.creatures.Creature performer,
+			com.wurmonline.server.items.Item tool,
+			com.wurmonline.server.items.Item vanillaTarget,
+			boolean dredging, boolean toPile, String contextName) {
+		com.garward.wurmmodloader.api.events.farming.DirtDestinationResolveEvent.Context ctx =
+			com.garward.wurmmodloader.api.events.farming.DirtDestinationResolveEvent.Context.valueOf(contextName);
+		com.garward.wurmmodloader.api.events.farming.DirtDestinationResolveEvent event =
+			new com.garward.wurmmodloader.api.events.farming.DirtDestinationResolveEvent(
+				dirt, performer, tool, vanillaTarget, dredging, toPile, ctx);
+		eventBus.post(event);
+		return event.getResolvedTarget();
+	}
+
+	/**
+	 * Fires DirtSourceResolveEvent and returns the (possibly replaced)
+	 * carried-item lookup result.
+	 */
+	public com.wurmonline.server.items.Item fireDirtSourceResolve(
+			com.wurmonline.server.creatures.Creature performer,
+			int templateId,
+			com.wurmonline.server.items.Item vanillaFound,
+			String contextName) {
+		com.garward.wurmmodloader.api.events.farming.DirtSourceResolveEvent.Context ctx =
+			com.garward.wurmmodloader.api.events.farming.DirtSourceResolveEvent.Context.valueOf(contextName);
+		com.garward.wurmmodloader.api.events.farming.DirtSourceResolveEvent event =
+			new com.garward.wurmmodloader.api.events.farming.DirtSourceResolveEvent(
+				performer, templateId, vanillaFound, ctx);
+		eventBus.post(event);
+		return event.getResolvedItem();
+	}
+
+	/**
+	 * Fires DigCapacityOverrideEvent. vanillaValue is 1/0 for boolean gates,
+	 * raw int for count/volume gates. Returns overridden value (same marshal).
+	 */
+	public long fireDigCapacityOverride(
+			com.wurmonline.server.creatures.Creature performer,
+			com.wurmonline.server.items.Item tool,
+			com.wurmonline.server.items.Item target,
+			String kindName, long vanillaValue, boolean toPile, boolean dredging) {
+		com.garward.wurmmodloader.api.events.farming.DigCapacityOverrideEvent.Kind kind =
+			com.garward.wurmmodloader.api.events.farming.DigCapacityOverrideEvent.Kind.valueOf(kindName);
+		com.garward.wurmmodloader.api.events.farming.DigCapacityOverrideEvent event =
+			new com.garward.wurmmodloader.api.events.farming.DigCapacityOverrideEvent(
+				performer, tool, target, kind, vanillaValue, toPile, dredging);
+		eventBus.post(event);
+		return event.getOverrideValue();
+	}
+
+	/**
+	 * Fires ActionPerformRequestEvent. Returns {@code true} if cancelled.
+	 */
+	public boolean fireActionPerformRequest(com.wurmonline.server.creatures.Creature performer,
+			long subjectWurmId, long targetWurmId, short actionShort) {
+		com.garward.wurmmodloader.api.events.action.ActionPerformRequestEvent event =
+			new com.garward.wurmmodloader.api.events.action.ActionPerformRequestEvent(
+				performer, subjectWurmId, targetWurmId, actionShort);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires ActionMenuBuildEvent so listeners can mutate the live
+	 * availableActions list before it ships to the client.
+	 */
+	public void fireActionMenuBuild(com.wurmonline.server.creatures.Communicator communicator,
+			java.util.List<com.wurmonline.server.behaviours.ActionEntry> availableActions,
+			String helpString, boolean sendToSelectBar) {
+		com.garward.wurmmodloader.api.events.action.ActionMenuBuildEvent event =
+			new com.garward.wurmmodloader.api.events.action.ActionMenuBuildEvent(
+				communicator, availableActions, helpString, sendToSelectBar);
+		eventBus.post(event);
+	}
+
+	/**
+	 * Fires TileMenuBuildEvent. Target-aware tile menu injection path.
+	 */
+	public void fireTileMenuBuild(com.wurmonline.server.creatures.Creature performer,
+			long target, boolean onSurface, com.wurmonline.server.items.Item source,
+			java.util.List<com.wurmonline.server.behaviours.ActionEntry> availableActions,
+			String helpString) {
+		com.garward.wurmmodloader.api.events.action.TileMenuBuildEvent event =
+			new com.garward.wurmmodloader.api.events.action.TileMenuBuildEvent(
+				performer, target, onSurface, source, availableActions, helpString);
+		eventBus.post(event);
+	}
+
+	/**
+	 * Fires ItemMenuBuildEvent. Target-aware item menu injection path.
+	 */
+	public void fireItemMenuBuild(com.wurmonline.server.creatures.Creature performer,
+			long targetId, com.wurmonline.server.items.Item source,
+			java.util.List<com.wurmonline.server.behaviours.ActionEntry> availableActions,
+			String helpString) {
+		com.garward.wurmmodloader.api.events.action.ItemMenuBuildEvent event =
+			new com.garward.wurmmodloader.api.events.action.ItemMenuBuildEvent(
+				performer, targetId, source, availableActions, helpString);
+		eventBus.post(event);
+	}
+
+	/**
+	 * Fires TileDirtConsumeEvent. Returns {@code true} if a listener claimed
+	 * consumption of the dirt pile.
+	 */
+	public boolean fireTileDirtConsume(com.wurmonline.server.behaviours.Action action,
+			com.wurmonline.server.creatures.Creature performer,
+			com.wurmonline.server.items.Item source) {
+		com.garward.wurmmodloader.api.events.farming.TileDirtConsumeEvent event =
+			new com.garward.wurmmodloader.api.events.farming.TileDirtConsumeEvent(
+				action, performer, source);
+		eventBus.post(event);
+		return event.isConsumed();
+	}
+
+	/**
+	 * Fires PlanterItemAcceptEvent. Returns the (possibly overridden) accepted flag.
+	 */
+	public boolean firePlanterItemAccept(com.wurmonline.server.creatures.Creature performer,
+			com.wurmonline.server.items.Item herb,
+			com.wurmonline.server.items.Item planter,
+			String kindName, boolean vanillaValue) {
+		com.garward.wurmmodloader.api.events.farming.PlanterItemAcceptEvent.Kind kind =
+			com.garward.wurmmodloader.api.events.farming.PlanterItemAcceptEvent.Kind.valueOf(kindName);
+		com.garward.wurmmodloader.api.events.farming.PlanterItemAcceptEvent event =
+			new com.garward.wurmmodloader.api.events.farming.PlanterItemAcceptEvent(
+				performer, herb, planter, kind, vanillaValue);
+		eventBus.post(event);
+		return event.isAccepted();
+	}
+
+	/**
+	 * Fires BulkStackNameEvent. Returns the canonical bulk-stacking name.
+	 */
+	public String fireBulkStackName(com.wurmonline.server.items.Item item, String vanillaName) {
+		com.garward.wurmmodloader.api.events.item.BulkStackNameEvent event =
+			new com.garward.wurmmodloader.api.events.item.BulkStackNameEvent(item, vanillaName);
+		eventBus.post(event);
+		return event.getResolvedName();
 	}
 
 }

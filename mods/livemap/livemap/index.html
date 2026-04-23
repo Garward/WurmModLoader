@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wurm Unlimited - Live Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .info-panel h2 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+
+        .info-panel p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .player-marker {
+            background-color: #ff0000;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+        }
+
+        .village-popup {
+            font-size: 14px;
+        }
+
+        .village-popup h3 {
+            margin: 0 0 5px 0;
+        }
+
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .legend-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .legend-marker {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="info-panel">
+        <h2>Wurm Live Map</h2>
+        <p>Map Size: <span id="mapSize">Loading...</span></p>
+        <p>Players Online: <span id="playerCount">0</span></p>
+        <p>Villages: <span id="villageCount">0</span></p>
+        <button onclick="togglePlayers()">Toggle Players</button>
+        <button onclick="toggleVillages()">Toggle Villages</button>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let map;
+        let config;
+        let playersLayer;
+        let villagesLayer;
+        let altarsLayer;
+        let showPlayers = true;
+        let showVillages = true;
+
+        // Initialize map
+        async function initMap() {
+            // Load config
+            const configResponse = await fetch('/livemap/api/config');
+            config = await configResponse.json();
+
+            document.getElementById('mapSize').textContent = config.mapSize + ' x ' + config.mapSize;
+
+            // Configure Leaflet with custom CRS for Wurm map
+            const mapSize = config.mapSize;
+
+            // Create custom CRS - override default transformation to prevent Y-axis flip
+            // Default CRS.Simple uses: new L.Transformation(1, 0, -1, 0) which flips Y
+            // We want: new L.Transformation(1, 0, 1, 0) so Y increases downward
+            const customCRS = L.extend({}, L.CRS.Simple, {
+                transformation: new L.Transformation(1, 0, 1, 0)
+            });
+
+            map = L.map('map', {
+                crs: customCRS,
+                minZoom: 0,
+                maxZoom: 3,
+                attributionControl: false
+            });
+
+            // Define bounds - [southwest, northeast] corners in [y, x] format
+            const bounds = [[0, 0], [mapSize, mapSize]];
+
+            // Add tile layer
+            L.tileLayer('/livemap/tile/{z}/{x}/{y}.png', {
+                tileSize: 256,
+                bounds: bounds,
+                noWrap: true,
+                minNativeZoom: 0,
+                maxNativeZoom: 3,
+                errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+            }).addTo(map);
+
+            // Set initial view to center of map at zoom 0
+            const center = [mapSize / 2, mapSize / 2];
+            map.setView(center, 0);
+
+            // Set max bounds to prevent panning outside map
+            map.setMaxBounds(bounds);
+
+            console.log('Map initialized:', {
+                mapSize: mapSize,
+                bounds: bounds,
+                tilesAtZoom0: Math.ceil(mapSize / 256)
+            });
+
+            // Create layers
+            playersLayer = L.layerGroup().addTo(map);
+            villagesLayer = L.layerGroup().addTo(map);
+            altarsLayer = L.layerGroup().addTo(map);
+
+            // Add legend
+            const legend = L.control({ position: 'bottomleft' });
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = `
+                    <div class="legend-item">
+                        <div class="legend-marker" style="background: red;"></div>
+                        <span>Players</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-marker" style="background: blue; border-radius: 0;"></div>
+                        <span>Villages</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-marker" style="background: purple;"></div>
+                        <span>Altars</span>
+                    </div>
+                `;
+                return div;
+            };
+            legend.addTo(map);
+
+            // Load initial data
+            updateMapData();
+
+            // Auto-refresh every 5 seconds
+            setInterval(updateMapData, 5000);
+        }
+
+        // Update live map data
+        async function updateMapData() {
+            try {
+                const response = await fetch('/livemap/api/data');
+                const data = await response.json();
+
+                // Update players
+                if (data.players && config.enablePlayers) {
+                    updatePlayers(data.players);
+                }
+
+                // Update villages
+                if (data.villages && config.enableVillages) {
+                    updateVillages(data.villages);
+                }
+
+                // Update altars
+                if (data.altars) {
+                    updateAltars(data.altars);
+                }
+            } catch (error) {
+                console.error('Error updating map data:', error);
+            }
+        }
+
+        // Update player markers
+        function updatePlayers(players) {
+            playersLayer.clearLayers();
+
+            if (!showPlayers) return;
+
+            document.getElementById('playerCount').textContent = players.length;
+
+            players.forEach(player => {
+                if (player.surface) {
+                    // In Wurm: X goes east, Y goes south
+                    // In Leaflet with CRS.Simple: [y, x] for [lat, lng]
+                    const marker = L.circleMarker([player.y, player.x], {
+                        radius: 6,
+                        fillColor: getKingdomColor(player.kingdom),
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+
+                    marker.bindPopup(`<b>${player.name}</b><br>In-game: ${player.x}, ${player.y}<br>Internal: (${player.x * 4}, ${player.y * 4})`);
+                    marker.addTo(playersLayer);
+                }
+            });
+        }
+
+        // Update village boundaries
+        function updateVillages(villages) {
+            villagesLayer.clearLayers();
+
+            if (!showVillages) return;
+
+            document.getElementById('villageCount').textContent = villages.length;
+
+            villages.forEach(village => {
+                // Draw rectangle for village bounds
+                const bounds = [
+                    [village.startY, village.startX],
+                    [village.endY, village.endX]
+                ];
+
+                const rect = L.rectangle(bounds, {
+                    color: '#0000ff',
+                    weight: 2,
+                    fillOpacity: 0.1
+                });
+
+                rect.bindPopup(`
+                    <div class="village-popup">
+                        <h3>${village.name}</h3>
+                        <p><b>Mayor:</b> ${village.mayor}</p>
+                        <p><b>Type:</b> ${village.type}</p>
+                        <p><b>Size:</b> ${village.endX - village.startX} x ${village.endY - village.startY}</p>
+                    </div>
+                `);
+
+                rect.addTo(villagesLayer);
+
+                // Add village label at center
+                const center = [(village.startY + village.endY) / 2, (village.startX + village.endX) / 2];
+                const label = L.marker(center, {
+                    icon: L.divIcon({
+                        className: 'village-label',
+                        html: `<div style="background: white; padding: 2px 5px; border-radius: 3px; font-size: 12px; white-space: nowrap;">${village.name}</div>`,
+                        iconSize: [0, 0]
+                    })
+                });
+                label.addTo(villagesLayer);
+            });
+        }
+
+        // Update altar markers
+        function updateAltars(altars) {
+            altarsLayer.clearLayers();
+
+            altars.forEach(altar => {
+                // Create marker for altar
+                const marker = L.circleMarker([altar.y, altar.x], {
+                    radius: 10,
+                    fillColor: '#9b59b6',  // Purple
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                });
+
+                marker.bindPopup(`
+                    <b>${altar.name}</b><br>
+                    In-game: ${altar.x}, ${altar.y}<br>
+                    Internal: (${altar.x * 4}, ${altar.y * 4})
+                `);
+
+                marker.addTo(altarsLayer);
+            });
+        }
+
+        // Get kingdom color
+        function getKingdomColor(kingdom) {
+            const colors = {
+                0: '#ff0000', // Freedom/None - Red
+                1: '#0000ff', // Jenn-Kellon - Blue
+                2: '#00ff00', // Mol-Rehan - Green
+                3: '#ffff00', // Horde of the Summoned - Yellow
+                4: '#ff00ff'  // PMK - Magenta
+            };
+            return colors[kingdom] || '#ff0000';
+        }
+
+        // Toggle players display
+        function togglePlayers() {
+            showPlayers = !showPlayers;
+            if (showPlayers) {
+                playersLayer.addTo(map);
+            } else {
+                map.removeLayer(playersLayer);
+            }
+        }
+
+        // Toggle villages display
+        function toggleVillages() {
+            showVillages = !showVillages;
+            if (showVillages) {
+                villagesLayer.addTo(map);
+            } else {
+                map.removeLayer(villagesLayer);
+            }
+        }
+
+        // Initialize when page loads
+        window.onload = initMap;
+    </script>
+</body>
+</html>

@@ -9,7 +9,7 @@ import org.gotti.wurmunlimited.modcomm.intra.ModIntraServer;
 import org.gotti.wurmunlimited.modloader.interfaces.ChannelMessageListener;
 import org.gotti.wurmunlimited.modloader.interfaces.ItemTemplatesCreatedListener;
 import org.gotti.wurmunlimited.modloader.interfaces.MessagePolicy;
-import org.gotti.wurmunlimited.modloader.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
 import org.gotti.wurmunlimited.modloader.interfaces.PlayerLoginListener;
 import org.gotti.wurmunlimited.modloader.interfaces.PlayerMessageListener;
 import org.gotti.wurmunlimited.modloader.interfaces.ServerPollListener;

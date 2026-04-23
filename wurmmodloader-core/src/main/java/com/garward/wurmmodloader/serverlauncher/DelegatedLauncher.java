@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 import com.garward.wurmmodloader.modloader.internal.classhooks.HookManager;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
 import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 
 import com.garward.wurmmodloader.core.bytecode.PatchSettings;
@@ -34,6 +34,23 @@ public class DelegatedLauncher {
 		try {
 			configureFileLogging();
 			String[] sanitizedArgs = processInternalFlags(args);
+
+			// Capture the world-folder name from "start=<Name>" (case-insensitive,
+			// matches WU's GuiCommandLineArgument.START) into a system property.
+			// ServerHook reads this during early config sync. Using a property
+			// (not a ServerHook setter) keeps us from class-loading ServerHook
+			// here — it transitively references com.wurmonline.* which would
+			// freeze Player before CapabilityHooks.installHooks() can patch it.
+			for (String arg : sanitizedArgs) {
+				if (arg != null && arg.length() > 6
+						&& arg.regionMatches(true, 0, "start=", 0, 6)) {
+					String worldName = arg.substring(6).trim();
+					if (!worldName.isEmpty()) {
+						System.setProperty("wurmmodloader.launchWorldFolder", worldName);
+					}
+					break;
+				}
+			}
 			// CRITICAL: Install capability hooks FIRST, before ANY Wurm classes are loaded
 			// This must happen before mods load, before ServerHook is created, before
 			// anything

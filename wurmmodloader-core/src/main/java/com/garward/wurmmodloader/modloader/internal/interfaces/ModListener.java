@@ -8,14 +8,5 @@ package com.garward.wurmmodloader.modloader.internal.interfaces;
  * @author ago
  *
  */
-public interface ModListener {
-
-	/**
-	 * Called once for each activated mod after it has been initalized.
-	 * 
-	 * @param entry
-	 *            Mod entry
-	 */
-	void modInitialized(ModEntry<?> entry);
-
+public interface ModListener extends com.garward.wurmmodloader.modloader.interfaces.ModListener {
 }

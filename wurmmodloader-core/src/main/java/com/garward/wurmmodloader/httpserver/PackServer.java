@@ -79,12 +79,7 @@ public abstract class PackServer {
             public void handle(HttpExchange paramHttpExchange) throws IOException {
                 String path = paramHttpExchange.getRequestURI().toString();
 
-                // Reduce logging spam - only log non-tile requests at INFO level
-                if (path.contains("/tile/")) {
-                    logger.fine("Got tile request " + path);
-                } else {
-                    logger.info("Got request " + path);
-                }
+                logger.fine("Got request " + path);
 
                 try (InputStream stream = getStream(paramHttpExchange.getRequestURI().getPath())) {
                     if (stream != null) {

@@ -59,7 +59,9 @@ public final class PostgresServer {
         // sees the running embedded server.
         cfg.host = "localhost";
         cfg.port = cfg.embeddedPort;
-        cfg.database = "postgres";
+        // Base/prefix for the Wurm per-world DBs. Admin DB stays 'postgres' for CREATE DATABASE.
+        cfg.database = "wurm";
+        cfg.adminDatabase = "postgres";
         cfg.user = "postgres";
         cfg.password = "";
         cfg.sslmode = "disable";
@@ -163,7 +165,9 @@ public final class PostgresServer {
         // Mutate cfg early so the connection-hint below reflects reality.
         cfg.host = "localhost";
         cfg.port = cfg.embeddedPort;
-        cfg.database = "postgres";
+        // Base/prefix for the Wurm per-world DBs. Admin DB stays 'postgres' for CREATE DATABASE.
+        cfg.database = "wurm";
+        cfg.adminDatabase = "postgres";
         cfg.user = "postgres";
         cfg.password = "";
         cfg.sslmode = "disable";
@@ -190,7 +194,9 @@ public final class PostgresServer {
         } catch (ClassNotFoundException e) {
             throw new IOException("pgjdbc not on mod classpath", e);
         }
-        String url = "jdbc:postgresql://" + cfg.host + ":" + cfg.port + "/" + cfg.database + "?sslmode=disable";
+        // Probe the admin DB (always exists after initdb) — the per-world database
+        // isn't created until onSelect's resolveWorldDatabase runs after start().
+        String url = "jdbc:postgresql://" + cfg.host + ":" + cfg.port + "/" + cfg.adminDatabase + "?sslmode=disable";
         Properties props = new Properties();
         props.setProperty("user", cfg.user);
         long deadline = System.currentTimeMillis() + 30_000L;

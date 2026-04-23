@@ -272,22 +272,18 @@ public class ServerReflectionUtil {
      * @throws Exception if reflection fails
      */
     public static Object createItemForPlayer(Object player, int templateId, float quality) throws Exception {
-        // Get ItemFactory instance
+        // ItemFactory.createItem is static — no singleton. Use the (int, float, String) overload
+        // that creates the item without a world position, then insert into the player's inventory.
         Class<?> itemFactoryClass = Class.forName("com.wurmonline.server.items.ItemFactory");
-        Method getInstance = itemFactoryClass.getMethod("getInstance");
-        Object itemFactory = getInstance.invoke(null);
+        Method createItem = itemFactoryClass.getMethod("createItem", int.class, float.class, String.class);
+        Object item = createItem.invoke(null, templateId, quality, null);
 
-        // Get player inventory
         Method getInventory = player.getClass().getMethod("getInventory");
         Object inventory = getInventory.invoke(player);
 
-        // Get inventory wurm ID
-        Method getWurmId = inventory.getClass().getMethod("getWurmId");
-        long inventoryId = (long) getWurmId.invoke(inventory);
-
-        // Create item
-        Method createItem = itemFactoryClass.getMethod("createItem", int.class, float.class, long.class, String.class);
-        Object item = createItem.invoke(itemFactory, templateId, quality, inventoryId, null);
+        Class<?> itemClass = Class.forName("com.wurmonline.server.items.Item");
+        Method insertItem = itemClass.getMethod("insertItem", itemClass);
+        insertItem.invoke(inventory, item);
 
         return item;
     }
@@ -309,9 +305,13 @@ public class ServerReflectionUtil {
         Method getSkillOrLearn = skills.getClass().getMethod("getSkillOrLearn", int.class);
         Object skill = getSkillOrLearn.invoke(skills, skillId);
 
-        // Set skill level
+        // Set skill level.
+        // Skill.setKnowledge gates its entire update block (in-memory assign + save +
+        // Communicator.sendUpdateSkill) behind `if (aKnowledge < 100.0)`. Passing exactly
+        // 100 is a silent no-op — no DB write, no live client update. Clamp just below.
+        double clamped = Math.min(amount, 99.9999);
         Method setKnowledge = skill.getClass().getMethod("setKnowledge", double.class, boolean.class);
-        setKnowledge.invoke(skill, amount, false);
+        setKnowledge.invoke(skill, clamped, false);
     }
 
     /**
@@ -490,27 +490,29 @@ public class ServerReflectionUtil {
      * @throws Exception if reflection fails
      */
     public static java.util.Map<Integer, String> getAllSkills() throws Exception {
-        Class<?> skillsClass = Class.forName("com.wurmonline.server.skills.Skills");
+        Class<?> skillsClass = Class.forName("com.wurmonline.server.skills.SkillList");
         java.util.Map<Integer, String> skills = new java.util.HashMap<>();
 
         try {
-            // Get all skill name fields (they're public static final String fields)
             java.lang.reflect.Field[] fields = skillsClass.getDeclaredFields();
+            int modMask = java.lang.reflect.Modifier.STATIC | java.lang.reflect.Modifier.FINAL;
 
             for (java.lang.reflect.Field field : fields) {
+                if ((field.getModifiers() & modMask) != modMask) continue;
+                if (field.getType() != int.class) continue;
+
                 String fieldName = field.getName();
-                // Skill ID fields typically start with "SKILL_" or just the skill name in caps
-                if (fieldName.startsWith("SKILL_") || (fieldName.equals(fieldName.toUpperCase()) && !fieldName.startsWith("GROUP_"))) {
-                    try {
-                        if (field.getType() == int.class) {
-                            int skillId = field.getInt(null);
-                            // Convert field name to readable name
-                            String skillName = fieldName.replace("SKILL_", "").replace("_", " ").toLowerCase();
-                            skills.put(skillId, skillName);
-                        }
-                    } catch (Exception e) {
-                        // Skip fields we can't access
-                    }
+                if (fieldName.startsWith("GROUP_")) continue;
+
+                try {
+                    int skillId = field.getInt(null);
+                    // Skip sentinel category IDs (e.g. SKILLS=Integer.MAX_VALUE, FAITH=0x7FFFFFFD)
+                    if (skillId < 0 || skillId > 100000) continue;
+
+                    String skillName = fieldName.replace("SKILL_", "").replace("_", " ").toLowerCase();
+                    skills.put(skillId, skillName);
+                } catch (Exception ignored) {
+                    // Skip fields we can't access
                 }
             }
         } catch (Exception e) {

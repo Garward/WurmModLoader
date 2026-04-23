@@ -28,8 +28,8 @@ import com.garward.wurmmodloader.modloader.internal.classhooks.HookManager;
 import com.garward.wurmmodloader.modloader.internal.dependency.DependencyResolver;
 import com.garward.wurmmodloader.modloader.interfaces.Configurable;
 import com.garward.wurmmodloader.modloader.interfaces.Initable;
-import org.gotti.wurmunlimited.modloader.interfaces.ModEntry;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModListener;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModListener;
 import com.garward.wurmmodloader.modloader.interfaces.PreInitable;
 import org.gotti.wurmunlimited.modloader.interfaces.Versioned;
 
@@ -41,7 +41,7 @@ public abstract class ModLoaderShared<T extends Versioned> implements Versioned 
 	
 	private static Logger logger = Logger.getLogger(ModLoaderShared.class.getName());
 	
-	private class Entry extends ModInfo implements ModEntry<T>, com.garward.wurmmodloader.modloader.internal.interfaces.ModEntry<T> {
+	private class Entry extends ModInfo implements ModEntry<T>, org.gotti.wurmunlimited.modloader.interfaces.ModEntry<T> {
 
 		T mod;
 

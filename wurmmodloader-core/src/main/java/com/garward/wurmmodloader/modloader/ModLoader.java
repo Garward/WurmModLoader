@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 
 import com.garward.wurmmodloader.modloader.internal.interfaces.Configurable;
 import com.garward.wurmmodloader.modloader.internal.interfaces.Initable;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModEntry;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModListener;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModListener;
 import com.garward.wurmmodloader.modloader.internal.interfaces.PreInitable;
 import com.garward.wurmmodloader.api.interfaces.Versioned;
 import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
@@ -189,7 +189,9 @@ public class ModLoader implements Versioned {
 					}
 				});
 
-		// Phase 7: modInitialized() callbacks for ModListener mods
+		// Phase 7: modInitialized() callbacks for ModListener mods. Legacy
+		// org.gotti.* ModListener extends the canonical one and default-bridges
+		// to its legacy signature, so a single scan covers both paths.
 		mods.stream()
 				.filter(modEntry -> modEntry.mod instanceof ModListener)
 				.forEach(modEntry -> {
@@ -283,7 +285,7 @@ public class ModLoader implements Versioned {
 	/**
 	 * Internal entry wrapper that implements ModEntry interface.
 	 */
-	private class Entry extends ModInfo implements ModEntry<WurmServerMod> {
+	private class Entry extends ModInfo implements ModEntry<WurmServerMod>, org.gotti.wurmunlimited.modloader.interfaces.ModEntry<WurmServerMod> {
 		private final WurmServerMod mod;
 
 		public Entry(ModInfo modInfo, WurmServerMod mod) {

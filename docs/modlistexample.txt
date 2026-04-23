@@ -1,0 +1,491 @@
+I just pulled the entire modlist of daedra for reference which of these mods would constitute as a "not opinionated vanilla bug fix" i can include into my framework Ago's Mod Launcher
+Core
+Server mod loader framework — required for all other mods.
+by ago1024
+CommonLibrary
+Core
+Shared utility library required by many of bdew's server mods.
+by bdew
+Scriptrunner
+Core
+Runs JavaScript scripts on the server for custom events without recompiling.
+by ago1024
+Iconzz
+Core
+Custom icon framework that other mods depend on for rendering item icons.
+by Tyoda
+Betterdig
+QoL
+Bulk digging, auto-drop at tile border, dig to ground level.
+by bdew
+Bettermap
+QoL
+Resizable, zoomable in-game map with deed markers and soul fall stones.
+by bdew
+Bulkmod
+QoL
+Separates bulk storage contents by quality level.
+by bdew
+Chestclaim
+QoL
+Claim abandoned or unowned chests and containers.
+by Unknown
+ChirpInfo
+QoL
+Tells players when the next crop growth tick will occur.
+by Unknown
+Combiner
+QoL
+Combine items that can't normally be combined (logs, shafts, etc).
+by Coldie
+Double Bulk Capacity
+QoL
+Doubles storage capacity of BSBs, FSBs, and crates.
+by Unknown
+Empty Trash Bin
+QoL
+Instantly empty all items from a trash heap with flint and steel.
+by mpsmonk
+Location Command
+QoL
+Adds /location command to display current tile coordinates.
+by Jubaroo
+Move to Center
+QoL
+Centers trees and objects on their tile, removing offset positioning.
+by dmon82
+No Mail Cost
+QoL
+Removes postage costs and auto-enchants new mailboxes with Courier.
+by dmon82
+Pick More Sprouts
+QoL
+Pick multiple sprouts in a single action.
+by dmon82
+PlayersOnline
+QoL
+Displays current online player count for status pages.
+by Unknown
+Rename Animals
+QoL
+Rename tamed or village-branded animals.
+by Arathok
+Tent Sleep
+QoL
+Sleep in tents to gain sleep bonus, just like beds.
+by Davatar
+Timerfix
+QoL
+Fixes action timers for prayer, meditation, alchemy, and improving.
+by bdew
+Affinity Fixer
+QoL
+Fixes mismatched food affinity assignments for correct skill bonuses.
+by Mthec
+Betterfarm
+Farming
+Tend multiple tiles at once, configurable farming speed.
+by bdew
+Cropmod
+Farming
+Prevents crops from turning to weeds — fields stay harvestable.
+by ago1024
+HarvestHelper
+Farming
+Shows exact harvest season start times for crops and trees.
+by ago1024
+Bdew's Planters
+Farming
+Craftable planter containers for indoor farming of herbs and crops.
+by bdew
+Planters
+Farming
+Large wood/stone planters that grow any crop, including reed and rice.
+by bdew
+More Potables
+Farming
+Plant and grow nearly any item (herbs, spices) in a pot.
+by dmon82
+Reedlands
+Farming
+Adds reedlands terrain for growing reed on land surfaces.
+by Unknown
+Banker
+Economy
+Banker NPC gives bank access from anywhere on the server.
+by Mthec
+Bounties
+Economy
+Coin rewards for killing creatures, scales with difficulty.
+by Coldie
+Bounty on Burn
+Economy
+Coins and karma for burning creature corpses.
+by Unknown
+BuyerMerchants
+Economy
+Buyer NPC that purchases specific items from players for coin.
+by Mthec
+CrafterMod
+Economy
+Crafter NPC accepts item improvement orders and returns them for coin.
+by Mthec
+CustomTrader
+Economy
+Configurable trader NPC with admin-set custom items and prices.
+by Mthec
+Delivery Contracts
+Economy
+Place heavy or bulk items on merchants for sale via contracts.
+by Mthec
+Fish Monger
+Economy
+NPC fish buyer in starter towns that purchases fish from players.
+by Jubaroo
+MailMerchants
+Economy
+Trade with merchants remotely through mailboxes.
+by BuddaT
+PiggyBank
+Economy
+Craftable clay piggy banks that store coins — smash to retrieve.
+by Tyoda
+Shop Anvil
+Economy
+Purchase tools and equipment directly for coin.
+by Unknown
+Timedpay
+Economy
+Auto-pays online players coin at set intervals as playtime reward.
+by whisper2shade
+Tool Purchaser
+Economy
+NPC that sells tools directly to players for coin.
+by Mthec
+VoteReward
+Economy
+Rewards coins when players vote on wurm-unlimited.com.
+by Revelation
+Archery
+Combat
+Rebalances archery: arrow speed, draw time, projectile behavior.
+by Coldie
+Balance
+Combat
+Adjusts combat and skill formulas for server-specific PvE balance.
+by Unknown
+DuskCombat
+Combat
+Full combat rewrite — removes CR, reworks weapon and shield skill influence.
+by Sindusk
+Guard Assist
+Combat
+Guard tower guards assist nearby players under attack.
+by Jubaroo
+Salve Mod
+Combat
+Shows healing cover power rating in the item name.
+by Sindusk
+Alchemy
+Magic
+Full alchemy system — brew potions and compounds with Natural Substances.
+by Arathok
+MeditateMod
+Magic
+Removes meditation skill delays and distance requirements.
+by bdew
+Sacrifice Mod
+Magic
+Sacrificed rare items can yield bones of equivalent rarity.
+by Sindusk
+Sand Spell Mod
+Magic
+Priest spell that converts nearby tiles to sand terrain.
+by Unknown
+Spellcraft
+Magic
+Full spell and religion overhaul — add, remove, rebalance spells and deity restrictions.
+by Sindusk
+Highway Portals
+Travel
+Craftable portal structures for fast travel along highway networks.
+by bdew
+Mark and Recall Runes
+Travel
+Craftable recall runes — mark a location, teleport back anytime.
+by dmon82
+Mark and Recall Vehicles
+Travel
+Recall with your vehicle or mount, not just on foot.
+by dmon82
+New Portals
+Travel
+Configurable custom portal structures for point-to-point travel.
+by webba
+Stable Master
+Travel
+NPC exchanges mounts for tokens — transport animals on boats.
+by TysonCodes
+Movement Mod
+Travel
+Tweaks player and creature movement speeds.
+by bdew
+Bridge Mod
+Building
+Configurable max bridge width beyond vanilla limits.
+by ausimus
+Infinity Mine Doors
+Building
+Removes size restrictions on mine door openings.
+by Unknown
+No Build Limit
+Building
+Removes skill requirement for planning buildings of any size.
+by bdew
+OneTileMining
+Building
+Surface mine by uncovering only one rock tile.
+by bdew
+MightyMattockMod
+Building
+Enhanced mattock for efficient mass terraforming.
+by Joedobo27
+Simple Concrete
+Building
+Make concrete with just clay and rock shards.
+by bdew
+Simple Paving Mod
+Building
+Right-click to pave — streamlined paving action.
+by Joedobo27
+Stop Dirt Flowing
+Building
+Prevents dirt tiles from shifting when terrain is modified.
+by Davatar
+Moon Metal Mining
+Building
+Rare chance to find Adamantine or Glimmersteel while mining.
+by webba
+Ash Produce
+Crafting
+Forges and fireplaces produce ash as a byproduct of burning.
+by bdew
+Cookingmod
+Crafting
+Expanded cooking system with new recipes and ingredients.
+by bdew
+Dye Maker
+Crafting
+Craftable device for extracting and mixing custom RGB dye values.
+by Coldie
+More Craftables
+Crafting
+Additional craftable items and recipes not in vanilla.
+by Jubaroo
+Pauldrons
+Crafting
+Craft all pauldron shoulder armor types not normally player-craftable.
+by Xype
+Waxed
+Crafting
+Preserve food with beeswax — non-edible decorative display items.
+by bdew
+Windmills
+Crafting
+Functional windmill and sawmill structures for bulk production.
+by Coldie
+Bardings
+Creatures
+Craftable horse barding (armor) for mounted protection.
+by bdew
+Beast Summoner
+Creatures
+NPC that summons specific creatures for combat or taming — for a price.
+by Mthec
+Bridings
+Creatures
+Equipment items for non-horse rideable creatures.
+by bdew
+Dragon Rider
+Creatures
+Tame and ride dragons and drakes as mounts.
+by Governor
+Hitching Posts
+Creatures
+Craftable posts to keep animals stationary in place.
+by Jubaroo
+HitchLimits
+Creatures
+Configure max animals hitched to carts and wagons.
+by bdew
+Minipets
+Creatures
+Tameable miniature pet versions of creatures as companions.
+by bdew
+More Creatures
+Creatures
+Increased variety and spawn count of creatures.
+by Unknown
+Taxidermy
+Creatures
+Convert creature corpses into decorative taxidermy displays.
+by bdew
+Armour Stand
+Decoration
+Display and store full equipment sets as decorative pieces.
+by bdew
+Customwagons
+Decoration
+Custom kingdom wagon skins using server-side asset packs.
+by Unknown
+Decorations
+Decoration
+Craftable decorative items: toys, furniture, playable chess set.
+by Coldie
+Paintings
+Decoration
+Craftable decorative paintings and windows with custom images.
+by Unknown
+Signs
+Decoration
+Customizable sign items with configurable text.
+by bdew
+Three Dee
+Decoration
+Third-person 3D player model view.
+by bdew
+AddKingdomItems
+Kingdom
+Custom kingdom-specific items added to server item tables.
+by Draeda Team
+Kingdom Sails
+Kingdom
+Kingdom-colored sails for boats.
+by Jubaroo
+Kingdom Tabards
+Kingdom
+All PMK kingdom tabards craftable on any kingdom.
+by Jubaroo
+Kingdom Wagons
+Kingdom
+Kingdom-branded wagons, banners, and flags.
+by Jubaroo
+Archaeology Gifts
+Adventure
+Configurable custom loot from archaeology digs.
+by bdew
+Epic Mission Hints
+Adventure
+Improved epic mission generation with better targeting.
+by Unknown
+Fishing Derby
+Adventure
+Community fishing competition event system.
+by Unknown
+Treasure Hunting
+Adventure
+Find treasure maps while digging/mining — use compass to locate buried loot.
+by dmon82
+Roll
+Adventure
+Dice roll command for loot distribution or RP.
+by Unknown
+Discord Relay
+Community
+Bridges in-game chat to Discord channels in real time.
+by Sindusk
+Distance Rendering Server
+Community
+Server-side companion for extended view distance rendering.
+by Sklo:D
+BDEW's Halloween Mod
+Community
+Seasonal Halloween content: pumpkins, costumes, themed events.
+by bdew
+EventMod
+Community
+GM event portals that teleport players from deed tokens to events.
+by Unknown
+Fire Burn Time
+Community
+Countdown timer showing when fires reach target temperature.
+by dmon82
+Fishytweaks
+Community
+Tweaks fish sizes, weights, and quality distribution.
+by bdew
+Disable Fog Spiders
+Gameplay
+Prevents fog spiders from spawning during foggy weather.
+by Unknown
+Mounted Actions
+Gameplay
+Perform actions like farming while mounted.
+by Jubaroo
+Elefant
+Gameplay
+Server-specific gameplay modification.
+by Unknown
+Better Gamemasters
+Admin
+Expanded GM utility commands and server management tools.
+by dmon82
+GM Commands
+Admin
+Additional in-game commands for staff and GMs.
+by dmon82
+Coffee Mod
+Custom
+Custom coffee items with stat boost or fatigue reduction effects.
+by Draeda Team
+Draeda Bet Pool
+Custom
+Betting pool system for player-run wager events.
+by Draeda Team
+Draeda BoonShrines
+Custom
+Shrine system that grants temporary buffs to players.
+by Draeda Team
+Draeda Cargo Hauler
+Custom
+Cargo hauler vehicle for large-scale item transport.
+by Draeda Team
+Draeda Chromancer
+Custom
+Chromatic magic class with color-themed abilities.
+by Draeda Team
+Draeda Dungeon Rooms
+Custom
+Generated dungeon room structures for exploration content.
+by Draeda Team
+Draeda Green Announcer
+Custom
+Broadcasts server events and milestones to players.
+by Draeda Team
+Draeda Job Board Mod
+Custom
+Job board for posting and completing player-listed tasks.
+by Draeda Team
+Draeda Karma Control
+Custom
+Adjusted karma gain and spend mechanics for server balance.
+by Draeda Team
+Draeda Loot Roll System
+Custom
+Fair loot rolling system for group events and slayings.
+by Draeda Team
+Draeda Strongbox Mod
+Custom
+Locked strongbox containers with special access rules.
+by Draeda Team
+Draeda Trader
+Custom
+Custom trader NPC with Draeda-specific items.
+by Draeda Team
+Draedic Vestiges
+Custom
+Unique lore items and artifacts tied to Draeda's world.
+by Draeda Team
+WyvernMods
+Custom
+Large server customization bundle — combat, gear, spells, starter items.

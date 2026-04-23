@@ -16,7 +16,7 @@ import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStartedEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStoppingEvent;
 import com.garward.wurmmodloader.core.event.EventBus;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
 
 /**
  * Framework-owned HTTP server subsystem. Replaces the legacy {@code HttpServerMod}.

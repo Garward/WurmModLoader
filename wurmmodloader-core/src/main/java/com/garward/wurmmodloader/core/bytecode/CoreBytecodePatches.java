@@ -37,7 +37,41 @@ import com.garward.wurmmodloader.core.bytecode.patches.ItemEnchantmentConstructo
 import com.garward.wurmmodloader.core.bytecode.patches.ItemEnchantmentStringsPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ItemExaminePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ItemTemplatesCreatedPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ItemMoveCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ItemTradePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TradeBalancePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TradeSessionStartPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.VillageExpansionCheckPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TerrainModificationPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TerrainFlattenPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TerrainPackPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TerrainCultivatePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CaveMinePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ActionAllowedOnVehiclePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CaveTileActionPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CaveTileGetBehavioursPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SurfaceRockActionPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SurfaceRockGetBehavioursPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TerraformingDigInnerPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.FlatteningInnerPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.BehaviourDispatcherPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.BehaviourDispatcherMenuPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CommunicatorMenuPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TileDirtConsumePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.PlanterItemAcceptPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.BulkStackNamePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.GuardPlanPollPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.StructurePlanningCheckPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.WallPlanningGatePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.FloorPlanningGatePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.FloorLevelGatePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.QuestionAnswerPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SacrificePostPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ContainerInsertionCheckPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TrellisPruningPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.FaithGainResetPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreatureMovementSpeedPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreatureTemplateColorPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.MaterialBonusExtendedPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.MountEquipmentCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.MovementBroadcastPatch;
@@ -64,6 +98,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.SpecialMoveHandlePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SpecialMoveSendPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerConfigLoadPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerPollPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ServerPreInitPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerShutdownPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerStartPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.WeaponStatQueryPatch;
@@ -88,6 +123,7 @@ public final class CoreBytecodePatches {
         new RemoveActionsFinalModifierPatch(),  // CRITICAL: Must run FIRST before mods register actions
         new ItemEnchantmentConstructorPatch(),  // CRITICAL: Must run early so mods can extend ItemEnchantment
         new ServerConfigLoadPatch(),  // CRITICAL: Syncs YAML config to DB before server reads config
+        new ServerPreInitPatch(),     // Fires before Villages.loadVillages so subsystems can seed wurmzones.db
         new ServerStartPatch(),
         new ServerShutdownPatch(),
         new ItemTemplatesCreatedPatch(),
@@ -114,6 +150,40 @@ public final class CoreBytecodePatches {
         new ItemTradePatch(),
         new ItemContainerPatch(),
         new ItemDamagePatch(),
+        new ItemMoveCheckPatch(),
+        new TradeSessionStartPatch(),
+        new TradeBalancePatch(),
+        new VillageExpansionCheckPatch(),
+        new TerrainModificationPatch(),
+        new TerrainFlattenPatch(),
+        new TerrainPackPatch(),
+        new TerrainCultivatePatch(),
+        new CaveMinePatch(),
+        new CaveTileActionPatch(),
+        new CaveTileGetBehavioursPatch(),
+        new SurfaceRockActionPatch(),
+        new SurfaceRockGetBehavioursPatch(),
+        new TerraformingDigInnerPatch(),
+        new FlatteningInnerPatch(),
+        new BehaviourDispatcherPatch(),
+        new BehaviourDispatcherMenuPatch(),
+        new CommunicatorMenuPatch(),
+        new TileDirtConsumePatch(),
+        new PlanterItemAcceptPatch(),
+        new BulkStackNamePatch(),
+        new ActionAllowedOnVehiclePatch(),
+        new GuardPlanPollPatch(),
+        new StructurePlanningCheckPatch(),
+        new WallPlanningGatePatch(),
+        new FloorPlanningGatePatch(),
+        new FloorLevelGatePatch(),
+        new QuestionAnswerPatch(),
+        new SacrificePostPatch(),
+        new ContainerInsertionCheckPatch(),
+        new TrellisPruningPatch(),
+        new FaithGainResetPatch(),
+        new CreatureMovementSpeedPatch(),
+        new CreatureTemplateColorPatch(),
         new ContainerVolumePatch(),
         new WeaponUsePatch(),
         new WeaponStatQueryPatch(),

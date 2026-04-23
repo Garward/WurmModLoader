@@ -291,7 +291,12 @@ public class CreatureStatusBatcher {
                         flushedCount++;
 
                     } catch (Exception e) {
-                        logger.log(Level.WARNING, "[CreatureStatusBatcher] Failed to save creature " + entry.getKey(), e);
+                        Throwable cause = (e instanceof java.lang.reflect.InvocationTargetException && e.getCause() != null)
+                                ? e.getCause() : e;
+                        // NPE here means the creature was unloaded between the liveness check and
+                        // the reflective save() — benign race, demote to FINE to avoid log spam.
+                        Level level = (cause instanceof NullPointerException) ? Level.FINE : Level.WARNING;
+                        logger.log(level, "[CreatureStatusBatcher] Failed to save creature " + entry.getKey(), cause);
                     }
                 }
             } finally {

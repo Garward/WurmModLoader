@@ -37,19 +37,69 @@ final class SchemaRepair {
         new String[]{"wurmlogin", "serverproperties", "propkey"}
     );
 
+    /**
+     * Tables Wurm queries with {@code SELECT *} but only creates lazily on
+     * first write — on SQLite those SELECTs tolerate the missing table (the
+     * server swallows the exception and logs a WARNING, treating the result
+     * as empty). On Postgres the same swallow happens, but the boot log is
+     * flooded with "relation does not exist" stack traces. We pre-create
+     * these tables as empty so the SELECTs succeed cleanly.
+     *
+     * <p>Column layouts derived from the {@code INSERT}/{@code SELECT}
+     * statements and {@code rs.get*} calls in the Wurm decompiled source
+     * ({@code SteamIdBan}, {@code Recipes}, {@code RecipesByPlayer}). No
+     * primary keys — Wurm's writes already guarantee uniqueness and we never
+     * need ON CONFLICT semantics on these.</p>
+     */
+    private static final String[][] OPTIONAL_TABLES = new String[][] {
+        {"wurmplayers", "banned_steam_ids",
+            "STEAM_ID VARCHAR(64) NOT NULL, BANREASON VARCHAR(255), BANEXPIRY BIGINT"},
+        {"wurmitems", "recipesnamed",
+            "RECIPEID SMALLINT NOT NULL, NAMER VARCHAR(64)"},
+        {"wurmitems", "recipesplayer",
+            "PLAYERID BIGINT NOT NULL, RECIPEID SMALLINT NOT NULL, FAVOURITE BOOLEAN, NOTES VARCHAR(255)"},
+        {"wurmitems", "recipeplayercookers",
+            "PLAYERID BIGINT NOT NULL, RECIPEID SMALLINT NOT NULL, COOKERID SMALLINT NOT NULL"},
+        {"wurmitems", "recipeplayercontainers",
+            "PLAYERID BIGINT NOT NULL, RECIPEID SMALLINT NOT NULL, CONTAINERID SMALLINT NOT NULL"},
+        {"wurmitems", "recipeplayeringredients",
+            "PLAYERID BIGINT NOT NULL, RECIPEID SMALLINT NOT NULL, INGREDIENTID SMALLINT NOT NULL, "
+            + "GROUPID SMALLINT, TEMPLATEID SMALLINT, CSTATE SMALLINT, PSTATE SMALLINT, "
+            + "MATERIAL SMALLINT, REALTEMPLATEID SMALLINT"}
+    };
+
     static void repair(PostgresConfig cfg) {
         Properties props = new Properties();
         props.setProperty("user", cfg.user);
         if (cfg.password != null && !cfg.password.isEmpty()) {
             props.setProperty("password", cfg.password);
         }
-        logger.info("[PostgresBackend][repair] checking " + REQUIRED_UNIQUE.size() + " required unique indexes");
+        logger.info("[PostgresBackend][repair] checking " + REQUIRED_UNIQUE.size()
+            + " required unique indexes + " + OPTIONAL_TABLES.length + " optional tables");
         try (Connection conn = DriverManager.getConnection(cfg.baseUrl(), props)) {
             for (String[] tgt : REQUIRED_UNIQUE) {
                 ensureUniqueIndex(conn, tgt[0], tgt[1], tgt[2]);
             }
+            for (String[] tgt : OPTIONAL_TABLES) {
+                ensureOptionalTable(conn, tgt[0], tgt[1], tgt[2]);
+            }
         } catch (SQLException e) {
             logger.log(Level.WARNING, "[PostgresBackend][repair] failed to open connection", e);
+        }
+    }
+
+    private static void ensureOptionalTable(Connection conn, String schema, String table, String columns) {
+        if (tableExists(conn, schema, table)) {
+            return;
+        }
+        String sql = "CREATE TABLE IF NOT EXISTS " + schema + "." + table + " (" + columns + ")";
+        try (Statement st = conn.createStatement()) {
+            st.execute(sql);
+            logger.info("[PostgresBackend][repair]   + created optional table "
+                + schema + "." + table);
+        } catch (SQLException e) {
+            logger.log(Level.WARNING, "[PostgresBackend][repair] failed creating optional table "
+                + schema + "." + table, e);
         }
     }
 

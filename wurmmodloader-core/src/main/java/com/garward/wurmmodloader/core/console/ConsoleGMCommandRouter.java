@@ -286,6 +286,14 @@ public class ConsoleGMCommandRouter {
                 handleSendMessage(args);
                 return true;
 
+            case "villageperm":
+                handleVillagePerm(args);
+                return true;
+
+            case "setmayor":
+                handleSetMayor(args);
+                return true;
+
             default:
                 return false; // Not a custom command
         }
@@ -341,6 +349,15 @@ public class ConsoleGMCommandRouter {
         System.out.println("  #spawncreature <name> <x> <y> [layer]");
         System.out.println("    Spawn creature (supports fuzzy name matching)");
         System.out.println();
+        System.out.println("VILLAGES:");
+        System.out.println("  #villageperm <deedname> <role> <permname> <on|off>");
+        System.out.println("    Edit a village role permission directly (bypasses readonly GM Tool)");
+        System.out.println("    role: everybody | mayor | citizen | ally");
+        System.out.println("    permname: any setCanXxx suffix (Build, PassGates, MineIron, ManageRoles, ...)");
+        System.out.println("  #setmayor <deedname> <playername>");
+        System.out.println("    Make <player> mayor of <deed> (player must be online)");
+        System.out.println("    Unlocks the in-game GM Tool role editor for that deed");
+        System.out.println();
         System.out.println("CHAT:");
         System.out.println("  #toggleglobal <on|off>");
         System.out.println("    Enable/disable global chat");
@@ -368,6 +385,21 @@ public class ConsoleGMCommandRouter {
         System.out.println("  #spawncreature trol 500 500  (fuzzy matches 'troll')");
         System.out.println("  #sendmessage Bob \"Hello!\"");
         System.out.println("  #shutdown 10 \"Server restart\"");
+        System.out.println("  #villageperm \"Freedom Landing\" everybody Build off");
+        System.out.println("  #villageperm \"Freedom Landing\" everybody MineIron on");
+        System.out.println("  #setmayor \"Freedom Landing\" Rorann");
+        System.out.println("========================================");
+        System.out.println("IN-GAME GM TOOL (village roles, etc.):");
+        System.out.println("  1. #setpower <you> 5   (power 4+ uses ebony wand 176; 2-3 uses ivory 315)");
+        System.out.println("  2. #createitem <you> 176 99   (ebony wand; or 315 for ivory)");
+        System.out.println("  3. In-game: activate wand (select + press A)");
+        System.out.println("  4. Right-click any ITEM you own (not your body/avatar)");
+        System.out.println("       - wand menu only surfaces on ItemBehaviour targets");
+        System.out.println("  5. Creatures submenu -> GM Management");
+        System.out.println("  6. Tick 'Start GM Tool?' checkbox -> submit");
+        System.out.println("  7. GM Tool window -> Village -> pick deed -> Show Roles");
+        System.out.println("       - edits non-citizen role + every citizen role, bypasses");
+        System.out.println("         mayManageRoles (normal village UI does NOT bypass it).");
         System.out.println("========================================");
         System.out.println("HYBRID SYSTEM:");
         System.out.println("  " + GMCommandDiscovery.getCommandCount() + " commands auto-discovered from Wurm");
@@ -1212,6 +1244,200 @@ public class ConsoleGMCommandRouter {
             System.out.println("[Console GM] ✓ Sent message to " + actualName + ": " + message);
         } catch (Exception e) {
             System.out.println("[Console GM] Failed to send message: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Parse an argument string that may contain a quoted first token.
+     * Returns the first token (quoted or whitespace-delimited) and the remainder.
+     */
+    private static String[] splitQuotedFirst(String args) {
+        if (args == null) return new String[]{"", ""};
+        args = args.trim();
+        if (args.isEmpty()) return new String[]{"", ""};
+        if (args.startsWith("\"")) {
+            int close = args.indexOf('"', 1);
+            if (close < 0) return new String[]{args.substring(1), ""};
+            String first = args.substring(1, close);
+            String rest = close + 1 < args.length() ? args.substring(close + 1).trim() : "";
+            return new String[]{first, rest};
+        }
+        String[] parts = args.split("\\s+", 2);
+        return new String[]{parts[0], parts.length > 1 ? parts[1] : ""};
+    }
+
+    /**
+     * Resolve a role-status argument ("everybody"/"mayor"/"citizen"/"ally"/numeric)
+     * to the VillageRole status byte used by Village.getRoleForStatus().
+     */
+    private static byte resolveRoleStatus(String token) {
+        if (token == null) return -1;
+        switch (token.trim().toLowerCase()) {
+            case "everybody":
+            case "noncitizens":
+            case "non-citizens":
+            case "everyone":
+                return 1;
+            case "mayor":
+                return 2;
+            case "citizen":
+            case "citizens":
+                return 3;
+            case "ally":
+            case "allies":
+                return 5;
+            default:
+                try { return Byte.parseByte(token); } catch (NumberFormatException e) { return -1; }
+        }
+    }
+
+    /**
+     * Handle #villageperm — reflectively set a permission on a village role and persist.
+     * Bypasses the GM Tool's "readonly unless citizen" gate by editing the VillageRole
+     * directly via the setCanXxx setters + role.save().
+     *
+     * Usage: #villageperm <deedname> <role> <permname> <on|off>
+     *   role      = everybody | mayor | citizen | ally | <numeric status>
+     *   permname  = Build, ManageRoles, DestroyItems, PassGates, MineIron, ... (suffix of setCanXxx)
+     */
+    private static void handleVillagePerm(String args) {
+        if (args == null || args.trim().isEmpty()) {
+            System.out.println("[Console GM] Usage: #villageperm <deedname> <role> <permname> <on|off>");
+            System.out.println("[Console GM]   role: everybody | mayor | citizen | ally");
+            System.out.println("[Console GM]   permname: any setCanXxx suffix (Build, PassGates, MineIron, ManageRoles, ...)");
+            System.out.println("[Console GM] Example: #villageperm \"Freedom Landing\" everybody Build off");
+            return;
+        }
+        String[] firstSplit = splitQuotedFirst(args);
+        String deedName = firstSplit[0];
+        String[] rest = firstSplit[1].split("\\s+", 3);
+        if (deedName.isEmpty() || rest.length < 3) {
+            System.out.println("[Console GM] Usage: #villageperm <deedname> <role> <permname> <on|off>");
+            return;
+        }
+        byte status = resolveRoleStatus(rest[0]);
+        if (status < 0) {
+            System.out.println("[Console GM] Unknown role: " + rest[0] + " (expected everybody|mayor|citizen|ally|<byte>)");
+            return;
+        }
+        String permName = rest[1];
+        String onOff = rest[2].trim().toLowerCase();
+        boolean value;
+        if (onOff.equals("on") || onOff.equals("true") || onOff.equals("1") || onOff.equals("yes")) {
+            value = true;
+        } else if (onOff.equals("off") || onOff.equals("false") || onOff.equals("0") || onOff.equals("no")) {
+            value = false;
+        } else {
+            System.out.println("[Console GM] Expected on|off, got: " + onOff);
+            return;
+        }
+
+        try {
+            Class<?> villagesClass = Class.forName("com.wurmonline.server.villages.Villages");
+            Object village = villagesClass.getMethod("getVillage", String.class).invoke(null, deedName);
+            if (village == null) {
+                System.out.println("[Console GM] Village not found: " + deedName);
+                return;
+            }
+            Object role = village.getClass().getMethod("getRoleForStatus", byte.class).invoke(village, status);
+            if (role == null) {
+                System.out.println("[Console GM] Role not found on village (status=" + status + ")");
+                return;
+            }
+
+            // Try setCan<PermName>(boolean) — normalize common aliases.
+            String methodName = "setCan" + capitalize(permName);
+            java.lang.reflect.Method setter = findBoolSetter(role.getClass(), methodName);
+            if (setter == null) {
+                // Fallback: try setMay<PermName>
+                setter = findBoolSetter(role.getClass(), "setMay" + capitalize(permName));
+            }
+            if (setter == null) {
+                System.out.println("[Console GM] No setCan/setMay setter matching '" + permName + "' on VillageRole.");
+                System.out.println("[Console GM] Hint: try Build, PassGates, MineIron, ManageRoles, DestroyItems, etc.");
+                return;
+            }
+            setter.setAccessible(true);
+            setter.invoke(role, value);
+            role.getClass().getMethod("save").invoke(role);
+
+            String villName = (String) village.getClass().getMethod("getName").invoke(village);
+            System.out.println("[Console GM] ✓ " + villName + " [" + rest[0] + "] " + setter.getName()
+                + "(" + value + ") saved.");
+        } catch (Throwable t) {
+            System.out.println("[Console GM] Failed to edit village perm: " + t.getMessage());
+            t.printStackTrace();
+        }
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    private static java.lang.reflect.Method findBoolSetter(Class<?> cls, String name) {
+        for (java.lang.reflect.Method m : cls.getMethods()) {
+            if (!m.getName().equalsIgnoreCase(name)) continue;
+            Class<?>[] p = m.getParameterTypes();
+            if (p.length == 1 && (p[0] == boolean.class || p[0] == Boolean.class)) return m;
+        }
+        return null;
+    }
+
+    /**
+     * Handle #setmayor — set a player as mayor of a deed and add them as a citizen
+     * with the mayor role. Player must be online (citizen add needs a live Creature).
+     *
+     * Usage: #setmayor <deedname> <playername>
+     */
+    private static void handleSetMayor(String args) {
+        if (args == null || args.trim().isEmpty()) {
+            System.out.println("[Console GM] Usage: #setmayor <deedname> <playername>");
+            System.out.println("[Console GM] Player must be online. Updates VILLAGES.MAYOR + adds citizen row with status=2.");
+            return;
+        }
+        String[] firstSplit = splitQuotedFirst(args);
+        String deedName = firstSplit[0];
+        String playerName = firstSplit[1].trim();
+        if (deedName.isEmpty() || playerName.isEmpty()) {
+            System.out.println("[Console GM] Usage: #setmayor <deedname> <playername>");
+            return;
+        }
+
+        try {
+            Class<?> villagesClass = Class.forName("com.wurmonline.server.villages.Villages");
+            Object village = villagesClass.getMethod("getVillage", String.class).invoke(null, deedName);
+            if (village == null) {
+                System.out.println("[Console GM] Village not found: " + deedName);
+                return;
+            }
+
+            Object player = ServerReflectionUtil.getPlayerByName(playerName);
+            if (player == null) {
+                System.out.println("[Console GM] Player not online: " + playerName + " (must be online for addCitizen).");
+                return;
+            }
+
+            Object mayorRole = village.getClass().getMethod("getRoleForStatus", byte.class).invoke(village, (byte) 2);
+            if (mayorRole == null) {
+                System.out.println("[Console GM] Village has no mayor role (status=2).");
+                return;
+            }
+
+            Class<?> creatureClass = Class.forName("com.wurmonline.server.creatures.Creature");
+            Class<?> roleClass = Class.forName("com.wurmonline.server.villages.VillageRole");
+            java.lang.reflect.Method addCitizen = village.getClass().getMethod("addCitizen", creatureClass, roleClass);
+            Boolean added = (Boolean) addCitizen.invoke(village, player, mayorRole);
+
+            village.getClass().getMethod("setMayor", String.class).invoke(village, playerName);
+
+            String villName = (String) village.getClass().getMethod("getName").invoke(village);
+            System.out.println("[Console GM] ✓ " + playerName + " set as mayor of " + villName
+                + " (addCitizen=" + added + ", MAYOR column updated).");
+            System.out.println("[Console GM]   You can now edit roles in the in-game GM Tool (no longer readonly).");
+        } catch (Throwable t) {
+            System.out.println("[Console GM] Failed to set mayor: " + t.getMessage());
+            t.printStackTrace();
         }
     }
 

@@ -108,6 +108,18 @@ done
 
 echo ""
 
+# === DEPLOY LAUNCHER SCRIPTS ===
+# Ship companion shell scripts (rebuild-dbs cleaner, etc.) alongside the
+# existing wurmmodloader.sh. The main launcher itself isn't overwritten — it's
+# been installed manually once and tends to carry local heap tweaks.
+for helper in wurmmodloader-rebuild-dbs.sh wurmmodloader-rebuild-dbs.bat wurmmodloader-create-world.sh wurmmodloader-create-world.bat; do
+    if [ -f "$TEMP_EXTRACT/$helper" ]; then
+        copy_if_changed "$TEMP_EXTRACT/$helper" "$SERVER_DIR/$helper" "Launcher: $helper"
+        chmod +x "$SERVER_DIR/$helper" 2>/dev/null || true
+    fi
+done
+echo ""
+
 # === SYNC FRAMEWORK JARS TO COMMUNITYMODS/libs ===
 # Keeps the sibling CommunityMods repo building against the freshly-built
 # framework. Silently skipped if the repo isn't present.

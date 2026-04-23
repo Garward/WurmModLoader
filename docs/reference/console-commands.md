@@ -164,6 +164,30 @@ Dumps every **auto-discovered** native WU GM command. These run through a logged
 
 ---
 
+## In-game GM Tool (village roles, kingdom mgmt, etc.)
+
+Vanilla WU's `mayPerformActionOnVillage` checks `role.mayManageRoles()` directly with **no power override** — which means a GM at power 5 still cannot open the normal right-click → Manage Roles UI on a deed they aren't a citizen of. The official bypass is the **in-game GM Tool**, opened two steps deep via the ebony wand.
+
+### Steps
+
+1. **Grant power** — from the console: `#setpower <yourname> 5`.
+2. **Spawn a GM wand** — `#createitem <yourname> 176 99` (ebony wand; use `315` for the ivory wand at power 2–3). `findWand` in `GmTool.java` picks **176** at power ≥ 4 and **315** below that.
+3. **Activate the wand in-game** — select it in inventory and press `A` (or click "activate").
+4. **Right-click an item you own** — any inventory item (even the wand itself) will do. Right-clicking your body/avatar won't work: that goes through `CreatureBehaviour`, which only surfaces combat/spy actions for the wand. The GM submenu is only added by `ItemBehaviour.getBehavioursFor(performer, source, targetItem)` (line ~2010 in the decompiled source).
+5. Under **Creatures** → **GM Management**. This opens a BML form (`GmInterface`) with many checkboxes.
+6. Scroll to the section labelled **"GM Tool (In-Game GM Interface)"** and tick **"Start GM Tool?"**, then submit.
+7. The **GM Tool** window opens. Type dropdown is **Village** by default; pick the deed → **Show Roles** → click into any role (non-citizens, citizens, mayor, …) → tick/untick permission checkboxes → save.
+
+This is the only in-game path that bypasses `mayManageRoles`. No `#`-command alternative exists in vanilla WU.
+
+### Common gotchas
+
+- Right-clicking your own avatar / body shows no menu for the wand — target must be an item.
+- If "GM Management" is missing from the menu, the wand isn't activated or `WurmPermissions.mayUseDeityWand` rejected you — confirm `#setpower` landed.
+- After editing the Everybody role via GM Tool, changes persist via `VillageRole.save()` — no server restart needed.
+
+---
+
 ## Architecture notes
 
 - Console input is read on a background thread and dispatched through a single-thread executor (`ConsoleGM-Executor`) to avoid racing server state.

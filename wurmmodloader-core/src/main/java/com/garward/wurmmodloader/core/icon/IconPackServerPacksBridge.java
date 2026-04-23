@@ -1,8 +1,8 @@
 package com.garward.wurmmodloader.core.icon;
 
 import com.garward.wurmmodloader.modloader.internal.ReflectionUtil;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModEntry;
-import com.garward.wurmmodloader.modloader.internal.interfaces.ModListener;
+import com.garward.wurmmodloader.modloader.interfaces.ModEntry;
+import com.garward.wurmmodloader.modloader.interfaces.ModListener;
 import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
 
 import java.nio.file.Path;

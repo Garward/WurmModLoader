@@ -1029,6 +1029,687 @@ public class ProxyServerHook extends ServerHook {
 		}
 	}
 
+	// ========================================================================
+	// Trade / Village / ItemMove Hook Static Fire Methods
+	// ========================================================================
+
+	/**
+	 * Fires TradeInitiateEvent followed by NpcTradePermissionCheckEvent from
+	 * {@code Creature.startTrading()}. Returns true if either event cancels.
+	 */
+	public static boolean fireTradeSessionStartEvent(Object npc) {
+		try {
+			return getInstance().fireTradeSessionStart(
+				(com.wurmonline.server.creatures.Creature) npc);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TradeSessionStart events", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires TradeBalanceEvent from {@code TradeHandler.balance()}.
+	 * Returns true if the vanilla balance pass should be skipped.
+	 */
+	public static boolean fireTradeBalanceEvent(Object tradeHandler) {
+		try {
+			return getInstance().fireTradeBalance(
+				(com.wurmonline.server.creatures.TradeHandler) tradeHandler);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TradeBalanceEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires ItemMoveCheckEvent from {@code Item.moveToItem()}.
+	 * Returns true if the move should be rejected.
+	 */
+	public static boolean fireItemMoveCheckEvent(Object item, Object mover, long targetId, boolean lastMove) {
+		try {
+			return getInstance().fireItemMoveCheck(
+				(com.wurmonline.server.items.Item) item,
+				(com.wurmonline.server.creatures.Creature) mover,
+				targetId, lastMove);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire ItemMoveCheckEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires VillageExpansionCheckEvent from
+	 * {@code VillageFoundationQuestion.parseVillageFoundationQuestion5()}.
+	 * Returns true if the foundation/expansion should be aborted.
+	 */
+	public static boolean fireVillageExpansionCheckEvent(Object question) {
+		try {
+			return getInstance().fireVillageExpansionCheck(
+				(com.wurmonline.server.questions.VillageFoundationQuestion) question);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire VillageExpansionCheckEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires TerrainModificationEvent from {@code Terraforming.dig(...)}.
+	 * Returns true to abort the dig.
+	 */
+	public static boolean fireTerrainModificationEvent(Object performer, Object tool,
+	                                                   int tileX, int tileY, int tile,
+	                                                   float counter, boolean corner) {
+		try {
+			return getInstance().fireTerrainModification(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				tileX, tileY, tile, counter, corner);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TerrainModificationEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires GuardPlanPollEvent from {@code GuardPlan.pollUpkeep()}.
+	 * Returns true to skip the upkeep drain entirely.
+	 */
+	public static boolean fireGuardPlanPollEvent(Object plan) {
+		try {
+			return getInstance().fireGuardPlanPoll(
+				(com.wurmonline.server.villages.GuardPlan) plan);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire GuardPlanPollEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires StructurePlanningCheckEvent from {@code MethodsStructure.canPlanStructureAt(...)}.
+	 * Returns true if the placement should be denied.
+	 */
+	public static boolean fireStructurePlanningCheckEvent(Object performer, Object tool,
+	                                                     int tileX, int tileY, int tile) {
+		try {
+			return getInstance().fireStructurePlanningCheck(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				tileX, tileY, tile);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire StructurePlanningCheckEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires {@code StructureGateCheckEvent} from mid-method gate patches in
+	 * {@code MethodsStructure} and {@code FloorBehaviour}. Listeners that flip
+	 * {@code bypass=true} let the performer past the vanilla check.
+	 * Returns true when at least one listener bypassed the gate.
+	 */
+	public static boolean fireStructureGateCheckEvent(Object performer,
+	                                                  String subjectName,
+	                                                  String phaseName,
+	                                                  int heightOffset) {
+		try {
+			com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent.Subject subject =
+				com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent.Subject.valueOf(subjectName);
+			com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent.Phase phase =
+				com.garward.wurmmodloader.api.events.structure.StructureGateCheckEvent.Phase.valueOf(phaseName);
+			return getInstance().fireStructureGateCheck(
+				(com.wurmonline.server.creatures.Creature) performer,
+				subject, phase, heightOffset);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire StructureGateCheckEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Dispatch shim used by {@code QuestionAnswerPatch} — replaces
+	 * {@code question.answer(answers)} call sites inside {@code Communicator}.
+	 * Fires {@link com.garward.wurmmodloader.api.events.player.QuestionAnswerEvent};
+	 * if not cancelled, invokes the original {@code Question.answer(Properties)}.
+	 */
+	public static void dispatchQuestionAnswer(Object question, Object answers) {
+		try {
+			com.wurmonline.server.questions.Question q =
+				(com.wurmonline.server.questions.Question) question;
+			java.util.Properties p = (java.util.Properties) answers;
+			boolean cancelled = getInstance().fireQuestionAnswer(q, p);
+			if (!cancelled) {
+				q.answer(p);
+			}
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to dispatch QuestionAnswerEvent", t);
+			// Fall back to invoking answer so vanilla flow is preserved.
+			try {
+				((com.wurmonline.server.questions.Question) question)
+					.answer((java.util.Properties) answers);
+			} catch (Throwable t2) {
+				java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+					.log(java.util.logging.Level.WARNING, "Fallback Question.answer also failed", t2);
+			}
+		}
+	}
+
+	/**
+	 * Fires SacrificePostEvent after {@code MethodsReligion.sacrifice} resolves.
+	 * Observer-only; return value is ignored.
+	 */
+	public static void fireSacrificePostEvent(Object action, Object performer, Object altar, boolean done) {
+		try {
+			getInstance().fireSacrificePost(
+				(com.wurmonline.server.behaviours.Action) action,
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) altar,
+				done);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire SacrificePostEvent", t);
+		}
+	}
+
+	/**
+	 * Fires ContainerInsertionCheckEvent from the private
+	 * {@code Item.testInsertHollowItem}. Returns true to reject the insertion.
+	 */
+	public static boolean fireContainerInsertionCheckEvent(Object container, Object incoming, boolean testItemCount) {
+		try {
+			return getInstance().fireContainerInsertionCheck(
+				(com.wurmonline.server.items.Item) container,
+				(com.wurmonline.server.items.Item) incoming,
+				testItemCount);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire ContainerInsertionCheckEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires TrellisPruningEvent from {@code TrellisBehaviour.prune}.
+	 * Returns true to abort the prune.
+	 */
+	public static boolean fireTrellisPruningEvent(Object action, Object performer, Object sickle,
+	                                              Object trellis, float counter) {
+		try {
+			return getInstance().fireTrellisPruning(
+				(com.wurmonline.server.behaviours.Action) action,
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) sickle,
+				(com.wurmonline.server.items.Item) trellis,
+				counter);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TrellisPruningEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires FaithGainResetEvent from {@code Players.resetFaithGain}.
+	 * Returns true to skip the vanilla reset.
+	 */
+	public static boolean fireFaithGainResetEvent() {
+		try {
+			return getInstance().fireFaithGainReset();
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire FaithGainResetEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires CreatureMovementSpeedEvent from {@code MovementScheme.getSpeedModifier}.
+	 * Returns the (possibly modified) speed; on failure, returns the original.
+	 */
+	public static float fireCreatureMovementSpeedEvent(Object creature, float speed) {
+		try {
+			return getInstance().fireCreatureMovementSpeed(
+				(com.wurmonline.server.creatures.Creature) creature, speed);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CreatureMovementSpeedEvent", t);
+			return speed;
+		}
+	}
+
+	/**
+	 * Fires CreatureTemplateColorEvent from {@code CreatureTemplate.getColorRed/Green/Blue}.
+	 * Returns the (possibly modified) color value; on failure, returns the original.
+	 */
+	public static int fireCreatureTemplateColorEvent(Object template, String channel, int value) {
+		try {
+			com.garward.wurmmodloader.api.events.creature.CreatureTemplateColorEvent.Channel ch =
+				com.garward.wurmmodloader.api.events.creature.CreatureTemplateColorEvent.Channel.valueOf(channel);
+			return getInstance().fireCreatureTemplateColor(
+				(com.wurmonline.server.creatures.CreatureTemplate) template, ch, value);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CreatureTemplateColorEvent", t);
+			return value;
+		}
+	}
+
+	/**
+	 * Fires TerrainFlattenEvent from {@code Flattening.flatten}. Returns true to cancel.
+	 */
+	public static boolean fireTerrainFlattenEvent(Object performer, Object tool, int tile,
+			int tileX, int tileY, float counter, Object action) {
+		try {
+			return getInstance().fireTerrainFlatten(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				tile, tileX, tileY, counter,
+				(com.wurmonline.server.behaviours.Action) action);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TerrainFlattenEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires TerrainPackEvent from {@code Terraforming.pack}. Returns true to cancel.
+	 */
+	public static boolean fireTerrainPackEvent(Object performer, Object tool, int tileX, int tileY,
+			boolean onSurface, int tile, float counter, Object action) {
+		try {
+			return getInstance().fireTerrainPack(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				tileX, tileY, onSurface, tile, counter,
+				(com.wurmonline.server.behaviours.Action) action);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TerrainPackEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires TerrainCultivateEvent from {@code Terraforming.cultivate}. Returns true to cancel.
+	 */
+	public static boolean fireTerrainCultivateEvent(Object performer, Object tool, int tileX, int tileY,
+			boolean onSurface, int tile, float counter) {
+		try {
+			return getInstance().fireTerrainCultivate(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				tileX, tileY, onSurface, tile, counter);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TerrainCultivateEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires CaveMineEvent from {@code CaveTileBehaviour.mine}. Returns true to cancel
+	 * (cancel returns true from mine() — matches the action-loop done/abort semantics).
+	 */
+	public static boolean fireCaveMineEvent(Object action, Object performer, Object source,
+			int tileX, int tileY, short mineAction, float counter, int dir, Object digTilePos) {
+		try {
+			return getInstance().fireCaveMine(
+				(com.wurmonline.server.behaviours.Action) action,
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) source,
+				tileX, tileY, mineAction, counter, dir,
+				(com.wurmonline.math.TilePos) digTilePos);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CaveMineEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires ActionAllowedOnVehicleEvent from {@code Actions.isActionAllowedOnVehicle}.
+	 * Returns the (possibly overridden) allow/deny verdict.
+	 */
+	public static boolean fireActionAllowedOnVehicleEvent(short action, boolean vanillaAllowed) {
+		try {
+			return getInstance().fireActionAllowedOnVehicle(action, vanillaAllowed);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire ActionAllowedOnVehicleEvent", t);
+			return vanillaAllowed;
+		}
+	}
+
+	/**
+	 * Fires CaveTileActionEvent from {@code CaveTileBehaviour.action}. Returns true to cancel
+	 * (cancel returns true from action() — action-loop done/abort semantics).
+	 */
+	public static boolean fireCaveTileActionEvent(Object action, Object performer, Object source,
+			int tileX, int tileY, boolean onSurface, int heightOffset,
+			int tile, int dir, short actionShort, float counter) {
+		try {
+			return getInstance().fireCaveTileAction(
+				(com.wurmonline.server.behaviours.Action) action,
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) source,
+				tileX, tileY, onSurface, heightOffset, tile, dir, actionShort, counter);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CaveTileActionEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires CaveTileGetBehavioursEvent after {@code CaveTileBehaviour.getBehavioursFor}
+	 * returns. Listeners mutate the live entries list.
+	 */
+	public static void fireCaveTileGetBehavioursEvent(Object performer, Object source,
+			int tileX, int tileY, boolean onSurface, int tile, int dir, Object entries) {
+		try {
+			getInstance().fireCaveTileGetBehaviours(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) source,
+				tileX, tileY, onSurface, tile, dir,
+				(java.util.List) entries);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CaveTileGetBehavioursEvent", t);
+		}
+	}
+
+	/**
+	 * Fires SurfaceRockActionEvent from {@code TileRockBehaviour.action}. Returns true to cancel.
+	 */
+	public static boolean fireSurfaceRockActionEvent(Object action, Object performer, Object source,
+			int tileX, int tileY, boolean onSurface, int heightOffset,
+			int tile, short actionShort, float counter) {
+		try {
+			return getInstance().fireSurfaceRockAction(
+				(com.wurmonline.server.behaviours.Action) action,
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) source,
+				tileX, tileY, onSurface, heightOffset, tile, actionShort, counter);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire SurfaceRockActionEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires SurfaceRockGetBehavioursEvent after {@code TileRockBehaviour.getBehavioursFor}
+	 * returns.
+	 */
+	public static void fireSurfaceRockGetBehavioursEvent(Object performer, Object source,
+			int tileX, int tileY, boolean onSurface, int tile, Object entries) {
+		try {
+			getInstance().fireSurfaceRockGetBehaviours(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) source,
+				tileX, tileY, onSurface, tile,
+				(java.util.List) entries);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire SurfaceRockGetBehavioursEvent", t);
+		}
+	}
+
+	/**
+	 * Fires DirtDestinationResolveEvent and performs the insertItem call on
+	 * the resolved target. Used by {@code TerraformingDigInnerPatch} and
+	 * {@code FlatteningInnerPatch} to replace the hardcoded
+	 * {@code target.insertItem(dirt, true)} call sites.
+	 *
+	 * @return the boolean result of the insertItem call (matches vanilla
+	 *         return contract). Falls back to {@code vanillaTarget.insertItem}
+	 *         on any failure so the vanilla path is preserved.
+	 */
+	public static boolean fireDirtDestinationResolve(Object dirt, Object performer, Object tool,
+			Object vanillaTarget, boolean dredging, boolean toPile, String contextName) {
+		com.wurmonline.server.items.Item dirtItem = (com.wurmonline.server.items.Item) dirt;
+		com.wurmonline.server.items.Item vanilla = (com.wurmonline.server.items.Item) vanillaTarget;
+		try {
+			com.wurmonline.server.items.Item resolved = getInstance().fireDirtDestinationResolve(
+				dirtItem,
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				vanilla, dredging, toPile, contextName);
+			com.wurmonline.server.items.Item target = resolved != null ? resolved : vanilla;
+			if (target == null) return false;
+			return target.insertItem(dirtItem, true);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DirtDestinationResolveEvent", t);
+			try {
+				return vanilla != null && vanilla.insertItem(dirtItem, true);
+			} catch (Throwable t2) {
+				return false;
+			}
+		}
+	}
+
+	/**
+	 * Fires DirtSourceResolveEvent and returns the resolved carried item.
+	 * Falls back to {@code vanillaFound} on failure.
+	 */
+	public static com.wurmonline.server.items.Item fireDirtSourceResolve(Object performer, int templateId,
+			Object vanillaFound, String contextName) {
+		com.wurmonline.server.items.Item vanilla = (com.wurmonline.server.items.Item) vanillaFound;
+		try {
+			return getInstance().fireDirtSourceResolve(
+				(com.wurmonline.server.creatures.Creature) performer,
+				templateId, vanilla, contextName);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DirtSourceResolveEvent", t);
+			return vanilla;
+		}
+	}
+
+	/**
+	 * Fires DigCapacityOverrideEvent for the pile-count gate and returns the
+	 * (possibly overridden) int value. Falls back to vanillaValue on failure.
+	 */
+	public static int fireDigCapacityNumItems(Object performer, Object tool, Object target,
+			int vanillaValue, boolean toPile, boolean dredging) {
+		try {
+			long v = getInstance().fireDigCapacityOverride(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				(com.wurmonline.server.items.Item) target,
+				"NUM_ITEMS_NOT_COINS", (long) vanillaValue, toPile, dredging);
+			return (int) v;
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DigCapacityOverrideEvent (NUM_ITEMS)", t);
+			return vanillaValue;
+		}
+	}
+
+	/**
+	 * Fires DigCapacityOverrideEvent for the canCarry gate. vanillaValue
+	 * marshals as 1/0.
+	 */
+	public static boolean fireDigCapacityCanCarry(Object performer, Object tool, Object target,
+			boolean vanillaValue, boolean toPile, boolean dredging) {
+		try {
+			long v = getInstance().fireDigCapacityOverride(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				(com.wurmonline.server.items.Item) target,
+				"CAN_CARRY", vanillaValue ? 1L : 0L, toPile, dredging);
+			return v != 0L;
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DigCapacityOverrideEvent (CAN_CARRY)", t);
+			return vanillaValue;
+		}
+	}
+
+	/**
+	 * Fires DigCapacityOverrideEvent for the free-volume gate.
+	 */
+	public static int fireDigCapacityFreeVolume(Object performer, Object tool, Object target,
+			int vanillaValue, boolean toPile, boolean dredging) {
+		try {
+			long v = getInstance().fireDigCapacityOverride(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) tool,
+				(com.wurmonline.server.items.Item) target,
+				"FREE_VOLUME", (long) vanillaValue, toPile, dredging);
+			return (int) v;
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire DigCapacityOverrideEvent (FREE_VOLUME)", t);
+			return vanillaValue;
+		}
+	}
+
+	/**
+	 * Fires ActionPerformRequestEvent. Returns {@code true} if the action
+	 * should be cancelled (dispatcher will {@code return} early). Any
+	 * exception is swallowed and treated as not-cancelled so vanilla
+	 * dispatch always runs.
+	 */
+	public static boolean fireActionPerformRequest(Object performer, long subject, long target, short actionShort) {
+		try {
+			return getInstance().fireActionPerformRequest(
+				(com.wurmonline.server.creatures.Creature) performer,
+				subject, target, actionShort);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire ActionPerformRequestEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires ActionMenuBuildEvent with the live {@code availableActions} list
+	 * so listeners can mutate in place before the menu is sent.
+	 */
+	public static void fireActionMenuBuild(Object communicator, Object availableActions,
+			String helpString, boolean sendToSelectBar) {
+		try {
+			getInstance().fireActionMenuBuild(
+				(com.wurmonline.server.creatures.Communicator) communicator,
+				(java.util.List) availableActions,
+				helpString, sendToSelectBar);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire ActionMenuBuildEvent", t);
+		}
+	}
+
+	/**
+	 * Fires TileMenuBuildEvent. Target-aware tile menu injection path.
+	 */
+	public static void fireTileMenuBuild(Object performer, long target, boolean onSurface,
+			Object source, Object availableActions, String helpString) {
+		try {
+			getInstance().fireTileMenuBuild(
+				(com.wurmonline.server.creatures.Creature) performer,
+				target, onSurface,
+				(com.wurmonline.server.items.Item) source,
+				(java.util.List) availableActions, helpString);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TileMenuBuildEvent", t);
+		}
+	}
+
+	/**
+	 * Fires ItemMenuBuildEvent. Target-aware item menu injection path.
+	 */
+	public static void fireItemMenuBuild(Object performer, long targetId, Object source,
+			Object availableActions, String helpString) {
+		try {
+			getInstance().fireItemMenuBuild(
+				(com.wurmonline.server.creatures.Creature) performer,
+				targetId,
+				(com.wurmonline.server.items.Item) source,
+				(java.util.List) availableActions, helpString);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire ItemMenuBuildEvent", t);
+		}
+	}
+
+	/**
+	 * Fires TileDirtConsumeEvent. Returns {@code true} if a listener claimed
+	 * the consumption (patch then skips vanilla destroyItem and deducts one
+	 * template weight from the source).
+	 */
+	public static boolean fireTileDirtConsume(Object action, Object performer, Object source) {
+		com.wurmonline.server.items.Item src = (com.wurmonline.server.items.Item) source;
+		try {
+			boolean consumed = getInstance().fireTileDirtConsume(
+				(com.wurmonline.server.behaviours.Action) action,
+				(com.wurmonline.server.creatures.Creature) performer,
+				src);
+			if (consumed && src != null) {
+				src.setWeight(src.getWeightGrams() - src.getTemplate().getWeightGrams(), true);
+			}
+			return consumed;
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire TileDirtConsumeEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires PlanterItemAcceptEvent. vanillaValue is the pre-event result of
+	 * {@code Item.isRaw()} / {@code Item.isSpice()}.
+	 */
+	public static boolean firePlanterItemAccept(Object performer, Object herb, Object planter,
+			String kindName, boolean vanillaValue) {
+		try {
+			return getInstance().firePlanterItemAccept(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) herb,
+				(com.wurmonline.server.items.Item) planter,
+				kindName, vanillaValue);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire PlanterItemAcceptEvent", t);
+			return vanillaValue;
+		}
+	}
+
+	/**
+	 * Fires BulkStackNameEvent. Listeners can canonicalize the item name used
+	 * for bulk-stack matching.
+	 */
+	public static String fireBulkStackName(Object item, String vanillaName) {
+		try {
+			return getInstance().fireBulkStackName(
+				(com.wurmonline.server.items.Item) item, vanillaName);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire BulkStackNameEvent", t);
+			return vanillaName;
+		}
+	}
+
+	/**
+	 * Called from {@link com.garward.wurmmodloader.core.bytecode.patches.ServerPreInitPatch}
+	 * at the top of {@code Villages.loadVillages()}. Posts {@link com.garward.wurmmodloader.api.events.server.ServerPreInitEvent}
+	 * so subsystems can seed/repair zones DB rows before they're loaded into memory.
+	 */
+	public static void fireServerPreInitEvent() {
+		getInstance().fireOnServerPreInit();
+	}
+
 	public static synchronized ProxyServerHook getInstance() {
 		if (instance == null) {
 			instance = new ProxyServerHook();

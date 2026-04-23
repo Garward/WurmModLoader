@@ -26,7 +26,13 @@ public final class PostgresConfig {
     public Mode mode;
     public String host;
     public int port;
+    /** Base/prefix database name. Effective DB = {@code database + "_" + worldSuffix} when a
+     *  world folder is resolved from {@code wurmmodloader.launchWorldFolder}. */
     public String database;
+    /** Admin DB used only for CREATE DATABASE. Stays "postgres" in embedded, configurable in external. */
+    public String adminDatabase = "postgres";
+    /** Sanitized launch-world token; empty = fall back to {@link #database} verbatim. */
+    public String worldSuffix = "";
     public String user;
     public String password;
     public String sslmode;
@@ -69,7 +75,8 @@ public final class PostgresConfig {
         c.mode = parseMode(p.getProperty("mode", "embedded"));
         c.host     = p.getProperty("host", "localhost");
         c.port     = Integer.parseInt(p.getProperty("port", "5432"));
-        c.database = p.getProperty("database", "postgres");
+        c.database = p.getProperty("database", "wurm");
+        c.adminDatabase = p.getProperty("adminDatabase", "postgres");
         c.user     = p.getProperty("user", "postgres");
         c.password = p.getProperty("password", "");
         c.sslmode  = p.getProperty("sslmode", "disable");
@@ -99,8 +106,38 @@ public final class PostgresConfig {
         }
     }
 
-    /** Base URL for the shared Postgres database; per-schema selection is done via SET search_path. */
+    /** Effective database name: base + "_" + sanitized world folder, or just base if no world resolved. */
+    public String effectiveDatabase() {
+        if (worldSuffix == null || worldSuffix.isEmpty()) return database;
+        return database + "_" + worldSuffix;
+    }
+
+    /** Base URL for the per-world Postgres database; per-schema selection is done via SET search_path. */
     public String baseUrl() {
-        return "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode=" + sslmode;
+        return "jdbc:postgresql://" + host + ":" + port + "/" + effectiveDatabase() + "?sslmode=" + sslmode;
+    }
+
+    /** URL targeting the admin database (never world-scoped). Used for CREATE DATABASE. */
+    public String adminUrl() {
+        return "jdbc:postgresql://" + host + ":" + port + "/" + adminDatabase + "?sslmode=" + sslmode;
+    }
+
+    /** Postgres identifier rules: lowercase, [a-z0-9_], must not start with a digit, max 63 chars. */
+    public static String sanitizeWorldSuffix(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim().toLowerCase();
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_') {
+                b.append(ch);
+            } else {
+                b.append('_');
+            }
+        }
+        String out = b.toString();
+        if (!out.isEmpty() && Character.isDigit(out.charAt(0))) out = "_" + out;
+        if (out.length() > 55) out = out.substring(0, 55); // leave headroom for "<database>_" prefix
+        return out;
     }
 }

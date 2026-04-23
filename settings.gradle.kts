@@ -41,5 +41,16 @@ project(":mods:eventlister").projectDir = file("mods/eventlister")
 include("mods:postgresbackend")
 project(":mods:postgresbackend").projectDir = file("mods/postgresbackend")
 
+include("mods:livemap")
+project(":mods:livemap").projectDir = file("mods/livemap")
+
+// Dormant — pivoted to mods/gmtools (in-world building tools > external blueprint import).
+// See mods/blueprints/DORMANT.md. Re-enable by uncommenting if the import path is revisited.
+// include("mods:blueprints")
+// project(":mods:blueprints").projectDir = file("mods/blueprints")
+
+include("mods:gmtools")
+project(":mods:gmtools").projectDir = file("mods/gmtools")
+
 // Note: Community mods now live in WurmModLoader-CommunityMods repo
 // They depend on JARs from this repo's libs/ directory

@@ -14,6 +14,7 @@ Day-to-day how-tos for writing mods.
 
 | Doc | Topic |
 |---|---|
+| [`guides/custom-map-setup.md`](guides/custom-map-setup.md) | **Running a custom map** — fixes the NW-corner NPC cluster; covers the world-seed bootstrap + `wurmmodloader-world-seed.yaml` |
 | [`guides/event-bus.md`](guides/event-bus.md) | `@SubscribeEvent` annotation-driven event system |
 | [`guides/extending-framework.md`](guides/extending-framework.md) | **Adding new events & bytecode patches to the framework** (five-file recipe) |
 | [`guides/database-backend-spi.md`](guides/database-backend-spi.md) | **Database Backend SPI** — replacing SQLite/MySQL with a custom backend (Postgres, MariaDB) |

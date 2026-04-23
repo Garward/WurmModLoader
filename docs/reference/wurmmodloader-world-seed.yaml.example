@@ -1,0 +1,102 @@
+# WurmModLoader — Custom-map world seeding
+#
+# Drop this file at `<server-root>/config/wurmmodloader-world-seed.yaml`
+# (same dir as vanilla Wurm's `logging.properties`). Missing file = the default
+# policy applies (single starter town at map center with altars; see below).
+# `./deploy.sh` will seed this file there on first run — subsequent deploys
+# won't overwrite your edits.
+#
+# Loaded by: com.garward.wurmmodloader.core.worldseed.WorldSeedBootstrap
+# Runs at:   ServerPreInitEvent — before Villages.loadVillages() reads the DB
+#
+# ---- Why this file exists ----
+# Vanilla Wurm does NOT procedurally generate starter towns, altars, or
+# kingdom spawn points. It reads them from absolute tile coordinates in
+# wurmzones.db/wurmitems.db that were hand-authored for the stock Creative /
+# Adventure maps. Custom maps (Riverweave, etc.) ship terrain only, so those
+# coordinates either land on meaningless spots or exceed your map bounds and
+# get clamped to the NW corner — the classic "all NPC towns clustered in one
+# corner" bug.
+#
+# This seeder fills the gap: on first boot (or any boot where the VILLAGES
+# table has no in-bounds permanent row), it writes a sensible starter-town +
+# altars + fallback spawn coords so the map is playable immediately.
+
+# Master switch. Set to false to disable the seeder entirely (use if you're
+# managing your own world fixtures via a different mod or by hand).
+enabled: true
+
+# Seeding strategy:
+#   center  — default. One shared starter town at the map's geometric center
+#             (worldTileSizeX/2, worldTileSizeY/2) with a water-safety check:
+#             the spot and every tile within a 20-tile radius must be dry
+#             land. If the raw center fails, spiral outward for the nearest
+#             valid dry tile satisfying the same buffer.
+#   manual  — use the `towns:` list below. No auto-placement.
+#   off     — alias for enabled: false.
+strategy: center
+
+# Only used when strategy: center. Tile radius that must be clear of water
+# around the chosen point. Bump if your map has tight inlets near the middle.
+centerWaterBuffer: 20
+
+# Altars placed adjacent to the starter town. Set to [] to skip altars.
+centerAltars:
+  - altar_of_three
+  - bone_altar
+
+# ---- Vanilla starter town creation (center strategy) ----
+# Set createVillage: false to get the "lazy onboarding minus the village"
+# experience — the framework still picks a dry tile and writes SERVERS spawn
+# points, but does NOT create a VILLAGES row / token / altars. Use this if
+# you have a mod that subscribes to WorldSeededEvent and builds its own town.
+createVillage: true
+centerTownName: "Freedom Landing"
+centerTownHalfSize: 14        # village footprint = (2*size + 1) tiles across
+centerTownPermanent: true     # permanent = starter town (can't be disbanded)
+
+# The vanilla createVillage() call needs a live Creature as the founder.
+# The seeder spawns a generic human NPC for this, then (by default) despawns
+# it immediately. The founder name string is kept in VILLAGES.FOUNDER.
+# Set despawnFounderNpc: false if you want the NPC to stick around as flavor.
+founderNpcName: "Settler"
+despawnFounderNpc: true
+
+# Optional terrain flattening under the starter town footprint.
+#
+# When enabled, the seeder levels every tile within the village footprint
+# plus `flattenBorderTiles` tiles on each side to the center tile's height,
+# so the town isn't half-buried or on a slope.
+#
+# Mountain-safety: if ANY tile in the footprint differs from the center by
+# more than `flattenMaxSlope` height units (Wurm's ~0.1m units — 40 ≈ 4m),
+# flattening is skipped entirely and raw terrain is preserved. This keeps
+# the seeder from carving a plateau out of a steep hillside.
+flattenFootprint: false
+flattenBorderTiles: 3
+flattenMaxSlope: 40
+
+# Manual town list — used only when strategy: manual. Each entry seeds one
+# permanent village with an associated token item.
+#
+# Coordinates are absolute tile coords (0 .. worldTileSize). Out-of-bounds
+# entries are skipped with a warning; they don't crash boot.
+#
+# towns:
+#   - name: "Hearth"
+#     kingdom: MOL_REHAN       # JENN_KELLON | MOL_REHAN | HOTS | FREEDOM
+#     spawnKingdom: MOL_REHAN  # who spawns here on death
+#     tileX: 1024
+#     tileY: 1024
+#     size: 14                 # half-size; village becomes 2*size+1 tiles wide
+#     altars: [altar_of_three, bone_altar]
+#     permanent: true          # marks as starter town (usually true)
+
+# Fallback spawn coords written into the SERVERS DB row (the absolute-last-
+# resort respawn point, used only if a kingdom has no permanent village).
+# Leave commented to accept the center-town coordinates automatically.
+#
+# fallbackSpawns:
+#   jennKellon: { x: 1024, y: 1024 }
+#   molRehan:   { x: 1024, y: 1024 }
+#   hots:       { x: 1024, y: 1024 }
