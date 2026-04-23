@@ -7,6 +7,18 @@ import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStartedEvent;
 import com.garward.wurmmodloader.core.event.EventBus;
 
+import com.wurmonline.server.Items;
+import com.wurmonline.server.endgames.EndGameItem;
+import com.wurmonline.server.endgames.EndGameItems;
+import com.wurmonline.server.items.Item;
+import com.wurmonline.server.items.ItemFactory;
+import com.wurmonline.server.items.ItemList;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
 /**
  * Routes console GM commands to appropriate handlers.
  *
@@ -38,6 +50,34 @@ public class ConsoleGMCommandRouter {
     private static volatile boolean eventSubscribed = false;
     private static final ConsoleGMCommandRouter EVENT_SINK = new ConsoleGMCommandRouter();
 
+    // Custom-handler output sink. Defaults to System.out for the console path.
+    // InGameGMCommandBridge swaps this for the duration of an in-game dispatch
+    // so messages land in the player's chat instead.
+    private static final ThreadLocal<Consumer<String>> OUTPUT_TL =
+        ThreadLocal.withInitial(() -> System.out::println);
+
+    private static void gmPrint(String line) {
+        OUTPUT_TL.get().accept(line);
+    }
+
+    /**
+     * Run a custom command on the calling thread with a caller-supplied output
+     * sink. Used by {@link InGameGMCommandBridge} to route in-game GM commands
+     * through the same handlers the console uses, with output sent to the
+     * player's chat.
+     *
+     * @return true if the command name matched a custom handler, false otherwise
+     */
+    public static boolean dispatchCustomWithSink(String commandName, String args, Consumer<String> sink) {
+        Consumer<String> previous = OUTPUT_TL.get();
+        OUTPUT_TL.set(sink);
+        try {
+            return executeCustomCommand(commandName, args);
+        } finally {
+            OUTPUT_TL.set(previous);
+        }
+    }
+
     /**
      * Register a ServerStartedEvent subscriber that eagerly initializes the router
      * so the command banner prints right after server boot (instead of lazily on
@@ -46,6 +86,7 @@ public class ConsoleGMCommandRouter {
     public static synchronized void installEagerInit() {
         if (eventSubscribed) return;
         EventBus.getInstance().register(EVENT_SINK);
+        InGameGMCommandBridge.install();
         eventSubscribed = true;
     }
 
@@ -294,6 +335,14 @@ public class ConsoleGMCommandRouter {
                 handleSetMayor(args);
                 return true;
 
+            case "villageguards":
+                handleVillageGuards(args);
+                return true;
+
+            case "movealtar":
+                handleMoveAltar(args);
+                return true;
+
             default:
                 return false; // Not a custom command
         }
@@ -325,7 +374,9 @@ public class ConsoleGMCommandRouter {
         System.out.println("  #summon <player>");
         System.out.println("    Teleport player to spawn (map center)");
         System.out.println("  #send <player> <x> <y>");
-        System.out.println("    Send player to coordinates");
+        System.out.println("    Send player to TILE coordinates (matches in-game F1 readout)");
+        System.out.println("  #send <player> meter <x> <y>");
+        System.out.println("    Send player to raw meter coordinates");
         System.out.println();
         System.out.println("SERVER MANAGEMENT:");
         System.out.println("  #shutdown <minutes> <reason>");
@@ -357,6 +408,16 @@ public class ConsoleGMCommandRouter {
         System.out.println("  #setmayor <deedname> <playername>");
         System.out.println("    Make <player> mayor of <deed> (player must be online)");
         System.out.println("    Unlocks the in-game GM Tool role editor for that deed");
+        System.out.println("  #villageguards <deedname> <count>");
+        System.out.println("    Set hired guard count on a deed (works on permanent/GM deeds)");
+        System.out.println("    Bypasses the token UI restriction; clamped to engine max for plan type");
+        System.out.println();
+        System.out.println("ENDGAME ALTARS:");
+        System.out.println("  #movealtar <holy|unholy> player <playername>");
+        System.out.println("    Move the Altar of Three (holy) or Bone Altar (unholy) to a player's position");
+        System.out.println("  #movealtar <holy|unholy> tile <tx> <ty>");
+        System.out.println("    Move the altar to tile coordinates");
+        System.out.println("    Destroys + recreates with bless/enchant + EndGameItems registration");
         System.out.println();
         System.out.println("CHAT:");
         System.out.println("  #toggleglobal <on|off>");
@@ -375,7 +436,8 @@ public class ConsoleGMCommandRouter {
         System.out.println("  #kick Bob");
         System.out.println("  #ban Alice \"Cheating\"");
         System.out.println("  #setpower Charlie 2");
-        System.out.println("  #send Bob 500 500");
+        System.out.println("  #send Bob 4391 319        (tile coords)");
+        System.out.println("  #send Bob meter 17564 1278 (raw meters)");
         System.out.println("  #time 24");
         System.out.println("  #weather clear");
         System.out.println("  #createitem Bob 1 50      (by ID)");
@@ -388,6 +450,9 @@ public class ConsoleGMCommandRouter {
         System.out.println("  #villageperm \"Freedom Landing\" everybody Build off");
         System.out.println("  #villageperm \"Freedom Landing\" everybody MineIron on");
         System.out.println("  #setmayor \"Freedom Landing\" Rorann");
+        System.out.println("  #villageguards \"Freedom Landing\" 4");
+        System.out.println("  #movealtar holy player Bob");
+        System.out.println("  #movealtar unholy tile 4391 319");
         System.out.println("========================================");
         System.out.println("IN-GAME GM TOOL (village roles, etc.):");
         System.out.println("  1. #setpower <you> 5   (power 4+ uses ebony wand 176; 2-3 uses ivory 315)");
@@ -654,41 +719,53 @@ public class ConsoleGMCommandRouter {
      */
     private static void handleSend(String args) {
         if (args == null || args.trim().isEmpty()) {
-            System.out.println("[Console GM] Usage: #send <player> <x> <y>");
-            System.out.println("[Console GM] Example: #send Bob 500 500");
+            gmPrint("[Console GM] Usage: #send <player> <x> <y>          (tile coords)");
+            gmPrint("[Console GM]    or: #send <player> meter <x> <y>   (raw meter coords)");
+            gmPrint("[Console GM] Example: #send Bob 4391 319");
             return;
         }
 
         String[] parts = args.split("\\s+");
         if (parts.length < 3) {
-            System.out.println("[Console GM] Usage: #send <player> <x> <y>");
+            gmPrint("[Console GM] Usage: #send <player> <x> <y>  (tile coords)");
             return;
         }
 
         String playerName = parts[0];
         float x, y;
+        boolean meterMode = parts.length >= 4 && "meter".equalsIgnoreCase(parts[1]);
 
         try {
-            x = Float.parseFloat(parts[1]);
-            y = Float.parseFloat(parts[2]);
+            int coordIdx = meterMode ? 2 : 1;
+            x = Float.parseFloat(parts[coordIdx]);
+            y = Float.parseFloat(parts[coordIdx + 1]);
         } catch (NumberFormatException e) {
-            System.out.println("[Console GM] Invalid coordinates");
+            gmPrint("[Console GM] Invalid coordinates");
+            return;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            gmPrint("[Console GM] Usage: #send <player> meter <x> <y>");
             return;
         }
+
+        // Default: input is tile coords. Convert to meters with tile-center offset.
+        float meterX = meterMode ? x : (x * 4.0f) + 2.0f;
+        float meterY = meterMode ? y : (y * 4.0f) + 2.0f;
 
         try {
             Object player = ServerReflectionUtil.getPlayerByName(playerName);
             if (player == null) {
-                System.out.println("[Console GM] Player not found: " + playerName);
+                gmPrint("[Console GM] Player not found: " + playerName);
                 return;
             }
 
             String actualName = ServerReflectionUtil.getPlayerName(player);
-            ServerReflectionUtil.setPlayerPosition(player, x, y);
+            ServerReflectionUtil.setPlayerPosition(player, meterX, meterY);
 
-            System.out.println("[Console GM] ✓ Sent " + actualName + " to (" + x + ", " + y + ")");
+            String unit = meterMode ? "m" : "tile";
+            gmPrint("[Console GM] ✓ Sent " + actualName + " to (" + x + ", " + y + ") " + unit
+                + "  →  meters (" + ((int) meterX) + ", " + ((int) meterY) + ")");
         } catch (Exception e) {
-            System.out.println("[Console GM] Failed to send player: " + e.getMessage());
+            gmPrint("[Console GM] Failed to send player: " + e.getMessage());
         }
     }
 
@@ -1302,22 +1379,22 @@ public class ConsoleGMCommandRouter {
      */
     private static void handleVillagePerm(String args) {
         if (args == null || args.trim().isEmpty()) {
-            System.out.println("[Console GM] Usage: #villageperm <deedname> <role> <permname> <on|off>");
-            System.out.println("[Console GM]   role: everybody | mayor | citizen | ally");
-            System.out.println("[Console GM]   permname: any setCanXxx suffix (Build, PassGates, MineIron, ManageRoles, ...)");
-            System.out.println("[Console GM] Example: #villageperm \"Freedom Landing\" everybody Build off");
+            gmPrint("[Console GM] Usage: #villageperm <deedname> <role> <permname> <on|off>");
+            gmPrint("[Console GM]   role: everybody | mayor | citizen | ally");
+            gmPrint("[Console GM]   permname: any setCanXxx suffix (Build, PassGates, MineIron, ManageRoles, ...)");
+            gmPrint("[Console GM] Example: #villageperm \"Freedom Landing\" everybody Build off");
             return;
         }
         String[] firstSplit = splitQuotedFirst(args);
         String deedName = firstSplit[0];
         String[] rest = firstSplit[1].split("\\s+", 3);
         if (deedName.isEmpty() || rest.length < 3) {
-            System.out.println("[Console GM] Usage: #villageperm <deedname> <role> <permname> <on|off>");
+            gmPrint("[Console GM] Usage: #villageperm <deedname> <role> <permname> <on|off>");
             return;
         }
         byte status = resolveRoleStatus(rest[0]);
         if (status < 0) {
-            System.out.println("[Console GM] Unknown role: " + rest[0] + " (expected everybody|mayor|citizen|ally|<byte>)");
+            gmPrint("[Console GM] Unknown role: " + rest[0] + " (expected everybody|mayor|citizen|ally|<byte>)");
             return;
         }
         String permName = rest[1];
@@ -1328,7 +1405,7 @@ public class ConsoleGMCommandRouter {
         } else if (onOff.equals("off") || onOff.equals("false") || onOff.equals("0") || onOff.equals("no")) {
             value = false;
         } else {
-            System.out.println("[Console GM] Expected on|off, got: " + onOff);
+            gmPrint("[Console GM] Expected on|off, got: " + onOff);
             return;
         }
 
@@ -1336,12 +1413,12 @@ public class ConsoleGMCommandRouter {
             Class<?> villagesClass = Class.forName("com.wurmonline.server.villages.Villages");
             Object village = villagesClass.getMethod("getVillage", String.class).invoke(null, deedName);
             if (village == null) {
-                System.out.println("[Console GM] Village not found: " + deedName);
+                gmPrint("[Console GM] Village not found: " + deedName);
                 return;
             }
             Object role = village.getClass().getMethod("getRoleForStatus", byte.class).invoke(village, status);
             if (role == null) {
-                System.out.println("[Console GM] Role not found on village (status=" + status + ")");
+                gmPrint("[Console GM] Role not found on village (status=" + status + ")");
                 return;
             }
 
@@ -1353,8 +1430,8 @@ public class ConsoleGMCommandRouter {
                 setter = findBoolSetter(role.getClass(), "setMay" + capitalize(permName));
             }
             if (setter == null) {
-                System.out.println("[Console GM] No setCan/setMay setter matching '" + permName + "' on VillageRole.");
-                System.out.println("[Console GM] Hint: try Build, PassGates, MineIron, ManageRoles, DestroyItems, etc.");
+                gmPrint("[Console GM] No setCan/setMay setter matching '" + permName + "' on VillageRole.");
+                gmPrint("[Console GM] Hint: try Build, PassGates, MineIron, ManageRoles, DestroyItems, etc.");
                 return;
             }
             setter.setAccessible(true);
@@ -1362,10 +1439,10 @@ public class ConsoleGMCommandRouter {
             role.getClass().getMethod("save").invoke(role);
 
             String villName = (String) village.getClass().getMethod("getName").invoke(village);
-            System.out.println("[Console GM] ✓ " + villName + " [" + rest[0] + "] " + setter.getName()
+            gmPrint("[Console GM] ✓ " + villName + " [" + rest[0] + "] " + setter.getName()
                 + "(" + value + ") saved.");
         } catch (Throwable t) {
-            System.out.println("[Console GM] Failed to edit village perm: " + t.getMessage());
+            gmPrint("[Console GM] Failed to edit village perm: " + t.getMessage());
             t.printStackTrace();
         }
     }
@@ -1392,15 +1469,15 @@ public class ConsoleGMCommandRouter {
      */
     private static void handleSetMayor(String args) {
         if (args == null || args.trim().isEmpty()) {
-            System.out.println("[Console GM] Usage: #setmayor <deedname> <playername>");
-            System.out.println("[Console GM] Player must be online. Updates VILLAGES.MAYOR + adds citizen row with status=2.");
+            gmPrint("[Console GM] Usage: #setmayor <deedname> <playername>");
+            gmPrint("[Console GM] Player must be online. Updates VILLAGES.MAYOR + adds citizen row with status=2.");
             return;
         }
         String[] firstSplit = splitQuotedFirst(args);
         String deedName = firstSplit[0];
         String playerName = firstSplit[1].trim();
         if (deedName.isEmpty() || playerName.isEmpty()) {
-            System.out.println("[Console GM] Usage: #setmayor <deedname> <playername>");
+            gmPrint("[Console GM] Usage: #setmayor <deedname> <playername>");
             return;
         }
 
@@ -1408,19 +1485,19 @@ public class ConsoleGMCommandRouter {
             Class<?> villagesClass = Class.forName("com.wurmonline.server.villages.Villages");
             Object village = villagesClass.getMethod("getVillage", String.class).invoke(null, deedName);
             if (village == null) {
-                System.out.println("[Console GM] Village not found: " + deedName);
+                gmPrint("[Console GM] Village not found: " + deedName);
                 return;
             }
 
             Object player = ServerReflectionUtil.getPlayerByName(playerName);
             if (player == null) {
-                System.out.println("[Console GM] Player not online: " + playerName + " (must be online for addCitizen).");
+                gmPrint("[Console GM] Player not online: " + playerName + " (must be online for addCitizen).");
                 return;
             }
 
             Object mayorRole = village.getClass().getMethod("getRoleForStatus", byte.class).invoke(village, (byte) 2);
             if (mayorRole == null) {
-                System.out.println("[Console GM] Village has no mayor role (status=2).");
+                gmPrint("[Console GM] Village has no mayor role (status=2).");
                 return;
             }
 
@@ -1432,11 +1509,225 @@ public class ConsoleGMCommandRouter {
             village.getClass().getMethod("setMayor", String.class).invoke(village, playerName);
 
             String villName = (String) village.getClass().getMethod("getName").invoke(village);
-            System.out.println("[Console GM] ✓ " + playerName + " set as mayor of " + villName
+            gmPrint("[Console GM] ✓ " + playerName + " set as mayor of " + villName
                 + " (addCitizen=" + added + ", MAYOR column updated).");
-            System.out.println("[Console GM]   You can now edit roles in the in-game GM Tool (no longer readonly).");
+            gmPrint("[Console GM]   You can now edit roles in the in-game GM Tool (no longer readonly).");
         } catch (Throwable t) {
-            System.out.println("[Console GM] Failed to set mayor: " + t.getMessage());
+            gmPrint("[Console GM] Failed to set mayor: " + t.getMessage());
+            t.printStackTrace();
+        }
+    }
+
+    /**
+     * Handle #villageguards — set the hired guard count on a deed via the public
+     * GuardPlan.changePlan API. Works on permanent / GM-created deeds where the
+     * in-game token UI refuses to let you change guards.
+     *
+     * Usage: #villageguards <deedname> <count>
+     */
+    private static void handleVillageGuards(String args) {
+        if (args == null || args.trim().isEmpty()) {
+            gmPrint("[Console GM] Usage: #villageguards <deedname> <count>");
+            gmPrint("[Console GM] Example: #villageguards \"Freedom Landing\" 4");
+            return;
+        }
+        String[] firstSplit = splitQuotedFirst(args);
+        String deedName = firstSplit[0];
+        String countStr = firstSplit[1].trim();
+        if (deedName.isEmpty() || countStr.isEmpty()) {
+            gmPrint("[Console GM] Usage: #villageguards <deedname> <count>");
+            return;
+        }
+        int requested;
+        try {
+            requested = Integer.parseInt(countStr);
+        } catch (NumberFormatException nfe) {
+            gmPrint("[Console GM] Count must be an integer, got: " + countStr);
+            return;
+        }
+        if (requested < 0) {
+            gmPrint("[Console GM] Count must be >= 0, got: " + requested);
+            return;
+        }
+
+        try {
+            Class<?> villagesClass = Class.forName("com.wurmonline.server.villages.Villages");
+            Object village = villagesClass.getMethod("getVillage", String.class).invoke(null, deedName);
+            if (village == null) {
+                gmPrint("[Console GM] Village not found: " + deedName);
+                return;
+            }
+
+            java.lang.reflect.Field planField = village.getClass().getField("plan");
+            Object plan = planField.get(village);
+            if (plan == null) {
+                String villName = (String) village.getClass().getMethod("getName").invoke(village);
+                gmPrint("[Console GM] Village '" + villName + "' has no guard plan.");
+                return;
+            }
+
+            Class<?> guardPlanClass = Class.forName("com.wurmonline.server.villages.GuardPlan");
+            int max = (Integer) guardPlanClass.getMethod("getMaxGuards", village.getClass())
+                .invoke(null, village);
+            // changePlan can fall through to type-specific clamps; respect them here too.
+            int effective = Math.min(requested, max);
+            if (effective != requested) {
+                gmPrint("[Console GM] Requested " + requested
+                    + " exceeds engine max for this plan type (" + max + "); clamping.");
+            }
+
+            int oldCount = (Integer) plan.getClass().getMethod("getNumHiredGuards").invoke(plan);
+            int planType = plan.getClass().getField("type").getInt(plan);
+
+            plan.getClass().getMethod("changePlan", int.class, int.class)
+                .invoke(plan, planType, effective);
+
+            String villName = (String) village.getClass().getMethod("getName").invoke(village);
+            gmPrint("[Console GM] ✓ " + villName + " guards: "
+                + oldCount + " -> " + effective + " (plan type " + planType + ").");
+        } catch (Throwable t) {
+            gmPrint("[Console GM] Failed to set village guards: " + t.getMessage());
+            t.printStackTrace();
+        }
+    }
+
+    /**
+     * Handle #movealtar — relocate the Altar of Three (holy) or Bone Altar
+     * (unholy). Destroys the existing endgame altar item, deletes its
+     * ENDGAMEITEMS row, then recreates a fresh blessed/enchanted/registered
+     * altar at the target meter coords. Mirrors {@code WorldSeedCompletionHandler}'s
+     * altar placement so behavior matches initial seed.
+     *
+     * <p>Syntax:
+     * <pre>
+     *   #movealtar &lt;holy|unholy&gt; player &lt;name&gt;
+     *   #movealtar &lt;holy|unholy&gt; tile &lt;tx&gt; &lt;ty&gt;
+     * </pre>
+     */
+    private static void handleMoveAltar(String args) {
+        if (args == null || args.trim().isEmpty()) {
+            gmPrint("[Console GM] Usage: #movealtar <holy|unholy> player <name>");
+            gmPrint("[Console GM]    or: #movealtar <holy|unholy> tile <tx> <ty>");
+            return;
+        }
+
+        String[] parts = args.trim().split("\\s+");
+        if (parts.length < 3) {
+            gmPrint("[Console GM] Usage: #movealtar <holy|unholy> player <name>");
+            gmPrint("[Console GM]    or: #movealtar <holy|unholy> tile <tx> <ty>");
+            return;
+        }
+
+        String which = parts[0].toLowerCase();
+        boolean holy;
+        int templateId;
+        switch (which) {
+            case "holy":
+            case "altarofthree":
+            case "altar_of_three":
+                holy = true;
+                templateId = ItemList.altarHoly;
+                break;
+            case "unholy":
+            case "bonealtar":
+            case "bone_altar":
+                holy = false;
+                templateId = ItemList.altarUnholy;
+                break;
+            default:
+                gmPrint("[Console GM] First arg must be 'holy' or 'unholy', got: " + parts[0]);
+                return;
+        }
+
+        String mode = parts[1].toLowerCase();
+        float meterX, meterY;
+        String locDesc;
+
+        try {
+            if ("player".equals(mode)) {
+                if (parts.length < 3) {
+                    gmPrint("[Console GM] Usage: #movealtar " + which + " player <name>");
+                    return;
+                }
+                String playerName = parts[2];
+                Object player = ServerReflectionUtil.getPlayerByName(playerName);
+                if (player == null) {
+                    gmPrint("[Console GM] Player not found / not online: " + playerName);
+                    return;
+                }
+                meterX = ServerReflectionUtil.getPlayerPosX(player);
+                meterY = ServerReflectionUtil.getPlayerPosY(player);
+                locDesc = "player '" + ServerReflectionUtil.getPlayerName(player)
+                    + "' at (" + ((int) meterX) + ", " + ((int) meterY) + ") meters";
+            } else if ("tile".equals(mode)) {
+                if (parts.length < 4) {
+                    gmPrint("[Console GM] Usage: #movealtar " + which + " tile <tx> <ty>");
+                    return;
+                }
+                int tx, ty;
+                try {
+                    tx = Integer.parseInt(parts[2]);
+                    ty = Integer.parseInt(parts[3]);
+                } catch (NumberFormatException nfe) {
+                    gmPrint("[Console GM] Invalid tile coords: " + parts[2] + " " + parts[3]);
+                    return;
+                }
+                meterX = (tx << 2) + 2.0f;
+                meterY = (ty << 2) + 2.0f;
+                locDesc = "tile (" + tx + ", " + ty + ")";
+            } else {
+                gmPrint("[Console GM] Second arg must be 'player' or 'tile', got: " + parts[1]);
+                return;
+            }
+        } catch (Throwable t) {
+            gmPrint("[Console GM] Failed to resolve target: " + t.getMessage());
+            return;
+        }
+
+        try {
+            // 1) Find existing altar(s) of matching kind. Multiple shouldn't exist
+            //    but defensively handle it — wipe them all, place exactly one new.
+            List<Long> matching = new ArrayList<>();
+            for (EndGameItem eg : EndGameItems.altars.values()) {
+                if (eg == null) continue;
+                if (eg.isHoly() == holy) {
+                    matching.add(eg.getWurmid());
+                }
+            }
+
+            if (matching.isEmpty()) {
+                gmPrint("[Console GM] No existing " + (holy ? "holy" : "unholy")
+                    + " endgame altar registered — creating one fresh at " + locDesc + ".");
+            } else {
+                gmPrint("[Console GM] Removing " + matching.size() + " existing "
+                    + (holy ? "holy" : "unholy") + " altar(s)...");
+                Method del = EndGameItem.class.getDeclaredMethod("delete", long.class);
+                del.setAccessible(true);
+                for (Long iid : matching) {
+                    EndGameItems.altars.remove(iid);
+                    try { Items.destroyItem(iid); } catch (Throwable ignore) {}
+                    try { del.invoke(null, iid); } catch (Throwable ignore) {}
+                }
+            }
+
+            // 2) Create new altar at target. Mirror WorldSeedCompletionHandler.placeAltars.
+            Item altar = ItemFactory.createItem(
+                templateId, 99.0f, meterX, meterY, 0.0f,
+                true, (byte) 0, -10L, null);
+            if (holy) {
+                altar.bless(1);
+                altar.enchant((byte) 5);
+            } else {
+                altar.bless(4);
+                altar.enchant((byte) 8);
+            }
+            EndGameItem eg = new EndGameItem(altar, holy, (short) 68, true);
+            EndGameItems.altars.put(Long.valueOf(altar.getWurmId()), eg);
+
+            gmPrint("[Console GM] ✓ " + (holy ? "Altar of Three" : "Bone Altar")
+                + " placed id=" + altar.getWurmId() + " at " + locDesc + ".");
+        } catch (Throwable t) {
+            gmPrint("[Console GM] Failed to move altar: " + t.getMessage());
             t.printStackTrace();
         }
     }

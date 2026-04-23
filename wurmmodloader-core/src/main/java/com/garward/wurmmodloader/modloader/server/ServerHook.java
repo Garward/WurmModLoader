@@ -2403,6 +2403,31 @@ public class ServerHook {
 	}
 
 	/**
+	 * Fires SurfaceMiningSlopeLowerCheckEvent and resolves the override. Returns
+	 * the per-tick decision: lower-slope (true) or chip-away (false). When no
+	 * listener overrides, the vanilla roll ({@code Server.rand.nextFloat()
+	 * &lt; naturalChance}) is performed inline so this method always answers
+	 * with the same semantics vanilla would.
+	 */
+	public boolean fireSurfaceMiningSlopeLower(com.wurmonline.server.creatures.Creature performer,
+	                                            com.wurmonline.server.items.Item source,
+	                                            float naturalChance) {
+		com.garward.wurmmodloader.api.events.structure.SurfaceMiningSlopeLowerCheckEvent event =
+			new com.garward.wurmmodloader.api.events.structure.SurfaceMiningSlopeLowerCheckEvent(
+				performer, source, naturalChance);
+		eventBus.post(event);
+		Boolean override = event.getOverride();
+		boolean decision = override != null
+			? override.booleanValue()
+			: (com.wurmonline.server.Server.rand.nextFloat() < naturalChance);
+		if (DEBUG) {
+			logger.info(String.format("[Event] SurfaceMiningSlopeLowerCheck: chance=%.3f override=%s -> %s",
+				naturalChance, override, decision));
+		}
+		return decision;
+	}
+
+	/**
 	 * Fires SurfaceRockGetBehavioursEvent. Listeners mutate the live entries list.
 	 */
 	public void fireSurfaceRockGetBehaviours(com.wurmonline.server.creatures.Creature performer,

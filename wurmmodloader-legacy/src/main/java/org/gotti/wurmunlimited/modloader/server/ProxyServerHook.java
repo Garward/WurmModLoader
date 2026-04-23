@@ -228,6 +228,7 @@ public class ProxyServerHook extends ServerHook {
 
 					@Override
 					public Object invoke(Object wrapped, Method method, Object[] args) throws Throwable {
+						com.garward.wurmmodloader.debug.ShutdownForensics.logServerShutdownCaller();
 						fireOnServerShutdown();
 						Object result = method.invoke(wrapped, args);
 						return result;

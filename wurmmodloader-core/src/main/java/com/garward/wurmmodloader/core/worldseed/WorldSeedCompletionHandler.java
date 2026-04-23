@@ -2,14 +2,20 @@ package com.garward.wurmmodloader.core.worldseed;
 
 import com.garward.wurmmodloader.api.events.server.WorldSeedResult;
 import com.garward.wurmmodloader.api.worldseed.WorldSeedAPI;
+import com.wurmonline.server.Items;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.Creatures;
+import com.wurmonline.server.endgames.EndGameItem;
+import com.wurmonline.server.endgames.EndGameItems;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemFactory;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.villages.Village;
 import com.wurmonline.server.villages.VillageRole;
 import com.wurmonline.server.villages.Villages;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -161,6 +167,7 @@ public final class WorldSeedCompletionHandler {
                 SpawnPointWriter.updateAllKingdoms(tokenX, tokenY);
             }
 
+            sweepExistingEndGameAltars();
             placeAltars(cfg, tileX, tileY);
 
             if (cfg.starterTownPublicAccess) {
@@ -295,6 +302,53 @@ public final class WorldSeedCompletionHandler {
         try { return c.getWurmId(); } catch (Throwable ignored) { return -1L; }
     }
 
+    /**
+     * One-shot endgame-altar wipe — runs only on {@code Outcome.SEEDED}, before
+     * we place the starter-town altars. Vanilla never re-creates altars on
+     * custom servers (see {@code EndGameItems.loadEndGameItems} — gated on
+     * server id 3/12, challenge, or PS+constant), so once we own the altar
+     * registry it stays ours.
+     *
+     * <p>Handles two cases: (1) a prior buggy seed left empty altar items
+     * registered in {@code EndGameItems.altars}; (2) vanilla recreated altars
+     * at random map coords because no village existed yet. Either way: nuke
+     * everything in the registry, delete the items, and clear the DB rows.
+     */
+    private static void sweepExistingEndGameAltars() {
+        try {
+            List<Long> ids = new ArrayList<>(EndGameItems.altars.keySet());
+            if (ids.isEmpty()) {
+                LOGGER.info("[WorldSeed] No prior endgame altars registered — clean slate.");
+                return;
+            }
+            int destroyed = 0;
+            for (Long iid : ids) {
+                try {
+                    Items.destroyItem(iid);
+                    destroyed++;
+                } catch (Throwable noItem) {
+                    // Item already gone — still need to clear the row.
+                    LOGGER.log(Level.FINE,
+                        "[WorldSeed] Endgame altar item " + iid + " already missing, clearing row.", noItem);
+                }
+                try {
+                    Method del = EndGameItem.class.getDeclaredMethod("delete", long.class);
+                    del.setAccessible(true);
+                    del.invoke(null, iid);
+                } catch (Throwable rowErr) {
+                    LOGGER.log(Level.WARNING,
+                        "[WorldSeed] Could not delete ENDGAMEITEMS row " + iid + " — " + rowErr.getMessage(), rowErr);
+                }
+            }
+            EndGameItems.altars.clear();
+            LOGGER.info("[WorldSeed] Wiped " + destroyed + "/" + ids.size()
+                + " stale endgame altar(s) before re-seeding starter town.");
+        } catch (Throwable t) {
+            LOGGER.log(Level.WARNING,
+                "[WorldSeed] Endgame altar sweep failed — " + t.getMessage(), t);
+        }
+    }
+
     private static void placeAltars(WorldSeedConfig cfg, int tileX, int tileY) {
         if (cfg.centerAltars == null || cfg.centerAltars.isEmpty()) return;
         int offset = 2;
@@ -310,8 +364,28 @@ public final class WorldSeedCompletionHandler {
                 Item altar = ItemFactory.createItem(
                     tpl, 99.0f, (ax << 2) + 2.0f, (ay << 2) + 2.0f, 0.0f,
                     true, (byte) 0, -10L, null);
-                LOGGER.info("[WorldSeed] Altar '" + altarName + "' placed id=" + altar.getWurmId()
-                    + " at tile (" + ax + ", " + ay + ").");
+
+                // Templates 327/328 are real endgame altars — bless, enchant,
+                // and register in EndGameItems so faith/sermon/etc. find them.
+                // Mirrors vanilla EndGameItems.createAltars.
+                if (tpl == ItemList.altarHoly) {
+                    altar.bless(1);
+                    altar.enchant((byte) 5);
+                    EndGameItem eg = new EndGameItem(altar, true, (short) 68, true);
+                    EndGameItems.altars.put(Long.valueOf(altar.getWurmId()), eg);
+                    LOGGER.info("[WorldSeed] Altar of Three registered as endgame holy altar id="
+                        + altar.getWurmId() + " at tile (" + ax + ", " + ay + ").");
+                } else if (tpl == ItemList.altarUnholy) {
+                    altar.bless(4);
+                    altar.enchant((byte) 8);
+                    EndGameItem eg = new EndGameItem(altar, false, (short) 68, true);
+                    EndGameItems.altars.put(Long.valueOf(altar.getWurmId()), eg);
+                    LOGGER.info("[WorldSeed] Bone Altar registered as endgame unholy altar id="
+                        + altar.getWurmId() + " at tile (" + ax + ", " + ay + ").");
+                } else {
+                    LOGGER.info("[WorldSeed] Altar '" + altarName + "' placed id=" + altar.getWurmId()
+                        + " at tile (" + ax + ", " + ay + ").");
+                }
             } catch (Throwable t) {
                 LOGGER.log(Level.WARNING, "[WorldSeed] Failed to place altar '" + altarName + "' — " + t.getMessage(), t);
             }

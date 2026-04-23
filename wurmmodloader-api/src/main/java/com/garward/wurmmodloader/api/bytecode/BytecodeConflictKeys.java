@@ -133,4 +133,6 @@ public final class BytecodeConflictKeys {
     public static final String STRUCTURE_GATE_WALL_PLAN = "structure.gate.wallPlan";
     public static final String STRUCTURE_GATE_FLOOR_PLAN = "structure.gate.floorPlan";
     public static final String STRUCTURE_GATE_FLOOR_LEVEL = "structure.gate.floorLevel";
+    public static final String GM_HELP_ADDENDUM = "console.gmHelpAddendum";
+    public static final String SURFACE_MINING_SLOPE_LOWER = "terrain.surfaceMiningSlopeLower";
 }

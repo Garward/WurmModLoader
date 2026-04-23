@@ -51,6 +51,10 @@ public class ProxyServerHook extends ServerHook {
 		return getInstance().fireOnMessage(communicator, message, title);
 	}
 
+	public static void gmHelpAddendumHook(Communicator communicator, int power) {
+		com.garward.wurmmodloader.core.console.InGameGMCommandBridge.appendHelpAddendum(communicator, power);
+	}
+
 	public static boolean communicatorChannelHook(Message message) {
 		return getInstance().fireOnKingdomMessage(message);
 	}
@@ -1443,6 +1447,26 @@ public class ProxyServerHook extends ServerHook {
 			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
 				.log(java.util.logging.Level.WARNING, "Failed to fire SurfaceRockActionEvent", t);
 			return false;
+		}
+	}
+
+	/**
+	 * Bytecode-injected from {@code SurfaceMiningSlopeLowerPatch}. Returns the
+	 * decision for "should this swing lower the slope?" — true when listener
+	 * forces it, false when listener forbids it, and the natural roll
+	 * ({@code Server.rand.nextFloat() < naturalChance}) otherwise.
+	 */
+	public static boolean fireSurfaceMiningSlopeLowerCheck(Object performer, Object source, float naturalChance) {
+		try {
+			return getInstance().fireSurfaceMiningSlopeLower(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) source,
+				naturalChance);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING,
+					"Failed to fire SurfaceMiningSlopeLowerCheckEvent — falling back to vanilla roll", t);
+			return com.wurmonline.server.Server.rand.nextFloat() < naturalChance;
 		}
 	}
 

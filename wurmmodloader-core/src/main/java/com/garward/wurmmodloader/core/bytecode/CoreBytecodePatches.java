@@ -50,6 +50,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.CaveMinePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ActionAllowedOnVehiclePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CaveTileActionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CaveTileGetBehavioursPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SurfaceMiningSlopeLowerPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SurfaceRockActionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SurfaceRockGetBehavioursPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.TerraformingDigInnerPatch;
@@ -76,6 +77,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.MaterialBonusExtendedPatc
 import com.garward.wurmmodloader.core.bytecode.patches.MountEquipmentCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.MovementBroadcastPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.OpportunityAttackPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.GmHelpAddendumPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PlayerLoginPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PlayerLogoutPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PlayerSkillLossPatch;
@@ -162,6 +164,7 @@ public final class CoreBytecodePatches {
         new CaveTileActionPatch(),
         new CaveTileGetBehavioursPatch(),
         new SurfaceRockActionPatch(),
+        new SurfaceMiningSlopeLowerPatch(),
         new SurfaceRockGetBehavioursPatch(),
         new TerraformingDigInnerPatch(),
         new FlatteningInnerPatch(),
@@ -198,6 +201,7 @@ public final class CoreBytecodePatches {
         new ActionSpeedPatch(),
         new SkillAdvancePatch(),
         new PlayerLoginPatch(),
+        new GmHelpAddendumPatch(),
         new PlayerLogoutPatch(),
         new PlayerSkillLossPatch(),
         new PriestRestrictionPatch(),

@@ -33,6 +33,7 @@ public class DelegatedLauncher {
 
 		try {
 			configureFileLogging();
+			com.garward.wurmmodloader.debug.ShutdownForensics.install();
 			String[] sanitizedArgs = processInternalFlags(args);
 
 			// Capture the world-folder name from "start=<Name>" (case-insensitive,

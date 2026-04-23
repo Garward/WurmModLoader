@@ -243,6 +243,8 @@
                         })
                     });
                     marker.bindPopup(`<b>${player.name}</b><br>In-game: ${player.x}, ${player.y}`);
+                    marker.bindTooltip(`${player.name} (${Math.round(player.x)}, ${Math.round(player.y)})`,
+                        { direction: 'top', sticky: true });
                     marker.addTo(playersLayer);
                 }
             });
@@ -269,14 +271,20 @@
                     fillOpacity: 0.1
                 });
 
+                const cx = Math.round((village.startX + village.endX) / 2);
+                const cy = Math.round((village.startY + village.endY) / 2);
+
                 rect.bindPopup(`
                     <div class="village-popup">
                         <h3>${village.name}</h3>
                         <p><b>Mayor:</b> ${village.mayor}</p>
                         <p><b>Type:</b> ${village.type}</p>
                         <p><b>Size:</b> ${village.endX - village.startX} x ${village.endY - village.startY}</p>
+                        <p><b>Center:</b> ${cx}, ${cy}</p>
                     </div>
                 `);
+                rect.bindTooltip(`${village.name} (${cx}, ${cy})`,
+                    { direction: 'top', sticky: true });
 
                 rect.addTo(villagesLayer);
 
@@ -313,6 +321,8 @@
                     In-game: ${altar.x}, ${altar.y}<br>
                     Internal: (${altar.x * 4}, ${altar.y * 4})
                 `);
+                marker.bindTooltip(`${altar.name} (${Math.round(altar.x)}, ${Math.round(altar.y)})`,
+                    { direction: 'top', sticky: true });
 
                 marker.addTo(altarsLayer);
 
