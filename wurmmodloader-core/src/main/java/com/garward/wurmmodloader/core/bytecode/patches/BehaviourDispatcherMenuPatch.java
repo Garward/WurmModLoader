@@ -53,14 +53,14 @@ public final class BehaviourDispatcherMenuPatch implements BytecodePatch {
             CtMethod tileReq = ct.getMethod("requestActionForTiles", DESC_TILE);
             tileReq.insertAfter(
                 "{ try { if ($_ != null) { " +
-                    proxy + ".fireTileMenuBuild($1, $2, $3, $4, $_.getAvailableActions(), $_.getHelpString()); " +
+                    proxy + ".fireTileMenuBuildStatic($1, $2, $3, $4, $_.getAvailableActions(), $_.getHelpString()); " +
                 "} } catch (Throwable _t) { java.util.logging.Logger.getLogger(\"ProxyServerHook\")" +
                 ".log(java.util.logging.Level.WARNING, \"Failed to fire TileMenuBuildEvent\", _t); } }");
 
             CtMethod itemReq = ct.getMethod("requestActionForItemsBodyIdsCoinIds", DESC_ITEM);
             itemReq.insertAfter(
                 "{ try { if ($_ != null) { " +
-                    proxy + ".fireItemMenuBuild($1, $2, $3, $_.getAvailableActions(), $_.getHelpString()); " +
+                    proxy + ".fireItemMenuBuildStatic($1, $2, $3, $_.getAvailableActions(), $_.getHelpString()); " +
                 "} } catch (Throwable _t) { java.util.logging.Logger.getLogger(\"ProxyServerHook\")" +
                 ".log(java.util.logging.Level.WARNING, \"Failed to fire ItemMenuBuildEvent\", _t); } }");
 

@@ -1,151 +1,70 @@
-# Legacy Compatibility Layer Status
+# Legacy Compatibility Layer — Structural Reference
 
-## Overview
+Per-class strategy for how `org.gotti.wurmunlimited.*` maps onto the current `com.garward.wurmmodloader.*` implementations. For a usage overview see [`README.md`](README.md); for edge cases see [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
-The legacy module provides backward compatibility for mods using the old `org.gotti.wurmunlimited` package structure. This is achieved through a **hybrid approach** combining thin proxies for public APIs with full implementations for complex internal classes.
+## Tier 1 — Interface extension
 
-## Compatibility Strategy
+Old interfaces extend new ones. Zero runtime overhead, full type compat.
 
-### Tier 1: Thin Proxy Interfaces (✅ Complete)
+**Mod lifecycle:**
+`WurmServerMod`, `WurmMod`, `Configurable`, `PreInitable`, `Initable`,
+`ServerStartedListener`, `ServerShutdownListener`, `ServerPollListener`,
+`PlayerLoginListener`, `PlayerMessageListener`, `ChannelMessageListener`,
+`ItemTemplatesCreatedListener`, `MessagePolicy`.
 
-These interfaces simply extend the new implementations, providing complete type compatibility:
+**Support interfaces:**
+`ModQuestion`, `IntraRequest`, `IChannelListener`, `ActionPerformer`,
+`BehaviourProvider`, `ModAction`, `IIdType`, `Property`, `TraitsSetter`,
+`ModCreature`, `ModelNameProvider`, `VehicleFacade`.
 
-**Mod Interfaces:**
-- `WurmServerMod` → extends `com.garward.wurmmodloader.modloader.interfaces.WurmServerMod`
-- `WurmMod`, `Configurable`, `PreInitable` → extend new interfaces
-- `ServerStartedListener`, `ServerShutdownListener`, `ServerPollListener` → extend new interfaces
-- `PlayerLoginListener`, `PlayerMessageListener`, `ChannelMessageListener` → extend new interfaces
-- `ItemTemplatesCreatedListener`, `MessagePolicy` → extend new interfaces
+## Tier 2 — Delegating wrappers
 
-**Support Interfaces:**
-- `ModQuestion` → extends `com.garward.wurmmodloader.modsupport.questions.ModQuestion`
-- `IntraRequest` → extends `com.garward.wurmmodloader.modcomm.intra.IntraRequest`
-- `IChannelListener`, `ActionPerformer`, `BehaviourProvider` → extend new interfaces
-- `ModAction`, `IIdType`, `Property`, `TraitsSetter` → extend new interfaces
-- `ModCreature`, `ModelNameProvider`, `VehicleFacade` → extend new interfaces
+Old class is a thin subclass/delegator routing to the new implementation.
 
-###  Tier 2: Delegating Wrapper Classes (✅ Complete)
+- `ModLoader` — extends `com.garward.wurmmodloader.modloader.ModLoader`
+- `ModActions`, `ModQuestions` — static delegators
+- `ServerHook` — extends new implementation
+- `SimpleMod` — extends new implementation
 
-These classes delegate all method calls to the new implementations:
+## Tier 3 — Simple extension
 
-**Core Classes:**
-- `ModLoader` → extends `com.garward.wurmmodloader.modloader.ModLoader`
-- `ModActions` → delegates to `com.garward.wurmmodloader.modsupport.actions.ModActions`
-- `ModQuestions` → delegates to `com.garward.wurmmodloader.modsupport.questions.ModQuestions`
+Subclasses that inherit everything from the new class.
 
-**Server Classes:**
-- `ServerHook` → extends new implementation
-- `SimpleMod` → extends new implementation
+**Builders:** `ItemTemplateBuilder`, `CreatureTemplateBuilder`, `EncounterBuilder`, `ActionEntryBuilder`, `BmlBuilder`.
+**Parsers:** `CreatureTemplateParser`, `CreatureTypesParser`, `ItemIdParser`.
+**Launcher:** `ServerLauncher`, `DelegatedLauncher`, `PatchedLauncher`.
+**Behaviour:** `WrappedBehaviourProvider`, `ChainedBehaviourProvider`.
 
-### Tier 3: Simple Extension Classes (✅ Complete)
+## Tier 4 — Full original implementation
 
-These classes can simply extend the new implementation:
+Kept verbatim because Java can't extend these shapes cleanly or because old bytecode expects the class to live in this exact form.
 
-**Builder Classes:**
-- `ItemTemplateBuilder`, `CreatureTemplateBuilder`, `EncounterBuilder`
-- `ActionEntryBuilder`, `BmlBuilder`
+**Enums** (can't be extended): `IdType`, `ActionPropagation`, `TextStyle`, `ModVehicleBehaviour`.
 
-**Parser Classes:**
-- `CreatureTemplateParser`, `CreatureTypesParser`, `ItemIdParser`
+**Complex/package-private:**
+`Property`, `ActionPerformerChain`, `WrappedBehaviour`, `ActionPerformerBase`,
+`ActionPerformerBehaviour`, `BmlNodeBuilder`, `VehicleFacadeImpl`,
+`ProxyServerHook`, `Listeners`, `NamedIdParser`, `NonFreezingNamedIdParser`.
 
-**Support Classes:**
-- `ServerLauncher`, `DelegatedLauncher`, `PatchedLauncher`
-- `WrappedBehaviourProvider`, `ChainedBehaviourProvider`
+**ModComm / ModIntraServer packet layer** (wire-compatible, must be exact):
+`ModComm`, `ModCommHandler`, `ModCommConstants`, `Channel`, `PacketReader`,
+`PacketWriter`, `PlayerModConnection`, `ModIntraServer`, `ModIntraServerHandler`,
+`ModIntraServerConstants`, `BBHelper`, `IntraRequestHandler`,
+`GetRemoteTemplatesMessage`, `ModPlayerTransfer`, `TemplateIdMapper`.
 
-### Tier 4: Full Implementation Classes (⚠️ Hybrid)
+**Support classes** (original registries): `IdFactory`, `ModSupportDb`,
+`ModCreatures`, `ModItems`, `ModTraits`, `ModPlayerProperties`,
+`ModVehicleBehaviours`.
 
-These classes retain full original implementations due to:
-- Complex constructors requiring parameters
-- Enum types that cannot be extended
-- Private constructors or package-private access
-- Internal cross-references between legacy classes
+## Wurm-side shims
 
-**Classes with Full Implementation:**
-- `IdType` (enum)
-- `ActionPropagation` (enum)
-- `TextStyle` (enum)
-- `ModVehicleBehaviour` (enum)
-- `Property` (complex)
-- `ActionPerformerChain`, `WrappedBehaviour` (package-private)
-- `ActionPerformerBase`, `ActionPerformerBehaviour` (complex constructors)
-- `BmlNodeBuilder`, `VehicleFacadeImpl` (complex constructors)
-- `ProxyServerHook` (private constructor)
-- `Listeners` (generic with complex constructor)
-- `NamedIdParser`, `NonFreezingNamedIdParser` (abstract methods)
+Wurm server classes instantiated with `org.gotti.*` types need thin wrappers:
 
-**Communication Classes (Original Implementations):**
-- `ModComm`, `ModCommHandler`, `ModCommConstants`
-- `Channel`, `PacketReader`, `PacketWriter`, `PlayerModConnection`
-- `ModIntraServer`, `ModIntraServerHandler`, `ModIntraServerConstants`
-- `BBHelper`, `IntraRequestHandler`
-- `GetRemoteTemplatesMessage`, `ModPlayerTransfer`, `TemplateIdMapper`
+- `com.wurmonline.server.questions.ModQuestionImpl` — accepts `org.gotti` `ModQuestion`
+- `com.wurmonline.server.intra.ModIntraServerMessage` — accepts `org.gotti` `IntraRequest`
 
-**Support Classes (Original Implementations):**
-- `IdFactory`, `ModSupportDb`
-- `ModCreatures`, `ModItems`, `ModTraits`
-- `ModPlayerProperties`, `ModVehicleBehaviours`
+## Compatibility guarantees
 
-## Backward Compatibility Guarantees
+**Fully compatible, no mod changes needed:** mod lifecycle interfaces, builder APIs, static utility classes (`ModActions`/`ModQuestions`/`ModItems`/`ModCreatures`), `ModLoader`, `ModComm`, `ModIntraServer`.
 
-### ✅ Fully Compatible
-
-Mods using these APIs will work without any code changes:
-
-1. **Mod Interfaces**: All mod lifecycle interfaces (`WurmServerMod`, listeners, etc.)
-2. **Builder APIs**: `ItemTemplateBuilder`, `CreatureTemplateBuilder`, `ActionEntryBuilder`
-3. **Static Utilities**: `ModActions`, `ModQuestions`, `ModItems`, `ModCreatures`
-4. **Core Loader**: `ModLoader` class
-
-### ⚠️ Partially Compatible
-
-Some advanced internal APIs may require attention:
-
-1. **Enums**: Direct enum comparisons work, but type casting between old/new enums may fail
-2. **Complex Constructors**: Classes with specific constructor requirements may need updates
-3. **Package-Private Classes**: Classes not part of public API may have limitations
-
-### 📝 Migration Recommended
-
-For best long-term support, mods should migrate to the new package structure:
-
-```java
-// OLD (deprecated but functional)
-import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
-import org.gotti.wurmunlimited.modsupport.actions.ModActions;
-
-// NEW (recommended)
-import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
-import com.garward.wurmmodloader.modsupport.actions.ModActions;
-```
-
-## Testing Status
-
-- ✅ Compilation: Core compatibility layer compiles
-- ⏳ Runtime Testing: Requires testing with actual mods
-- ⏳ Integration Testing: Needs validation with mod ecosystem
-
-## Known Limitations
-
-1. **Enum Type Incompatibility**: `IdType` enum values cannot be directly cast between old/new packages
-2. **Internal API Changes**: Some internal implementation classes may behave differently
-3. **Reflection**: Code using reflection on package names will need updates
-
-## Migration Guide
-
-For mod authors who want to update to the new package structure:
-
-1. **Update imports** from `org.gotti.wurmunlimited.*` to `com.garward.wurmmodloader.*`
-2. **Recompile** against the new API
-3. **Test** thoroughly with your mod
-4. **Update** build dependencies to use new artifact coordinates
-
-## Future Work
-
-- Runtime testing with real mods
-- Create example migration for common mod patterns
-- Document any discovered edge cases
-- Consider creating an automated migration tool
-
-## Conclusion
-
-This hybrid approach provides a pragmatic balance between backward compatibility and forward progress. Most mods should work without changes, while providing a clear migration path for mod authors who want to adopt the new package structure.
+**Not compatible:** direct enum casts between `org.gotti.*` and `com.garward.*`, reflective package walks that assume one package holds everything. See `KNOWN_ISSUES.md`.

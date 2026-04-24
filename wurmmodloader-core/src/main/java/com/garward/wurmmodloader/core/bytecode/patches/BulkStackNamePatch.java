@@ -54,7 +54,7 @@ public final class BulkStackNamePatch implements BytecodePatch {
                             && "getActualName".equals(mc.getMethodName())) {
                         mc.replace(
                             "{ String __n = $proceed($$); " +
-                            "$_ = " + proxy + ".fireBulkStackName($0, __n); }");
+                            "$_ = " + proxy + ".fireBulkStackNameStatic($0, __n); }");
                     }
                 }
             };

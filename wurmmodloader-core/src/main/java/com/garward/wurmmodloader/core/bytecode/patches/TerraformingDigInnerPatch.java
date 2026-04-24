@@ -71,7 +71,7 @@ public final class TerraformingDigInnerPatch implements BytecodePatch {
                     String mn = mc.getMethodName();
                     if ("com.wurmonline.server.items.Item".equals(cn) && "insertItem".equals(mn)) {
                         mc.replace(
-                            "{ $_ = " + proxy + ".fireDirtDestinationResolve(" +
+                            "{ $_ = " + proxy + ".fireDirtDestinationInsertItem(" +
                                 "$1, performer, source, $0, dredging, toPile, \"TERRAFORMING_DIG\"); }");
                     } else if ("com.wurmonline.server.items.Item".equals(cn) && "getNumItemsNotCoins".equals(mn)) {
                         mc.replace(

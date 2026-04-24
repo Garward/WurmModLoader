@@ -58,7 +58,7 @@ public final class TileDirtConsumePatch implements BytecodePatch {
                     if ("com.wurmonline.server.items.Item".equals(mc.getClassName())
                             && "destroyItem".equals(mc.getMethodName())) {
                         mc.replace(
-                            "{ if (!" + proxy + ".fireTileDirtConsume(act, performer, source)) { " +
+                            "{ if (!" + proxy + ".fireTileDirtConsumeStatic(act, performer, source)) { " +
                                 "$_ = $proceed($$); " +
                             "} }");
                     }

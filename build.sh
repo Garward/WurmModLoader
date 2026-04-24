@@ -59,6 +59,22 @@ if ./gradlew clean build dist; then
     find mods/*/build/libs -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" 2>/dev/null | sort
     echo ""
 
+    # Sync SDK jars into the CommunityMods repo's libs/ if it lives next door,
+    # so sibling mod builds always compile against the freshly-built framework.
+    COMMUNITY_LIBS="$PROJECT_DIR/../WurmModLoader-CommunityMods/libs"
+    if [ -d "$COMMUNITY_LIBS" ]; then
+        echo -e "${YELLOW}🔗 Syncing CommunityMods libs/${NC}"
+        rm -f "$COMMUNITY_LIBS"/wurmmodloader-{api,core,modsupport,legacy}-*.jar
+        for m in api core modsupport legacy; do
+            src="$PROJECT_DIR/wurmmodloader-$m/build/libs/wurmmodloader-$m-*.jar"
+            for f in $src; do
+                case "$f" in *-sources.jar|*-javadoc.jar) continue ;; esac
+                [ -f "$f" ] && cp "$f" "$COMMUNITY_LIBS/" && echo "  → $(basename "$f")"
+            done
+        done
+        echo ""
+    fi
+
     echo -e "${GREEN}Ready to deploy! Run:${NC} ${BLUE}./deploy.sh${NC}"
     echo ""
 

@@ -1,11 +1,46 @@
 plugins {
     id("java-library")
     id("maven-publish")
+    id("com.github.johnrengelman.shadow") version "7.1.2"
+}
+
+// =============================
+// Uber JAR (server-owner runtime)
+// =============================
+// Bundles core + api + modsupport + legacy + cli + javassist + gson + snakeyaml
+// into one jar. Unrelocated: mods depend on real javassist.* class names.
+dependencies {
+    implementation(project(":wurmmodloader-api"))
+    implementation(project(":wurmmodloader-core"))
+    implementation(project(":wurmmodloader-modsupport"))
+    implementation(project(":wurmmodloader-legacy"))
+    implementation(project(":wurmmodloader-cli"))
+}
+
+tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+    archiveBaseName.set("wurmmodloader")
+    archiveClassifier.set("")
+    archiveVersion.set(project.version.toString())
+    mergeServiceFiles()
+    manifest {
+        attributes(
+            "Main-Class" to "com.garward.wurmmodloader.serverlauncher.ServerLauncher",
+            "Implementation-Title" to "WurmModLoader Runtime",
+            "Implementation-Version" to project.version
+        )
+    }
+    // Drop per-module manifests and signatures to avoid SecurityException at runtime
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+}
+
+// The root project doesn't ship its own classes, so disable the thin jar.
+tasks.named<Jar>("jar") {
+    enabled = false
 }
 
 allprojects {
     group = "com.garward.wurmmodloader"
-    version = "0.9.1"
+    version = "0.10.0"
 
     repositories {
         mavenCentral()
@@ -130,38 +165,22 @@ tasks.register("testAll") {
 }
 
 // =============================
-// Production Runtime ZIP
+// Server-owner Runtime ZIP (single uber jar)
 // =============================
 tasks.register<Zip>("dist") {
     group = "distribution"
-    description = "Creates complete runtime ZIP with all core modules"
+    description = "Server-owner runtime: single uber jar + launcher scripts + bundled mods"
 
-    dependsOn("buildAll")
+    dependsOn("shadowJar", "buildAll")
 
     archiveBaseName.set("WurmModloader-Runtime")
     archiveVersion.set(version.toString())
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
 
-    // 🩹 Fix duplicate JARs
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    val modules = listOf(
-        "wurmmodloader-core",
-        "wurmmodloader-api",
-        "wurmmodloader-modsupport",
-        "wurmmodloader-legacy",
-    )
-
-    modules.forEach { module ->
-        from(project(":$module").buildDir.resolve("libs")) {
-            include("*.jar")
-            exclude("*-sources.jar", "*-javadoc.jar")
-            into(".")
-        }
-    }
-
-    from("distribution") {
-        include("javassist.jar", "gson.jar", "snakeyaml-2.2.jar")
+    // Uber jar (everything bundled)
+    from(tasks.named("shadowJar")) {
         into(".")
     }
 
@@ -184,54 +203,98 @@ tasks.register<Zip>("dist") {
         into("mods")
         includeEmptyDirs = true
     }
+
+    from("distribution/config") {
+        into("config")
+        includeEmptyDirs = true
+    }
+
+    // ---- Bundled near-finished mods ----
+    // livemap: enabled by default, drop-in web map.
+    from(project(":mods:livemap").buildDir.resolve("libs/livemap.jar")) {
+        into("mods/livemap")
+    }
+    from("mods/livemap/src/dist") {
+        into("mods")
+    }
+
+    // gmtools: enabled by default, in-game admin toolkit.
+    from(project(":mods:gmtools").buildDir.resolve("libs/gmtools.jar")) {
+        into("mods/gmtools")
+    }
+    from("mods/gmtools/src/dist") {
+        into("mods")
+    }
+
+    // postgresbackend: DISABLED by default — requires Postgres setup.
+    // Ship the jar + pgjdbc driver + scripts but rename the properties to
+    // .disabled so the modloader skips it. Server owners rename to enable.
+    from(project(":mods:postgresbackend").buildDir.resolve("libs/postgresbackend.jar")) {
+        into("mods/postgresbackend")
+    }
+    from(project(":mods:postgresbackend").configurations.getByName("driverRuntime")) {
+        include("postgresql-*.jar")
+        into("mods/postgresbackend")
+    }
+    from("mods/postgresbackend/src/dist") {
+        into("mods")
+        exclude("**/.venv/**", "postgresbackend.properties")
+        filesMatching("**/*.sh") { mode = Integer.parseInt("755", 8) }
+    }
+    from("mods/postgresbackend/src/dist/postgresbackend.properties") {
+        into("mods")
+        rename { "postgresbackend.properties.disabled" }
+    }
 }
 
 // =============================
-// Developer / Full Bundle ZIP
+// Modder SDK ZIP (separate module jars + sources/javadocs)
 // =============================
-tasks.register<Zip>("dev") {
+tasks.register<Zip>("sdk") {
     group = "distribution"
-    description = "Creates full developer ZIP including all subproject jars and docs"
+    description = "Modder SDK: individual module jars + sources + javadocs"
 
     dependsOn("buildAll")
 
-    archiveBaseName.set("WurmModloader-DevBundle")
+    archiveBaseName.set("WurmModloader-SDK")
     archiveVersion.set(version.toString())
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
 
-    subprojects.forEach { proj ->
-        val jarTask = proj.tasks.named("jar")
-        from(jarTask.map { it.outputs.files }) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    val sdkModules = listOf(
+        "wurmmodloader-api",
+        "wurmmodloader-core",
+        "wurmmodloader-modsupport",
+        "wurmmodloader-legacy",
+    )
+
+    sdkModules.forEach { module ->
+        from(project(":$module").buildDir.resolve("libs")) {
+            include("*.jar")
             into("libs")
         }
     }
 
-    // Extra runtime and helper libs
-    from("distribution") {
-        include("javassist.jar")
-        into("libs")
-    }
-
-    // Docs and config
     from(".") {
         include("README.md", "LICENSE", "NOTICE.md")
         into(".")
     }
 
     from("distribution") {
-        include("INSTALL.md", "logging.properties")
+        include("INSTALL.md")
+        into(".")
+    }
+
+    from("distribution/config") {
         into("config")
-    }
-
-    // Scripts
-    from("distribution/scripts") {
-        fileMode = Integer.parseInt("755", 8)
-        into("scripts")
-    }
-
-    // Mods folder (empty)
-    from("distribution/mods") {
-        into("mods")
         includeEmptyDirs = true
     }
+}
+
+// Legacy alias — keep `dev` working for any external tooling still calling it.
+tasks.register("dev") {
+    group = "distribution"
+    description = "Deprecated alias for :sdk"
+    dependsOn("sdk")
 }

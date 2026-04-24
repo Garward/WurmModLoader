@@ -61,7 +61,7 @@ public final class BehaviourDispatcherPatch implements BytecodePatch {
                 creatureCt, commCt, CtClass.longType, CtClass.longType, CtClass.shortType
             });
             actSingle.insertBefore(
-                "{ try { if (" + proxy + ".fireActionPerformRequest($1, $3, $4, $5)) return; } " +
+                "{ try { if (" + proxy + ".fireActionPerformRequestStatic($1, $3, $4, $5)) return; } " +
                 "catch (Throwable _t) { java.util.logging.Logger.getLogger(\"ProxyServerHook\")" +
                 ".log(java.util.logging.Level.WARNING, \"Failed to fire ActionPerformRequestEvent\", _t); } }");
 
@@ -74,7 +74,7 @@ public final class BehaviourDispatcherPatch implements BytecodePatch {
                 "  long[] __t = $4; " +
                 "  java.util.ArrayList __kept = new java.util.ArrayList($4.length); " +
                 "  for (int __i = 0; __i < __t.length; __i++) { " +
-                "    if (!" + proxy + ".fireActionPerformRequest($1, $3, __t[__i], $5)) " +
+                "    if (!" + proxy + ".fireActionPerformRequestStatic($1, $3, __t[__i], $5)) " +
                 "      __kept.add(Long.valueOf(__t[__i])); " +
                 "  } " +
                 "  if (__kept.isEmpty()) return; " +

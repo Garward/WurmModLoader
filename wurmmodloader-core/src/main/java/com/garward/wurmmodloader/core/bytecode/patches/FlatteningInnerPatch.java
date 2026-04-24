@@ -71,7 +71,7 @@ public final class FlatteningInnerPatch implements BytecodePatch {
                     String mn = mc.getMethodName();
                     if ("com.wurmonline.server.items.Item".equals(cn) && "insertItem".equals(mn)) {
                         mc.replace(
-                            "{ $_ = " + proxy + ".fireDirtDestinationResolve(" +
+                            "{ $_ = " + proxy + ".fireDirtDestinationInsertItem(" +
                                 "$1, performer, source, $0, false, false, \"FLATTENING_GETDIRT\"); }");
                     } else if ("com.wurmonline.server.items.Item".equals(cn) && "getNumItemsNotCoins".equals(mn)) {
                         mc.replace(
@@ -100,7 +100,7 @@ public final class FlatteningInnerPatch implements BytecodePatch {
                             && "getCarriedItem".equals(mc.getMethodName())) {
                         mc.replace(
                             "{ com.wurmonline.server.items.Item __v = $proceed($$); " +
-                            "$_ = " + proxy + ".fireDirtSourceResolve(" +
+                            "$_ = " + proxy + ".fireDirtSourceResolveStatic(" +
                                 "performer, $1, __v, \"USE_DIRT\"); }");
                     }
                 }
@@ -121,7 +121,7 @@ public final class FlatteningInnerPatch implements BytecodePatch {
                             && "getCarriedItem".equals(mc.getMethodName())) {
                         mc.replace(
                             "{ com.wurmonline.server.items.Item __v = $proceed($$); " +
-                            "$_ = " + proxy + ".fireDirtSourceResolve(" +
+                            "$_ = " + proxy + ".fireDirtSourceResolveStatic(" +
                                 "performer, $1, __v, \"CHECK_USE_DIRT\"); }");
                     }
                 }

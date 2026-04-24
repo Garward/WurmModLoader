@@ -11,7 +11,7 @@ WurmModLoader is a modern, extensible modding framework for Wurm Unlimited serve
 
 ## 🎯 Project Status
 
-**Version**: 0.9.1 — Release Candidate
+**Version**: 0.10.0 — Release Candidate
 
 The framework is feature-complete and in the polish phase. See [`Architecture.MD`](Architecture.MD) for the module map and [`PROJECT_STATE.md`](PROJECT_STATE.md) for the current state audit.
 
@@ -60,14 +60,14 @@ The framework is feature-complete and in the polish phase. See [`Architecture.MD
 
 1. **Download the latest release**
    ```bash
-   wget https://github.com/garward/WurmModLoader/releases/latest/download/WurmModloader-Runtime-0.9.1.zip
+   wget https://github.com/garward/WurmModLoader/releases/latest/download/WurmModloader-Runtime-0.10.0.zip
    # Or build from source: ./build.sh   (runs ./gradlew clean build dist)
    ```
 
 2. **Extract to your Wurm server directory**
    ```bash
    cd ~/.local/share/Steam/steamapps/common/Wurm\ Unlimited\ Dedicated\ Server/
-   unzip /path/to/WurmModloader-Runtime-0.9.1.zip
+   unzip /path/to/WurmModloader-Runtime-0.10.0.zip
    ```
 
 3. **Launch your server**

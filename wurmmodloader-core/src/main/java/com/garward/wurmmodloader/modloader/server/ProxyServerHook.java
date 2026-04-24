@@ -1498,7 +1498,7 @@ public class ProxyServerHook extends ServerHook {
 	 *         return contract). Falls back to {@code vanillaTarget.insertItem}
 	 *         on any failure so the vanilla path is preserved.
 	 */
-	public static boolean fireDirtDestinationResolve(Object dirt, Object performer, Object tool,
+	public static boolean fireDirtDestinationInsertItem(Object dirt, Object performer, Object tool,
 			Object vanillaTarget, boolean dredging, boolean toPile, String contextName) {
 		com.wurmonline.server.items.Item dirtItem = (com.wurmonline.server.items.Item) dirt;
 		com.wurmonline.server.items.Item vanilla = (com.wurmonline.server.items.Item) vanillaTarget;
@@ -1526,7 +1526,7 @@ public class ProxyServerHook extends ServerHook {
 	 * Fires DirtSourceResolveEvent and returns the resolved carried item.
 	 * Falls back to {@code vanillaFound} on failure.
 	 */
-	public static com.wurmonline.server.items.Item fireDirtSourceResolve(Object performer, int templateId,
+	public static com.wurmonline.server.items.Item fireDirtSourceResolveStatic(Object performer, int templateId,
 			Object vanillaFound, String contextName) {
 		com.wurmonline.server.items.Item vanilla = (com.wurmonline.server.items.Item) vanillaFound;
 		try {
@@ -1605,7 +1605,7 @@ public class ProxyServerHook extends ServerHook {
 	 * exception is swallowed and treated as not-cancelled so vanilla
 	 * dispatch always runs.
 	 */
-	public static boolean fireActionPerformRequest(Object performer, long subject, long target, short actionShort) {
+	public static boolean fireActionPerformRequestStatic(Object performer, long subject, long target, short actionShort) {
 		try {
 			return getInstance().fireActionPerformRequest(
 				(com.wurmonline.server.creatures.Creature) performer,
@@ -1621,7 +1621,7 @@ public class ProxyServerHook extends ServerHook {
 	 * Fires ActionMenuBuildEvent with the live {@code availableActions} list
 	 * so listeners can mutate in place before the menu is sent.
 	 */
-	public static void fireActionMenuBuild(Object communicator, Object availableActions,
+	public static void fireActionMenuBuildStatic(Object communicator, Object availableActions,
 			String helpString, boolean sendToSelectBar) {
 		try {
 			getInstance().fireActionMenuBuild(
@@ -1637,7 +1637,7 @@ public class ProxyServerHook extends ServerHook {
 	/**
 	 * Fires TileMenuBuildEvent. Target-aware tile menu injection path.
 	 */
-	public static void fireTileMenuBuild(Object performer, long target, boolean onSurface,
+	public static void fireTileMenuBuildStatic(Object performer, long target, boolean onSurface,
 			Object source, Object availableActions, String helpString) {
 		try {
 			getInstance().fireTileMenuBuild(
@@ -1654,7 +1654,7 @@ public class ProxyServerHook extends ServerHook {
 	/**
 	 * Fires ItemMenuBuildEvent. Target-aware item menu injection path.
 	 */
-	public static void fireItemMenuBuild(Object performer, long targetId, Object source,
+	public static void fireItemMenuBuildStatic(Object performer, long targetId, Object source,
 			Object availableActions, String helpString) {
 		try {
 			getInstance().fireItemMenuBuild(
@@ -1673,7 +1673,7 @@ public class ProxyServerHook extends ServerHook {
 	 * the consumption (patch then skips vanilla destroyItem and deducts one
 	 * template weight from the source).
 	 */
-	public static boolean fireTileDirtConsume(Object action, Object performer, Object source) {
+	public static boolean fireTileDirtConsumeStatic(Object action, Object performer, Object source) {
 		com.wurmonline.server.items.Item src = (com.wurmonline.server.items.Item) source;
 		try {
 			boolean consumed = getInstance().fireTileDirtConsume(
@@ -1695,7 +1695,7 @@ public class ProxyServerHook extends ServerHook {
 	 * Fires PlanterItemAcceptEvent. vanillaValue is the pre-event result of
 	 * {@code Item.isRaw()} / {@code Item.isSpice()}.
 	 */
-	public static boolean firePlanterItemAccept(Object performer, Object herb, Object planter,
+	public static boolean firePlanterItemAcceptStatic(Object performer, Object herb, Object planter,
 			String kindName, boolean vanillaValue) {
 		try {
 			return getInstance().firePlanterItemAccept(
@@ -1714,7 +1714,7 @@ public class ProxyServerHook extends ServerHook {
 	 * Fires BulkStackNameEvent. Listeners can canonicalize the item name used
 	 * for bulk-stack matching.
 	 */
-	public static String fireBulkStackName(Object item, String vanillaName) {
+	public static String fireBulkStackNameStatic(Object item, String vanillaName) {
 		try {
 			return getInstance().fireBulkStackName(
 				(com.wurmonline.server.items.Item) item, vanillaName);

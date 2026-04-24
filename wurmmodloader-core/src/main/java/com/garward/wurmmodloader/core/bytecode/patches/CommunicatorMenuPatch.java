@@ -54,7 +54,7 @@ public final class CommunicatorMenuPatch implements BytecodePatch {
                 CtClass.byteType, listCt, stringCt
             });
             sendAvail.insertBefore(
-                "{ try { " + proxy + ".fireActionMenuBuild($0, $2, $3, false); } " +
+                "{ try { " + proxy + ".fireActionMenuBuildStatic($0, $2, $3, false); } " +
                 "catch (Throwable _t) { java.util.logging.Logger.getLogger(\"ProxyServerHook\")" +
                 ".log(java.util.logging.Level.WARNING, \"Failed to fire ActionMenuBuildEvent\", _t); } }");
 
@@ -62,7 +62,7 @@ public final class CommunicatorMenuPatch implements BytecodePatch {
                 CtClass.byteType, listCt
             });
             sendSelBar.insertBefore(
-                "{ try { " + proxy + ".fireActionMenuBuild($0, $2, \"\", true); } " +
+                "{ try { " + proxy + ".fireActionMenuBuildStatic($0, $2, \"\", true); } " +
                 "catch (Throwable _t) { java.util.logging.Logger.getLogger(\"ProxyServerHook\")" +
                 ".log(java.util.logging.Level.WARNING, \"Failed to fire ActionMenuBuildEvent\", _t); } }");
 

@@ -58,7 +58,7 @@ public final class PlanterItemAcceptPatch implements BytecodePatch {
                             && "isRaw".equals(mc.getMethodName())) {
                         mc.replace(
                             "{ boolean __v = $proceed($$); " +
-                            "$_ = " + proxy + ".firePlanterItemAccept(performer, $0, target, \"RAW\", __v); }");
+                            "$_ = " + proxy + ".firePlanterItemAcceptStatic(performer, $0, target, \"RAW\", __v); }");
                     }
                 }
             };
@@ -70,7 +70,7 @@ public final class PlanterItemAcceptPatch implements BytecodePatch {
                             && "isSpice".equals(mc.getMethodName())) {
                         mc.replace(
                             "{ boolean __v = $proceed($$); " +
-                            "$_ = " + proxy + ".firePlanterItemAccept(performer, $0, target, \"SPICE\", __v); }");
+                            "$_ = " + proxy + ".firePlanterItemAcceptStatic(performer, $0, target, \"SPICE\", __v); }");
                     }
                 }
             };

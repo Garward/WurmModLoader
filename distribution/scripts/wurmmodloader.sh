@@ -39,23 +39,92 @@ resolve_jar() {
 	printf '%s' "$jar"
 }
 
-API_JAR=$(resolve_jar "wurmmodloader-api-*.jar")
-CORE_JAR=$(resolve_jar "wurmmodloader-core-*.jar")
-MODSUPPORT_JAR=$(resolve_jar "wurmmodloader-modsupport-*.jar")
-LEGACY_JAR=$(resolve_jar "wurmmodloader-legacy-*.jar")
+# Uber jar bundles api/core/modsupport/legacy/cli + javassist/gson/snakeyaml.
+UBER_JAR=$(resolve_jar "wurmmodloader-*.jar")
 
-# Build classpath (order matters: API -> Core -> ModSupport -> Legacy)
-CP="$API_JAR"
-CP="$CP:$CORE_JAR"
-CP="$CP:$MODSUPPORT_JAR"
-CP="$CP:$LEGACY_JAR"
-CP="$CP:javassist.jar"
-CP="$CP:gson.jar"
-CP="$CP:snakeyaml-2.2.jar"
+# =============================
+# Interactive menu (no args passed)
+# =============================
+# Without start=<World> vanilla Wurm silently pops the Steam GUI, which offers
+# no hint that modded boots require start=<folder>. This menu is the friendly
+# default; power users pass start=<World> and skip straight to launch.
+if [ $# -eq 0 ] && [ -t 0 ]; then
+	find_worlds() {
+		local d
+		for d in */; do
+			[ -f "$d/wurm.ini" ] && printf '%s\n' "${d%/}"
+		done
+	}
+
+	while :; do
+		echo
+		echo "═══════════════════════════════════════════════════════════════"
+		echo "  WurmModLoader — $(basename "$UBER_JAR" .jar | sed 's/^wurmmodloader-//')"
+		echo "═══════════════════════════════════════════════════════════════"
+		echo
+		echo "  What would you like to do?"
+		echo
+		echo "    1) Start an existing world"
+		echo "    2) Create a new world          (wurmmodloader-create-world)"
+		echo "    3) Rebuild world databases     (wurmmodloader-rebuild-dbs)"
+		echo "    4) Launch vanilla Wurm GUI     (no modloader — advanced)"
+		echo "    5) Exit"
+		echo
+		echo "  Tip: skip this menu with:  ./wurmmodloader.sh start=<WorldName>"
+		echo
+		printf "Choice [1-5]: "
+		read -r choice
+		case "$choice" in
+			1)
+				mapfile -t WORLDS < <(find_worlds)
+				if [ "${#WORLDS[@]}" -eq 0 ]; then
+					echo
+					echo "No worlds found in $PWD."
+					echo "Run option 2 first to create a new world."
+					continue
+				fi
+				echo
+				echo "Available worlds:"
+				for i in "${!WORLDS[@]}"; do
+					printf "   %d) %s\n" "$((i+1))" "${WORLDS[$i]}"
+				done
+				echo
+				printf "Pick a world [1-%d] (or blank to go back): " "${#WORLDS[@]}"
+				read -r wpick
+				[ -z "$wpick" ] && continue
+				if ! [[ "$wpick" =~ ^[0-9]+$ ]] || [ "$wpick" -lt 1 ] || [ "$wpick" -gt "${#WORLDS[@]}" ]; then
+					echo "Invalid selection."
+					continue
+				fi
+				set -- "start=${WORLDS[$((wpick-1))]}"
+				break
+				;;
+			2)
+				exec ./wurmmodloader-create-world.sh
+				;;
+			3)
+				exec ./wurmmodloader-rebuild-dbs.sh
+				;;
+			4)
+				echo
+				echo "Launching vanilla Steam GUI (modloader disabled)..."
+				break
+				;;
+			5|q|Q|exit|quit)
+				exit 0
+				;;
+			*)
+				echo "Invalid choice."
+				;;
+		esac
+	done
+fi
+
+CP="$UBER_JAR"
 CP="$CP:server.jar"
 CP="$CP:common.jar"
 
 # Launch modloader
 "$JAVA" "-Dworkdir=$PWD" "-Djava.library.path=$PWD/nativelibs" $LOGGING \
-    -Xmn256M -Xms512m -Xmx2048m -XX:+OptimizeStringConcat -XX:+AggressiveOpts \
+    -Xmn512M -Xms1g -Xmx4g -XX:+OptimizeStringConcat \
     -cp "$CP" com.garward.wurmmodloader.serverlauncher.ServerLauncher "$@"

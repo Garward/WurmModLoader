@@ -1,133 +1,43 @@
-# WurmModLoader Legacy Module - Known Issues
+# Legacy Module — Known Issues
 
-## Status: Functional with Hybrid Compatibility Layer (Phase 2.5)
+The compat layer has been in production since 0.5.x and carries the full Ago-era mod corpus. The issues below are edge cases, not blockers.
 
-The legacy module provides backward compatibility through a **hybrid approach**: thin proxies for public APIs combined with full implementations for complex internal classes. This allows most mods to work without modifications while providing a clear migration path.
+## Enum casting between old and new packages
 
-## Solution Implemented
+You can't directly cast an `org.gotti.wurmunlimited.modsupport.IdType` to `com.garward.wurmmodloader.modsupport.IdType` — Java enums can't be extended, so the legacy module keeps its own copy.
 
-### Original Problem
-
-Phase 2's package rename (org.gotti.wurmunlimited → com.garward.wurmmodloader) created type incompatibility issues for mods using the old package names.
-
-### Hybrid Compatibility Strategy
-
-**Tier 1 - Interface Extension** (✅ Implemented)
-- Public API interfaces extend new implementations
-- Examples: `WurmServerMod`, `ModQuestion`, `IntraRequest`, all listener interfaces
-- Result: Full type compatibility through interface extension
-
-**Tier 2 - Delegating Wrappers** (✅ Implemented)
-- Utility classes delegate to new implementations
-- Examples: `ModActions`, `ModQuestions`, `ModLoader`
-- Result: Zero-overhead delegation to new code
-
-**Tier 3 - Simple Extensions** (✅ Implemented)
-- Builder and parser classes extend new implementations
-- Examples: `ItemTemplateBuilder`, `CreatureTemplateBuilder`, `ActionEntryBuilder`
-- Result: Full inheritance-based compatibility
-
-**Tier 4 - Full Implementations** (✅ Retained)
-- Complex internal classes keep original code
-- Includes: Enums, classes with complex constructors, package-private classes
-- Result: Complete backward compatibility for internal APIs
-
-## Remaining Issues
-
-### Minor: Enum Type Casting
-
-**Issue**: `IdType` enum values may have casting issues in edge cases
-
-**Example:**
 ```java
-// This works:
-IdType type = IdType.ITEMTEMPLATE;
+// Works:
+if (type == IdType.ITEMTEMPLATE) { ... }
 
-// This may fail in mixed old/new code:
-com.garward.wurmmodloader.modsupport.IdType newType =
-    (com.garward.wurmmodloader.modsupport.IdType) oldType; // ClassCastException
+// Fails with ClassCastException:
+var newType = (com.garward.wurmmodloader.modsupport.IdType) oldType;
 ```
 
-**Workaround**: Use enum by name rather than direct casting
-**Impact**: Low - rare in typical mod code
+Compare by `name()` if you need to cross the boundary, or stay in one package.
 
-### Minor: Reflection on Package Names
+Applies to: `IdType`, `ActionPropagation`, `TextStyle`, `ModVehicleBehaviour`.
 
-**Issue**: Code using reflection to find classes by package name will need updates
+## Reflection against hardcoded package names
 
-**Example:**
-```java
-// This won't find legacy classes:
-Class.forName("org.gotti.wurmunlimited.modloader.ModLoader")
-```
+Code that does `Class.forName("org.gotti...")` finds the legacy shim. Code that does `Class.forName("com.garward...")` finds the real implementation. Both load; they're just different classes from Java's POV.
 
-**Workaround**: Update reflection code to use new package names
-**Impact**: Low - uncommon pattern
+If a mod reflectively walks one package expecting to find everything, it won't — move to the canonical `com.garward.wurmmodloader.*` packages.
 
-## Testing Status
+## No other blockers
 
-- ✅ Compilation: Legacy module compiles successfully with hybrid approach
-- ⏳ Runtime Testing: Needs validation with real mods
-- ⏳ Integration Testing: Requires mod ecosystem testing
+Everything else — mod lifecycle, `ModActions`/`ModItems`/`ModCreatures`, `ModQuestions`, `ModComm`, `ModIntraServer`, `ItemTemplateBuilder` / `CreatureTemplateBuilder` / `ActionEntryBuilder`, server listeners — runs unchanged.
 
-## Migration Recommendations
+## Migration recommendation
 
-### For Mod Authors
-
-**Option 1: Continue Using Legacy API (Easiest)**
-- No code changes required
-- Update dependency to include legacy module
-- Accept deprecated warnings
-
-**Option 2: Migrate to New API (Recommended)**
-- Update imports: `org.gotti.wurmunlimited.*` → `com.garward.wurmmodloader.*`
-- Recompile mod
-- Benefits: No deprecated warnings, better long-term support
-
-### Migration Example
+You don't have to migrate. But for new development, import from `com.garward.wurmmodloader.*` directly — it's a straight rename, no API changes:
 
 ```java
-// BEFORE
+// Before
 import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
 import org.gotti.wurmunlimited.modsupport.actions.ModActions;
-import org.gotti.wurmunlimited.modsupport.ItemTemplateBuilder;
 
-public class MyMod implements WurmServerMod {
-    @Override
-    public void preInit() {
-        ModActions.init();
-    }
-}
-
-// AFTER
+// After
 import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 import com.garward.wurmmodloader.modsupport.actions.ModActions;
-import com.garward.wurmmodloader.modsupport.ItemTemplateBuilder;
-
-public class MyMod implements WurmServerMod {
-    @Override
-    public void preInit() {
-        ModActions.init();
-    }
-}
 ```
-
-## Benefits of Hybrid Approach
-
-1. **Backward Compatibility**: Most mods work without changes
-2. **Forward Progress**: New development uses clean package structure
-3. **Clear Migration Path**: Mod authors can update incrementally
-4. **Minimal Overhead**: Thin proxies have negligible performance impact
-5. **Maintainability**: Full implementations only where truly necessary
-
-## Documentation
-
-See `COMPAT_LAYER_STATUS.md` for complete details on:
-- Which classes use which compatibility strategy
-- Full API compatibility guarantees
-- Detailed migration guide
-- Testing checklist
-
-## Conclusion
-
-The hybrid compatibility layer successfully resolves the package rename issues while maintaining backward compatibility for the vast majority of mod code. The approach balances pragmatism with long-term maintainability.
