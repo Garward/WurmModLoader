@@ -357,9 +357,10 @@ Run the server against a throwaway world copy. First-boot signs the swap took ef
 After startup, sanity-check that connections are live and the schemas migrated:
 
 ```
-wurmlog --since-last-restart --grep DatabaseBackendRegistry
-wurmlog --since-last-restart --grep DatabaseConnectionOpenedEvent
-wurmlog --since-last-restart --grep DatabaseMigration
+LOG=<wurm-server-dir>/logs/wurmmodloader.0.log
+grep DatabaseBackendRegistry "$LOG"
+grep DatabaseConnectionOpenedEvent "$LOG"
+grep DatabaseMigration "$LOG"
 ```
 
 If vanilla SQLite messages still appear (`JournalMode.WAL`, `SynchronousMode.NORMAL`), the backend didn't take — usually because registration happened after `DbConnector.initialize()` ran.
@@ -370,4 +371,4 @@ If vanilla SQLite messages still appear (`JournalMode.WAL`, `SynchronousMode.NOR
 
 - [`extending-framework.md`](extending-framework.md) — how new events and patches are added to the framework (for understanding the plumbing, not required for backend authors).
 - [`event-bus.md`](event-bus.md) — `@SubscribeEvent` mechanics, priority, cancellation.
-- Decompiled WU reference: `com.wurmonline.server.DbConnector`, `com.wurmonline.server.database.ConnectionFactory`, `com.wurmonline.server.database.migrations.MigrationStrategy`. Use `wurmquery search DbConnector` to inspect without grepping the whole tree.
+- Decompiled WU reference: `com.wurmonline.server.DbConnector`, `com.wurmonline.server.database.ConnectionFactory`, `com.wurmonline.server.database.migrations.MigrationStrategy`. Inspect signatures via `javap -s -p -classpath server.jar com.wurmonline.server.DbConnector`.

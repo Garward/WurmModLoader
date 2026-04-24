@@ -27,12 +27,11 @@ Optional: `wurmmodloader-core/.../core/eventlogic/<area>/` — for non-trivial d
 
 ### Step 1 — Find the injection point
 
-Use `wurmquery`, not grep, on the decompiled server/client source:
+Locate the target method in the decompiled server/client source. `javap` against `server.jar` is the most reliable way to read signatures:
 
 ```bash
-wurmquery search addWound            # find the target method
-wurmquery search getModifiedDamageForWeapon
-wurmquery file com/wurmonline/server/combat/CombatEngine.java
+javap -p -classpath /path/to/server.jar com.wurmonline.server.combat.CombatEngine | grep addWound
+javap -s -p -classpath /path/to/server.jar com.wurmonline.server.combat.CombatEngine | grep -A1 addWound
 ```
 
 You need three things from the vanilla method:
@@ -219,7 +218,6 @@ public boolean fireXxx(Creature attacker) {
 
 ```bash
 ./build-and-deploy.sh
-codeindex regen
 ```
 
 Watch the server log for `Registered XxxPatch` at boot. If the patch silently no-ops, the descriptor is wrong (see cheat sheet).
@@ -297,6 +295,5 @@ Quick way to get the real descriptor: `javap -s -p -classpath <path-to-server.ja
 - [ ] `fireXxx` implementation in `wurmmodloader-core/.../modloader/server/ServerHook.java`
 - [ ] (If complex) dispatch/util helpers in `wurmmodloader-core/.../core/eventlogic/<area>/`
 - [ ] `./build-and-deploy.sh` runs clean
-- [ ] `codeindex regen`
 - [ ] Server log shows `Registered XxxPatch`
 - [ ] A subscriber handler (even a logging one) verifies it fires

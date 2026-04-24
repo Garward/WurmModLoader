@@ -133,9 +133,8 @@ depend.conflicts=oldversion
 cp -r mods/yourmod/build/mods/* "$WURM_SERVER/mods/"
 ```
 
-Tail the log (`wurmlog --since-last-restart --mod YourMod` if the
-helper is available). If you see your mod's startup message, you're
-done.
+Tail the log: `tail -f "$WURM_SERVER/logs/wurmmodloader.0.log" | grep YourMod`.
+If you see your mod's startup message, you're done.
 
 ---
 

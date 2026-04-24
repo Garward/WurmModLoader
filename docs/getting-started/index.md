@@ -102,7 +102,7 @@ mod. Every `com.wurmonline.*` import in a mod is a future liability.
    the class + package, change the subscribed event type. Register it
    in `settings.gradle.kts`.
 4. **Build and deploy.** `./build-and-deploy.sh` — then start the
-   server and run `wurmlog --since-last-restart --grep <YourMod>`.
+   server and `grep <YourMod> <wurm-server-dir>/logs/wurmmodloader.0.log`.
    Verify the event fires before writing behavior.
 5. **Write the behavior.** If you need a helper, look in
    `wurmmodloader-modsupport` first. If it's missing, add it to
@@ -240,7 +240,7 @@ wurmmodloader.bat start=Riverweave     :: Windows
 Then in another terminal:
 
 ```bash
-wurmlog --since-last-restart --grep HelloMod
+grep HelloMod <wurm-server-dir>/logs/wurmmodloader.0.log
 ```
 
 You should see:
@@ -426,13 +426,11 @@ In rough order of "how often I've seen this":
 3. **Importing `com.wurmonline.*` in mod code.** Each one is a future
    break. Check `wurmmodloader-modsupport` first; if nothing fits,
    extend the framework rather than reaching into Wurm directly.
-4. **Not reading `wurmlog --since-last-restart --errors` before
-   asking "why doesn't it work?"** Bytecode patch failures, class-not-found
-   errors, mod-load failures all show up there with the exact line
-   that broke. The log tells you the answer 90% of the time.
-5. **Forgetting to regenerate `codeindex` after adding classes.**
-   `codeindex regen` — the index is how you (and I) find code fast;
-   stale index → ghost hunts. Run it after any structural change.
+4. **Not reading the server log before asking "why doesn't it work?"**
+   `grep -E "SEVERE|WARNING" -A 20 <wurm-server-dir>/logs/wurmmodloader.0.log`
+   — bytecode patch failures, class-not-found errors, and mod-load
+   failures all show up there with the exact line that broke. The log
+   tells you the answer 90% of the time.
 
 ---
 
@@ -496,9 +494,10 @@ A few things to know before you start writing:
   `build.gradle.kts` snippet above sets `archiveBaseName` accordingly.
 - **Configs load before `init()`.** Properties and JSON files in `mods/` are
   parsed before your mod runs, so reading them in `init()` is safe.
-- **Always verify in logs, not in theory.** `wurmlog --since-last-restart
-  --errors` is your first stop after any change. Patches that silently fail to
-  apply will show up there.
+- **Always verify in logs, not in theory.**
+  `grep -E "SEVERE|WARNING" -A 20 <wurm-server-dir>/logs/wurmmodloader.0.log`
+  is your first stop after any change. Patches that silently fail to apply
+  will show up there.
 
 ---
 

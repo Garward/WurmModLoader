@@ -21,18 +21,18 @@ Default Steam locations for `<wurm-server-dir>`:
 - **Windows:** `C:\Program Files (x86)\Steam\steamapps\common\Wurm Unlimited Dedicated Server\`
 - **Linux:**   `~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/`
 
-Use `wurmlog` (installed in `~/.local/bin/wurmlog`) to slice them —
-grepping 60k-line JUL logs by hand wastes time:
+Useful one-liners (set `LOG=<wurm-server-dir>/logs/wurmmodloader.0.log` first):
 
 ```bash
-wurmlog --since-last-restart --errors           # every SEVERE/WARNING this boot
-wurmlog --mod YourMod -C 3                      # just your mod + 3 records of context
-wurmlog --grep "NoSuchCreatureException" -C 5   # search with context
-wurmlog --follow --mod YourMod                  # live tail
+grep -E "SEVERE|WARNING" "$LOG"                # all errors/warnings
+grep -A 20 "SEVERE" "$LOG"                     # errors with following stacktrace lines
+grep -i "yourmod" "$LOG"                       # anything mentioning your mod
+tail -f "$LOG"                                 # live tail
+tail -f "$LOG" | grep --line-buffered YourMod  # live tail filtered to your mod
 ```
 
-`wurmlog` keeps stacktraces attached to their `SEVERE`. Raw `tail` or
-`grep` on the file will cut them mid-trace.
+JUL log records are two lines (`<timestamp> <class> <method>` then `LEVEL: message`),
+so use `grep -A N` / `grep -B N` to keep stacktrace context glued to its `SEVERE`.
 
 ---
 
@@ -41,7 +41,7 @@ wurmlog --follow --mod YourMod                  # live tail
 ### Symptom: no startup message, no error
 
 ```bash
-wurmlog --since-last-restart --grep "yourmod"
+grep -i "yourmod" "$LOG"
 # (no output)
 ```
 
@@ -95,7 +95,7 @@ Checklist, in order:
    to be registered (framework handles the descriptor class; anything
    else is on you).
 5. **The event actually fires during your test.** Check with:
-   `wurmlog --grep "YourEvent" --since-last-restart`. If the framework
+   `grep "YourEvent" "$LOG"`. If the framework
    never fired it, your handler has nothing to react to.
 
 ### Legacy-bridge listener not called
@@ -117,12 +117,13 @@ If you ported a mod with `implements ServerStartedListener` and
 Your patch target class doesn't exist, was renamed, or isn't in the
 Wurm version you're running.
 
-1. Run `wurmquery server search Foo` to confirm the class exists.
+1. Confirm the class exists in the current `server.jar`:
+   `unzip -l server.jar | grep -i Foo`.
 2. If it does but the full path differs, fix the `classPool.getCtClass(...)`
    argument.
 3. If it doesn't, you're targeting a class that was renamed between WU
-   patches — check the decompiled source at
-   `~/Scripts/Games/WurmUnlimited/PowerFantasy/Wurmguide/decompiled/`.
+   patches — decompile `server.jar` (CFR / Vineflower / Procyon) and
+   search there.
 
 ### Symptom: `NotFoundException` on a method (but the class exists)
 
@@ -132,8 +133,8 @@ Method signature mismatch. Javassist needs the exact descriptor:
 ctClass.getMethod("breed", "(Lcom/wurmonline/server/creatures/Creature;...)Z")
 ```
 
-Use `wurmquery server search Foo::methodname` to see the signature the
-current client/server jars expose, and copy the descriptor from there.
+Use `javap -s -p -classpath server.jar com.wurmonline.server.Foo | grep -A1 methodname`
+to read the exact descriptor from the current jar, and copy it verbatim.
 
 ### Symptom: `cannot modify frozen class`
 
@@ -153,7 +154,7 @@ Almost always: the patched class was loaded *before* your patch ran.
 Verify with:
 
 ```bash
-wurmlog --since-last-restart --grep "Applied .* to .*Foo"
+grep -E "Applied .* to .*Foo" "$LOG"
 ```
 
 If the log line is there but the behavior didn't change, your patch
@@ -254,7 +255,7 @@ Usually a mod's `preInit()` or `init()` is in an infinite loop, or
 waiting on something that never arrives. Check:
 
 ```bash
-wurmlog --follow --since-last-restart
+tail -f "$LOG"
 ```
 
 The last mod to log before the hang is your suspect. Thread dump with
@@ -290,9 +291,9 @@ Or from server console with five minutes of warning. See
 
 ## When you really can't figure it out
 
-1. `wurmlog --since-last-restart --errors` — every error since boot,
-   traces intact.
-2. `wurmlog --mod YourMod -C 5` — your mod's records with surrounding
+1. `grep -E "SEVERE|WARNING" -A 20 "$LOG"` — every error/warning with
+   following stacktrace lines.
+2. `grep -B 1 -A 5 YourMod "$LOG"` — your mod's records with surrounding
    context.
 3. Reproduce against [`examples/hellomod/`](../../examples/hellomod/) —
    the smallest possible mod. If hellomod works and yours doesn't,

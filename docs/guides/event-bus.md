@@ -42,8 +42,8 @@ your mod class automatically.
   matching)
 
 If a handler isn't firing, 9 times out of 10 it's one of those four. Check
-the server log for `wurmlog --since-last-restart --grep "subscriber"` —
-registration failures are logged.
+the server log (`<wurm-server-dir>/logs/wurmmodloader.0.log`) for the
+word `subscriber` — registration failures are logged.
 
 ---
 
@@ -201,12 +201,12 @@ index, not a reference.
 | `events/` (top-level) | `ModActionEvent`, `ModQueryEvent` — generic mod-to-mod dispatch |
 
 If you need to find an event by what it *does* rather than where it lives,
-use the codeindex:
+grep the api module:
 
 ```bash
-codeindex tag event
-codeindex pattern event_handlers
-codeindex search "CreatureDeath"
+grep -rln "extends Event" wurmmodloader-api/src
+grep -rln "@SubscribeEvent" wurmmodloader-core/src
+grep -rln "CreatureDeath" wurmmodloader-api/src
 ```
 
 ---

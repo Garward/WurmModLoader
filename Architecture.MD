@@ -8,7 +8,7 @@ A map of **where everything is** and **how the pieces connect**. For hands-on gu
 
 A from-scratch modloader for **Wurm Unlimited Dedicated Server**, built on top of a fork of Ago's `WurmServerModLauncher`. Not a patch set — a full replacement with a clean event-driven API, a capability system, a bytecode-patch pipeline, and a legacy compatibility bridge so older Ago-era mods still load.
 
-Current scale (regenerate with `codeindex regen` + `wurmquery regen`):
+Current scale (snapshot — counts may drift between releases):
 - **788** Java files, **1,512** classes, **5,952** methods across the framework
 - **118** bytecode patches
 - **133** API event types
@@ -188,8 +188,7 @@ For the full walkthrough, read `examples/oversizedclub/` top to bottom — it's 
 4. Add a fire method in `ServerHook`
 5. (Optional) Put complex dispatch / resolver / util logic in `wurmmodloader-core/.../core/eventlogic/<area>/`
 6. Build & deploy: `./build-and-deploy.sh`
-7. Regenerate the code index: `codeindex regen`
-8. Convert any mods that should use it
+7. Convert any mods that should use it
 
 ---
 
@@ -200,11 +199,9 @@ For the full walkthrough, read `examples/oversizedclub/` top to bottom — it's 
 | Build all modules + distribution zip | `./build.sh` |
 | Deploy (changed JARs only) to live server | `./deploy.sh` |
 | Build + deploy in one shot | `./build-and-deploy.sh` |
-| Search framework code | `codeindex search <term>` / `codeindex pattern event_handlers` |
-| Search vanilla Wurm (decompiled) | `wurmquery search <term>` (server) / `wurmquery client search <term>` |
-| Regen framework index | `codeindex regen` |
-| Regen vanilla indexes | `wurmquery regen server` / `wurmquery regen client` |
-| Check index ages | `codeindex status` / `wurmquery status` |
+| Search framework code | `grep -rn <term> wurmmodloader-*/src` |
+| Inspect a vanilla method signature | `javap -s -p -classpath <server.jar> com.wurmonline.server.Foo` |
+| List vanilla classes | `unzip -l <server.jar> \| grep <name>` |
 
 Server location: `~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/`
 Server logs: `logs/` and `<WORLDNAME>/Logs/` under the server root.

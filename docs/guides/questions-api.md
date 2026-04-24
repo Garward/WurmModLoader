@@ -223,7 +223,7 @@ UIWindow for another without conflict.
   `mods/` — find them with:
 
   ```bash
-  codeindex search ModQuestion
+  grep -rln "extends ModQuestion" mods/
   ```
 
 ---
