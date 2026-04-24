@@ -9,10 +9,10 @@ A map of **where everything is** and **how the pieces connect**. For hands-on gu
 A from-scratch modloader for **Wurm Unlimited Dedicated Server**, built on top of a fork of Ago's `WurmServerModLauncher`. Not a patch set — a full replacement with a clean event-driven API, a capability system, a bytecode-patch pipeline, and a legacy compatibility bridge so older Ago-era mods still load.
 
 Current scale (regenerate with `codeindex regen` + `wurmquery regen`):
-- **591** Java files, **1,222** classes, **4,495** methods across the framework
-- **57** bytecode patches
-- **98** API event types
-- **5** bundled showcase mods
+- **788** Java files, **1,512** classes, **5,952** methods across the framework
+- **118** bytecode patches
+- **133** API event types
+- **8** bundled showcase mods
 
 ---
 
@@ -27,7 +27,7 @@ Multi-module Gradle build (`settings.gradle.kts`). One JAR per module.
 | **`wurmmodloader-modsupport`** | Higher-level helper APIs — `CreatureTemplateBuilder`, `ItemTemplateBuilder`, BML UI helpers, loot/vehicle utilities. Optional for mods. | Yes (via core) |
 | **`wurmmodloader-legacy`** | Compatibility shim that bridges the old `org.gotti.wurmunlimited.*` package namespace to the new framework, so Ago-era mods run unchanged. | Yes |
 | **`wurmmodloader-cli`** | picocli-based CLI tooling (mod inspection, diagnostics). | No |
-| `wurmmodloader-patcher` | *Disabled* — client-only JAR patcher. Commented out in `settings.gradle.kts`; source retained for when client modloader work resumes. | — |
+| `wurmmodloader-patcher` | *Retired* — early client-side patcher prototype. Commented out in `settings.gradle.kts`. Client-side work now lives in the separate [`WurmModLoader-Client`](https://github.com/Garward/WurmModLoader-Client) repo. | — |
 
 **Golden rule:** `com.wurmonline.*` imports are allowed only in `wurmmodloader-core`. Everything else (mods, modsupport helpers) talks to the game through events, the capability system, or reflection-safe wrappers.
 
@@ -43,7 +43,12 @@ Each mod is its own Gradle sub-project. Build output lands in `mods/<name>/build
 | `soulboundgear` | Gear that binds to the player who attunes it |
 | `upgradetree` | In-world UI for picking upgrade paths |
 | `materialsystem` | Damage types & material behavior overhaul |
+| `gmtools` | In-world GM building / terraforming tools |
+| `livemap` | Live server map served over the framework's HTTP subsystem (companion client mod in [`WurmModLoader-Client`](https://github.com/Garward/WurmModLoader-Client)) |
+| `postgresbackend` | PostgreSQL `DatabaseBackend` implementation — reference consumer of the DB SPI; replaces SQLite for large/busy servers |
 | `eventlister` | Diagnostic mod that prints fired events — useful when exploring the event catalog |
+
+`mods/blueprints/` is retained in-tree but dormant — see its `DORMANT.md`; it's excluded from the Gradle build.
 
 ---
 
@@ -51,11 +56,13 @@ Each mod is its own Gradle sub-project. Build output lands in `mods/<name>/build
 
 | Path | What it shows |
 |---|---|
-| **`oversizedclub/`** | **Canonical tutorial mod.** Heavily commented, intentionally simple mechanic (bigger club = harder hits). Read this first when you're new to the framework. |
+| **`oversizedclub/`** | **Canonical tutorial mod.** Custom weapon template + `Weapon` registration + crafting recipe + a persistent capability (`ItemLevel`) + subscriptions to seven events. Read this first when you're new to the framework. Gotchas collected in `examples/oversizedclub/WEAPON_CREATION_PITFALLS.md`. |
 | `templatemod/` | Bare-bones skeleton to copy when starting a new mod |
+| `hellomod/` | Minimal "hello world" — smallest possible working mod |
 | `basic-item-mod/` | Registering a custom item |
 | `custom-creature/` | Defining a custom creature template |
 | `action-system/` | Hooking into the action/interaction system |
+| `database-backend-noop/` | Skeleton implementation of the `DatabaseBackend` SPI — copy when writing a new DB backend |
 
 ---
 
