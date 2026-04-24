@@ -1,12 +1,12 @@
 package com.garward.wurmmodloader.mods.templarpatrol;
 
 import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
-import com.garward.wurmmodloader.api.events.movement.CreatureMovementTickEvent;
 import com.garward.wurmmodloader.api.events.movement.CreaturePollMovementPreEvent;
 import com.wurmonline.server.Server;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.ai.PathTile;
 
+import com.garward.wurmmodloader.modloader.interfaces.Reloadable;
 import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
 import org.gotti.wurmunlimited.modloader.interfaces.ServerStartedListener;
 import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
@@ -30,7 +30,7 @@ import java.util.logging.Logger;
  * {@link CreaturePollMovementPreEvent} to override vanilla idle wandering;
  * vanilla combat/chase is left intact when the creature has a target.
  */
-public final class TemplarPatrolMod implements WurmServerMod, Configurable, ServerStartedListener {
+public final class TemplarPatrolMod implements WurmServerMod, Configurable, ServerStartedListener, Reloadable {
 
     private static final Logger LOGGER = Logger.getLogger(TemplarPatrolMod.class.getName());
 
@@ -52,7 +52,14 @@ public final class TemplarPatrolMod implements WurmServerMod, Configurable, Serv
         loadRoutes();
     }
 
+    @Override
+    public void onReload() {
+        LOGGER.info("TemplarPatrol: reloading routes.");
+        loadRoutes();
+    }
+
     private void loadRoutes() {
+        routes.clear();
         Path path = Paths.get(routesFile);
         if (!Files.isRegularFile(path)) {
             LOGGER.info("TemplarPatrol: no routes file at " + path.toAbsolutePath() + " — mod is idle.");
@@ -114,12 +121,6 @@ public final class TemplarPatrolMod implements WurmServerMod, Configurable, Serv
         } catch (Exception e) {
             LOGGER.log(Level.FINE, "TemplarPatrol: startPathingToTile failed for " + creature.getWurmId(), e);
         }
-    }
-
-    @SubscribeEvent
-    public void onMovementTick(CreatureMovementTickEvent event) {
-        // Reserved for arrival-detection refinements in later versions.
-        // v0.1 re-evaluates every pre-poll tick, which is sufficient.
     }
 
     private PathTile buildPathTile(Creature creature, int tx, int ty) {

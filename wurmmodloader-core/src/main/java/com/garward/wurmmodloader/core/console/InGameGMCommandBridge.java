@@ -58,7 +58,8 @@ public final class InGameGMCommandBridge {
         "villageperm",
         "setmayor",
         "villageguards",
-        "movealtar"
+        "movealtar",
+        "reloadmods"
     ));
 
     /** Framework help lines (single source of truth for both addendum print + index). */
@@ -77,6 +78,7 @@ public final class InGameGMCommandBridge {
         "  #serverinfo                      - uptime / tick / world info",
         "  #sendmessage <player> <message>  - DM a specific player from the server",
         "  #shutdown <minutes> <reason>     - safe shutdown w/ DB flush (use this, not Ctrl-C)",
+        "  #reloadmods [modname]            - re-read mod .properties/.config + fire reload hooks",
         "  #time [day|night|dawn|dusk|HH:MM]- set server time of day",
         "  #weather [clear|rain|storm|...]  - set weather",
         "[Villages / deeds]",

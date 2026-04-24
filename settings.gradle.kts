@@ -69,5 +69,8 @@ project(":mods:gmtools").projectDir = file("mods/gmtools")
 include("mods:surfaceminingfix")
 project(":mods:surfaceminingfix").projectDir = file("mods/surfaceminingfix")
 
+include("mods:templarpatrol")
+project(":mods:templarpatrol").projectDir = file("mods/templarpatrol")
+
 // Note: Community mods now live in WurmModLoader-CommunityMods repo
 // They depend on JARs from this repo's libs/ directory

@@ -11,15 +11,16 @@ WurmModLoader is a modern, extensible modding framework for Wurm Unlimited serve
 
 ## 🎯 Project Status
 
-**Version**: 0.10.0 — Release Candidate
+**Version**: 0.10.1
 
-The framework is feature-complete and in the polish phase. See [`Architecture.MD`](Architecture.MD) for the module map and [`PROJECT_STATE.md`](PROJECT_STATE.md) for the current state audit.
+The framework is in active use. See [`Architecture.MD`](Architecture.MD) for the module map and the boot sequence.
 
 - ✅ **Core Infrastructure** — Legacy compatibility + modern runtime subsystems
-- ✅ **Native Launcher & Patcher** — GUI/headless launchers, patched bootstrap, diagnostic flags
-- ✅ **Event Bus / Registries** — 98 annotation-driven events with automatic legacy bridge
-- ✅ **Bytecode patch pipeline** — 57 patches with conflict detection and `--continue-on-patch-error`
+- ✅ **Native Launcher** — GUI/headless launchers, patched bootstrap, diagnostic flags
+- ✅ **Event Bus / Registries** — 130+ annotation-driven events with automatic legacy bridge
+- ✅ **Bytecode patch pipeline** — 110+ patches with conflict detection and `--continue-on-patch-error`
 - ✅ **Dual Interface Support** — Modern `@SubscribeEvent` and legacy listeners both work
+- ✅ **Database backend SPI** — pluggable SQLite/MySQL/Postgres backends
 
 ## ✨ Features
 
@@ -60,14 +61,14 @@ The framework is feature-complete and in the polish phase. See [`Architecture.MD
 
 1. **Download the latest release**
    ```bash
-   wget https://github.com/garward/WurmModLoader/releases/latest/download/WurmModloader-Runtime-0.10.0.zip
+   wget https://github.com/garward/WurmModLoader/releases/latest/download/WurmModloader-Runtime-0.10.1.zip
    # Or build from source: ./build.sh   (runs ./gradlew clean build dist)
    ```
 
 2. **Extract to your Wurm server directory**
    ```bash
    cd ~/.local/share/Steam/steamapps/common/Wurm\ Unlimited\ Dedicated\ Server/
-   unzip /path/to/WurmModloader-Runtime-0.10.0.zip
+   unzip /path/to/WurmModloader-Runtime-0.10.1.zip
    ```
 
 3. **Launch your server**
@@ -90,77 +91,71 @@ The framework is feature-complete and in the polish phase. See [`Architecture.MD
    - Quick testing cycles
    _Diagnostics:_ append `--continue-on-patch-error` (or `--force-bytecode-conflicts`) to gather full patch reports without aborting startup.
 
-   **Alternative: Java launcher:**
-   ```bash
-   # Linux/Mac
-   ./wurmmodloader.sh start=Adventure
-
-   # Windows
+   **Windows equivalent:**
+   ```cmd
    wurmmodloader.bat start=Adventure
    ```
 
-5. **Verify modloader is running**
+4. **Verify modloader is running**
 
    Check the logs for:
    ```
-   INFO ModLoader version 1.0.0-SNAPSHOT
+   INFO ModLoader initialization COMPLETE
+   INFO Loaded N mods
    ```
 
 ### Adding Mods
 
-**Important:** WurmModLoader is a framework only. Individual mods must be downloaded separately from their respective releases (e.g., from the [original WurmServerModLauncher releases](https://github.com/ago1024/WurmServerModLauncher/releases)).
-
-#### Installation Steps
-
-1. **Download mod releases** - Each mod is a separate ZIP file (e.g., `announcer-0.47.zip`)
-2. **Extract to mods directory** - Extract the mod ZIP into your `mods/` folder
-3. **Verify structure** - Each mod needs both a `.properties` file and its JAR
+**Important:** WurmModLoader is a framework only. Individual mods are distributed separately. Mods built against this framework ship as a self-contained folder you drop into `mods/`.
 
 #### Required Directory Structure
 
+Each mod lives in its own subfolder under `mods/`. The descriptor (`mod.properties`),
+optional config (`mod.config`), and the JAR all sit *inside* that subfolder:
+
 ```
 mods/
-├── announcer.properties          ← REQUIRED (in root)
-├── announcer.config              ← Optional mod configuration
 ├── announcer/
-│   └── announcer.jar             ← Mod code
-├── bagofholding.properties       ← REQUIRED (in root)
-├── bagofholding.config           ← Optional
+│   ├── mod.properties        ← REQUIRED (descriptor: classname, classpath)
+│   ├── mod.config            ← Optional mod-specific settings
+│   └── announcer.jar         ← Mod code
 ├── bagofholding/
+│   ├── mod.properties
+│   ├── mod.config
 │   └── bagofholding.jar
+├── livemap/
+│   ├── mod.properties
+│   └── livemap.jar
 ...
 ```
 
-⚠️ **Critical:** The `.properties` file in `mods/` root is MANDATORY. Without it, the mod will be marked as "ondemand" and automatically pruned from the load list, resulting in "Loaded 0 mods".
+⚠️ **Critical:** the JAR filename **must not contain a version suffix**. The loader matches by folder name — `announcer.jar`, not `announcer-0.47.jar`.
 
-#### Extracting from Mod Releases
+> **Legacy layout still works.** Older Ago-style mods that use top-level
+> `mods/<modname>.properties` + `mods/<modname>/<modname>.jar` continue to
+> load via the legacy bridge. New mods should use the self-contained subfolder
+> layout above.
 
-When you download a mod release ZIP (e.g., `announcer-0.47.zip`), it contains:
-```
-announcer-0.47/
-└── mods/
-    ├── announcer.properties      ← Extract this
-    ├── announcer.config          ← Extract this
-    └── announcer/
-        └── announcer.jar         ← Extract this
-```
+#### Installing a mod
 
-Extract the contents of the `mods/` folder from the ZIP into your server's `mods/` directory.
+1. Download the mod's release archive.
+2. Extract it so its `<modname>/` folder ends up under `mods/`.
+3. Confirm structure: `ls mods/<modname>/` should show `mod.properties` and `<modname>.jar`.
 
 #### Quick Test
 
 After adding mods, verify they load:
 ```bash
-./wurmmodloder.sh start=Adventure
+./wurmmodloader.sh start=Adventure
 ```
 
-You should see: `INFO com.garward.wurmmodloader.serverlauncher.DelegatedLauncher main Loaded X mods`
+You should see: `INFO com.garward.wurmmodloader.serverlauncher.DelegatedLauncher main Loaded N mods`
 
 ### Configuration & EventLogic Profiles
 
-Traditional mods still live in `mods/`:
-- `modname.properties` – Required loader metadata (mod class + classpath)
-- `modname.config` – Optional mod-specific settings
+Each mod's folder under `mods/` carries its own descriptor and config:
+- `mod.properties` – Required loader metadata (`classname`, `classpath`)
+- `mod.config` – Optional mod-specific settings
 
 **EventLogic data** can be loaded from any JSON file (no code required):
 
@@ -217,10 +212,9 @@ WurmModLoader is designed as a modular framework:
 ```
 wurmmodloader/
 ├── wurmmodloader-api/         # Public API (stable, semantic versioned)
-├── wurmmodloader-core/        # Core loader implementation
-├── wurmmodloader-legacy/      # Backward compatibility layer
+├── wurmmodloader-core/        # Core loader, bytecode patches, eventlogic
+├── wurmmodloader-legacy/      # Backward compatibility layer (Ago bridge)
 ├── wurmmodloader-modsupport/  # Mod development utilities
-├── wurmmodloader-patcher/     # Bytecode patcher
 └── wurmmodloader-cli/         # Command-line tools
 ```
 
@@ -240,23 +234,21 @@ When you extract the distribution ZIP, you get:
 
 ```
 WurmServerLauncher/
-├── wurmmodloader-api-1.0.0-SNAPSHOT.jar
-├── wurmmodloader-core-1.0.0-SNAPSHOT.jar
-├── wurmmodloader-modsupport-1.0.0-SNAPSHOT.jar
-├── wurmmodloader-legacy-1.0.0-SNAPSHOT.jar
-├── wurmmodloader-patcher-1.0.0-SNAPSHOT.jar
+├── wurmmodloader-api-0.10.1.jar
+├── wurmmodloader-core-0.10.1.jar
+├── wurmmodloader-modsupport-0.10.1.jar
+├── wurmmodloader-legacy-0.10.1.jar
 ├── modlauncher.jar                  # Main launcher JAR (fat JAR)
 ├── javassist.jar                    # Bytecode manipulation
 ├── modloader-shared-0.18.jar        # HookManager infrastructure
 ├── wurmmodloader.sh                 # Linux/Mac launcher
 ├── wurmmodloader.bat                # Windows launcher
-├── patcher.sh / patcher.bat         # One-time patcher
 ├── logging.properties               # Logger configuration
-└── mods/                            # Download mods separately!
+└── mods/                            # Drop mod folders here
     └── .gitkeep
 ```
 
-**Note:** The distribution does NOT include any mods. Download individual mods from their releases (e.g., [WurmServerModLauncher releases](https://github.com/ago1024/WurmServerModLauncher/releases)).
+**Note:** The distribution does NOT include any mods.
 
 ## 🛠 Diagnostics & Flags
 
@@ -278,7 +270,7 @@ cd WurmModLoader
 # Regular ./gradlew build creates stub JARs (not usable)
 ./gradlew dist
 
-# Output: build/distributions/wurmmodloader-1.0.0-SNAPSHOT.zip
+# Output: build/distributions/WurmModloader-Runtime-0.10.1.zip
 ```
 
 **Build Notes:**
@@ -289,27 +281,22 @@ cd WurmModLoader
 ## 📖 Documentation
 
 ### Getting Started
-- **[README.md](README.md)** - This file (installation and quick start)
-- **[docs/guides/custom-map-setup.md](docs/guides/custom-map-setup.md)** - **Running a custom map?** Read this first. Fixes the "all NPC towns in the NW corner" papercut; covers the world-seed bootstrap and its `config/wurmmodloader-world-seed.yaml` file.
-- **[NOTICE.md](NOTICE.md)** - Attribution and licenses
-
-### Technical Documentation
-- **[docs/reference/console-commands.md](docs/reference/console-commands.md)** - `#`-prefixed server console GM commands (safe shutdown, player/item/creature ops)
-- **[MOD_LOADING_DISCOVERY_REPORT.md](MOD_LOADING_DISCOVERY_REPORT.md)** - Deep dive into mod loading architecture
-- **[MODERNIZATION_PLAN_AUDIT.md](MODERNIZATION_PLAN_AUDIT.md)** - Critical analysis of design gaps
-- **[WURMMODLOADER_MODERNIZATION_PLAN.md](WURMMODLOADER_MODERNIZATION_PLAN.md)** - Complete technical roadmap
-
-### Troubleshooting
-- **[FAQ](#-faq)** - Common questions and solutions
-- **[Troubleshooting](#-troubleshooting)** - Common issues and fixes
+- **[docs/getting-started/index.md](docs/getting-started/index.md)** — full walkthrough: write your first mod, deploy, debug.
+- **[docs/guides/custom-map-setup.md](docs/guides/custom-map-setup.md)** — **Running a custom map?** Read this first. Fixes the "all NPC towns in the NW corner" papercut; covers the world-seed bootstrap and its `config/wurmmodloader-world-seed.yaml`.
 
 ### For Mod Developers
+- **[docs/guides/extending-framework.md](docs/guides/extending-framework.md)** — adding a new event + bytecode patch, end to end.
+- **[docs/guides/event-bus.md](docs/guides/event-bus.md)** — `@SubscribeEvent` mechanics, priority, cancellation.
+- **[docs/guides/legacy-mod-compatibility.md](docs/guides/legacy-mod-compatibility.md)** — what the Ago bridge supports.
+- **[docs/guides/ui-api-overview.md](docs/guides/ui-api-overview.md)** — building in-game UI with `UIWindow`.
+- **[docs/guides/questions-api.md](docs/guides/questions-api.md)** — BML / question-menu prompts.
+- **[docs/guides/database-backend-spi.md](docs/guides/database-backend-spi.md)** — pluggable Postgres/MySQL/SQLite backends.
 
-Documentation is under active development. See the modernization plan for upcoming features.
-
-**Current Resources:**
-- Original [WurmServerModLauncher Wiki](https://github.com/ago1024/WurmServerModLauncher/wiki)
-- Legacy mod examples in the original repository
+### Reference
+- **[Architecture.MD](Architecture.MD)** — module map + boot sequence.
+- **[docs/reference/console-commands.md](docs/reference/console-commands.md)** — `#`-prefixed server console GM commands (safe shutdown, player/item/creature ops).
+- **[docs/guides/troubleshooting.md](docs/guides/troubleshooting.md)** — log triage and common failure modes.
+- **[NOTICE.md](NOTICE.md)** — attribution and licenses.
 
 ## 🆚 Differences from WurmServerModLauncher
 
@@ -339,11 +326,10 @@ Documentation is under active development. See the modernization plan for upcomi
 
 WurmModLoader is a drop-in replacement:
 
-1. Backup your `mods/` directory
-2. Remove old WurmServerModLauncher files
-3. Follow installation instructions above
-4. Copy your mods back to `mods/` directory
-5. Mods will work without modification
+1. Backup your `mods/` directory.
+2. Remove old WurmServerModLauncher files.
+3. Follow installation instructions above.
+4. Copy your mods back to `mods/`. Old-style `mods/<modname>.properties` + `mods/<modname>/<modname>.jar` continues to load via the legacy bridge — no need to re-pack them into the new self-contained subfolder layout.
 
 ## 🤝 Contributing
 
@@ -386,52 +372,19 @@ This project includes:
 - **Issues**: [GitHub Issues](https://github.com/garward/WurmModLoader/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/garward/WurmModLoader/discussions)
 
-## 📊 Development Roadmap
-
-### Phase 0: Foundation ✅ COMPLETE
-- ✅ Repository setup and legal foundation
-- ✅ Gradle build system migration
-- ✅ Distribution infrastructure
-- ✅ Documentation framework
-
-### Phase 1: Build System (Weeks 3-4)
-- ✅ Maven → Gradle migration
-- ✅ Java 17 toolchain setup
-- ✅ Module configuration
-- 🚧 CI/CD pipeline
-
-### Phase 2: Package Rename (Weeks 5-8)
-- Rename from `org.gotti.wurmunlimited` to `com.garward.wurmmodloader`
-- API/implementation split
-- Legacy bridge implementation
-
-### Phase 3: Legacy Compatibility Layer (Weeks 9-12)
-- Transparent interception of old API calls
-- Property-based mod loading support
-- Backward compatibility testing
-
-### Phase 4: Registry System (Weeks 13-16)
-- ResourceLocation (namespaced identifiers)
-- Generic Registry<T> implementation
-- IdAllocator for database persistence
-- ItemTemplate/CreatureTemplate integration
-
-### Phase 5-10
-See [WURMMODLOADER_MODERNIZATION_PLAN.md](WURMMODLOADER_MODERNIZATION_PLAN.md) for complete timeline.
-
 ## ❓ FAQ
 
 **Q: Should I use WurmModLoader or WurmServerModLauncher?**
-A: ✅ **WurmModLoader v0.9.0 is now a stable release candidate!** (Nov 11, 2025). Successfully running 17+ mods with full backward compatibility and modern interface support. Ready for testing - recommended for new servers and brave existing servers. 1.0.0 release coming after wider community testing.
+A: WurmModLoader if you want the modern event API, the bytecode patch pipeline, the database backend SPI, and the legacy bridge that runs Ago-style mods unmodified. Stick with the original WurmServerModLauncher if your existing setup works and you don't need any of that.
 
 **Q: Will my existing mods work with WurmModLoader?**
-A: Yes! Full backward compatibility is a core design goal. All existing mods work without modification through the legacy bridge.
+A: Yes — the legacy bridge runs Ago-style mods (`org.gotti.wurmunlimited.modloader.interfaces.*`) without modification.
 
 **Q: Why does it say "Loaded 0 mods"?**
-A: This usually means the `.properties` files are missing from `mods/` root. See the [Troubleshooting](#-troubleshooting) section below.
+A: Either no mod folders exist under `mods/`, or the descriptors are missing. Each mod must have a `mod.properties` (new layout, inside `mods/<modname>/`) **or** a `mods/<modname>.properties` (legacy layout). See the [Troubleshooting](#-troubleshooting) section.
 
 **Q: Where do I get mods?**
-A: Download individual mod releases from [WurmServerModLauncher releases](https://github.com/ago1024/WurmServerModLauncher/releases). The framework doesn't include mods.
+A: Download individual mod releases from their authors. The framework doesn't bundle mods.
 
 **Q: Do I need to update my mods?**
 A: No, your mods work as-is. However, you can optionally modernize them to use new features:
@@ -467,57 +420,34 @@ This section covers the most common problems encountered when migrating mods to 
 
 **Symptoms:**
 - Mod folder exists but mod never appears in discovery logs
-- Server starts but specific mod is completely skipped
-- No "Found legacy subfolder mod: modname" message in logs
+- Server starts but a specific mod is completely skipped
 
 **Causes & Solutions:**
 
-1. **Case Sensitivity Mismatch** ⭐ Most Common
+1. **Case sensitivity mismatch** (Linux only — most common)
    ```
-   ❌ WRONG:
-   mods/
-   ├── mymod.properties          ← lowercase
-   └── MyMod/                    ← Capital M
-       └── mymod.jar
-
-   ✅ CORRECT:
-   mods/
-   ├── mymod.properties          ← lowercase
-   └── mymod/                    ← lowercase
-       └── mymod.jar
+   ❌ WRONG: mods/MyMod/mod.properties      ← capitalized folder
+   ✅ RIGHT: mods/mymod/mod.properties      ← lowercase folder
    ```
-   **Fix:** Rename directory to match properties file name exactly (case-sensitive).
+   **Fix:** lowercase the folder name. The `classname=` value inside the descriptor is unaffected.
 
-2. **Versioned JAR Name**
+2. **Versioned JAR name**
    ```
-   ❌ WRONG:
-   mods/
-   ├── armoury.properties
-   └── armoury/
-       └── armoury-4.1.0.jar     ← versioned name
-
-   ✅ CORRECT:
-   mods/
-   ├── armoury.properties
-   └── armoury/
-       └── armoury.jar           ← exact match
+   ❌ WRONG: mods/armoury/armoury-4.1.0.jar   ← version in filename
+   ✅ RIGHT: mods/armoury/armoury.jar         ← matches folder name
    ```
-   Legacy discovery expects exact name match: `modname/modname.jar`
+   The loader matches `<folder>/<folder>.jar`. **Fix:** rename the JAR, or set `classpath=armoury-4.1.0.jar` in `mod.properties`.
 
-   **Fix:** Rename JAR to match mod name without version suffix, or update classpath in .properties:
+3. **Descriptor missing or in the wrong place**
+   - **New layout:** `mods/<modname>/mod.properties`
+   - **Legacy layout:** `mods/<modname>.properties`
+   - Either works. **Both** is fine. **Neither** = no load.
+
+4. **Obsolete dependencies**
    ```properties
-   classpath=armoury/armoury.jar
+   ❌ depend.import=SinduskLibrary   # no longer exists
    ```
-
-3. **Obsolete Dependencies**
-   ```properties
-   ❌ WRONG:
-   depend.import=SinduskLibrary   # No longer exists
-
-   ✅ CORRECT:
-   # depend.import=SinduskLibrary  # Removed - now in wurmmodloader-core
-   ```
-   **Fix:** Remove dependencies on legacy libraries (SinduskLibrary, etc.) - functionality is now in core.
+   Many old library deps (SinduskLibrary, etc.) are folded into `wurmmodloader-core` — remove them.
 
 #### ClassCastException on Mod Load
 
@@ -527,64 +457,60 @@ SEVERE: class mod.sin.armoury.ArmouryModMain
 java.lang.ClassCastException: class mod.sin.armoury.ArmouryModMain
 ```
 
-**Cause:** Mod implements modern interface but modloader expects legacy interface (fixed in v0.9.0).
+**Cause:** Mod implements one interface but a stale loader cast expects the other.
 
-**Solution (v0.9.0+):**
-✅ Both interfaces now work! Use either:
-- **Modern (preferred):** `import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;`
-- **Legacy (backward compat):** `import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;`
+**Solution:**
+Both interfaces work — pick either:
+- **Modern (preferred for new mods):** `import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;`
+- **Legacy (for Ago-style mods):** `import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;`
 
-**For older versions:**
-Change mod to use legacy interface temporarily, then upgrade WurmModLoader.
+If you still see this on a current build, file an issue.
 
 #### Complete Mod Migration Checklist
 
 When migrating a mod from legacy modloader or fixing detection issues:
 
-- [ ] **Properties file exists** in `mods/` root (not just in subfolder)
-- [ ] **Directory name** matches properties file name (case-sensitive)
-- [ ] **JAR name** matches directory name without version suffix
-- [ ] **classpath** in properties points to correct JAR location
+- [ ] **Descriptor exists** — either `mods/<modname>/mod.properties` (new layout) or `mods/<modname>.properties` (legacy layout)
+- [ ] **Directory name** is lowercase and matches the JAR's basename
+- [ ] **JAR name** has no version suffix (`armoury.jar`, not `armoury-4.1.0.jar`)
+- [ ] **`classpath=` in the descriptor** points to the JAR (relative to the mod folder for new layout, relative to `mods/` for legacy)
 - [ ] **Remove obsolete dependencies** (SinduskLibrary, etc.)
-- [ ] **Interface import** uses either modern or legacy (both work in v0.9.0+)
-- [ ] **Test load:** Check for "Found legacy subfolder mod: modname" in logs
+- [ ] **Test load:** verify the `Loaded N mods` line shows your mod count
 
-**Example - Correct Structure:**
+**Example — new layout:**
 ```
 mods/
-├── armoury.properties           # lowercase, in root
-└── armoury/                     # lowercase directory
-    └── armoury.jar              # unversioned JAR
+└── armoury/
+    ├── mod.properties           # classname=..., classpath=armoury.jar
+    └── armoury.jar
 ```
 
-**Properties file:**
+**`mod.properties`:**
 ```properties
 classname=mod.sin.armoury.ArmouryModMain
-classpath=armoury/armoury.jar
-# depend.import=SinduskLibrary  # REMOVED - now in core
+classpath=armoury.jar
 ```
 
 ### "Loaded 0 mods" or Mods Not Loading
 
 **Symptom:** Server starts but no mods load. Log shows `Loaded 0 mods`.
 
-**Cause:** Missing `.properties` files in `mods/` directory root.
+**Cause:** Each mod's descriptor is missing or in the wrong place.
 
 **Solution:**
-1. Verify you have `.properties` files in `mods/` root (not just in subdirectories)
-2. Check your directory structure:
+1. Each mod folder under `mods/` must contain a `mod.properties`:
    ```bash
-   ls -la mods/
-   # Should show: modname.properties files
+   ls mods/<modname>/
+   # Should show: mod.properties  <modname>.jar  (and optionally mod.config)
    ```
-3. If missing, extract from mod release ZIPs or create manually:
+2. Legacy mods may instead use the older layout (`mods/<modname>.properties` + `mods/<modname>/<modname>.jar`) — both are supported.
+3. A minimal `mod.properties` looks like:
    ```properties
-   # mods/announcer.properties
-   classname=org.gotti.wurmunlimited.mods.announcer.AnnounceMod
-   classpath=announcer.jar
+   classname=com.example.mymod.MyMod
+   classpath=mymod.jar
    ```
 
-**Technical Details:** ModLoaderShared marks mods as "ondemand" when external `.properties` files are absent. The DependencyResolver then prunes these mods from the load list. This is intentional - `.properties` files signal explicit mod installation. See [MOD_LOADING_DISCOVERY_REPORT.md](MOD_LOADING_DISCOVERY_REPORT.md) for full details.
+**Technical Details:** ModLoaderShared marks mods as "ondemand" when no descriptor is found. The DependencyResolver then prunes them from the load list — `.properties`/`mod.properties` is the explicit "install me" signal.
 
 ### Class Not Found Errors
 
@@ -797,50 +723,17 @@ Event handlers run AFTER the framework sets everything up, so all game classes a
 
 ## 🧪 Testing Status
 
-**✅ RELEASE CANDIDATE - v0.9.0 (November 11, 2025)**
-
-This is the first stable release candidate with complete backward compatibility and dual interface support. Awaiting wider community testing with complex mod setups before 1.0.0 release.
-
-**Tested Configurations:**
-- ✅ Linux (Arch Linux, kernel 6.17.5)
-- ✅ Wurm Unlimited version 4596061
-- ✅ Java 8 (bundled JRE) and Java 17 (OpenJDK)
-- ✅ Native launcher (WurmServerLauncher-patched)
-- ✅ Pure Java launcher (wurmmodloader.sh)
-- ✅ Legacy mod property loading
+**Tested configurations:**
+- ✅ Linux (Arch, kernel 6.x)
+- ✅ Wurm Unlimited version 4596061+
+- ✅ Java 8 (bundled JRE) and Java 17+ (OpenJDK)
+- ✅ Native launcher (WurmServerLauncher-patched) and pure-Java launcher (`wurmmodloader.sh`)
 - ✅ Headless server operation
-- ✅ Modern interface implementation (com.garward.wurmmodloader.*)
-- ✅ Legacy interface implementation (org.gotti.wurmunlimited.*)
+- ✅ Modern (`com.garward.wurmmodloader.*`) and legacy (`org.gotti.wurmunlimited.*`) mod interfaces
 
-**Verified Working Mods (17+ total):**
-- **Legacy mods:** actiondemo, announcer, bagofholding, christmasmod, creatureagemod, cropmod, digtoground, harvesthelper, hitchingpost, httpserver, inbreedwarning, scriptrunner, serverfixes, serverpacks, servermap, spellmod
-- **Modern mods:** armoury (Sindusk), oversizedclub (modern interface)
-
-All legacy mods tested at version v0.47-73f7152 from original repository.
-
-**Known Issues:**
-- Windows testing needed
-- macOS testing needed
-- Some CI/CD features still in development
-
-**Milestone Achievements (November 11, 2025):**
-- ✅ **Unified Interface Hierarchy** - Legacy and modern interfaces work seamlessly
-- ✅ **Complete Backward Compatibility** - All legacy mods work without modification
-- ✅ **Modern Interface Support** - New mods can use com.garward.* as preferred method
-- ✅ **Production Testing** - Successfully migrated Armoury mod (complex combat system)
-- ✅ **Comprehensive Troubleshooting** - Common Issues section covers migration pitfalls
-
-**Recent Fixes (November 11, 2025):**
-- ✅ Unified interface hierarchy (legacy extends modern)
-- ✅ Fixed ClassCastException for modern interface implementations
-- ✅ Updated ModLoader/DelegatedLauncher/ServerHook to use modern interface
-- ✅ Comprehensive Common Issues documentation with migration checklist
-
-**Previous Fixes (November 4, 2025):**
-- ✅ Fixed PatchedLauncher package references
-- ✅ Fixed modlauncher.jar MANIFEST (Main-Class)
-- ✅ Documented .properties file requirements
-- ✅ Verified full compatibility layer functionality
+**Known gaps:**
+- Windows testing is light — reports welcome.
+- macOS untested.
 
 ---
 

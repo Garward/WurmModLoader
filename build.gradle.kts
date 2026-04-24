@@ -222,6 +222,14 @@ tasks.register<Zip>("dist") {
         into("mods/eventlister")
     }
 
+    // templarpatrol: waypoint-route driver — first consumer of AI events.
+    from(project(":mods:templarpatrol").buildDir.resolve("libs/templarpatrol.jar")) {
+        into("mods/templarpatrol")
+    }
+    from("mods/templarpatrol/src/dist") {
+        into("mods/templarpatrol")
+    }
+
     // livemap: enabled by default, drop-in web map.
     from(project(":mods:livemap").buildDir.resolve("libs/livemap.jar")) {
         into("mods/livemap")

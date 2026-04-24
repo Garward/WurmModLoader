@@ -343,8 +343,38 @@ public class ConsoleGMCommandRouter {
                 handleMoveAltar(args);
                 return true;
 
+            case "reloadmods":
+                handleReloadMods(args);
+                return true;
+
             default:
                 return false; // Not a custom command
+        }
+    }
+
+    /**
+     * Handle #reloadmods [modname] — re-read mod .properties/.config files
+     * and fire Configurable.configure() + Reloadable.onReload() on each mod.
+     * With no argument, reloads every registered mod. With an argument,
+     * reloads only the named mod (case-insensitive).
+     */
+    private static void handleReloadMods(String args) {
+        com.garward.wurmmodloader.modloader.ModRegistry registry =
+            com.garward.wurmmodloader.modloader.ModRegistry.getInstance();
+        String trimmed = args == null ? "" : args.trim();
+        if (trimmed.isEmpty()) {
+            gmPrint("[reloadmods] Reloading all registered mods...");
+            java.util.Map<String, String> results = registry.reloadAll(OUTPUT_TL.get());
+            for (java.util.Map.Entry<String, String> e : results.entrySet()) {
+                gmPrint(com.garward.wurmmodloader.modloader.ModRegistry.formatStatus(e.getKey(), e.getValue()));
+            }
+            for (String line : com.garward.wurmmodloader.modloader.ModRegistry.summary(results)) {
+                gmPrint(line);
+            }
+        } else {
+            gmPrint("[reloadmods] Reloading " + trimmed + "...");
+            String status = registry.reloadByName(trimmed, OUTPUT_TL.get());
+            gmPrint(com.garward.wurmmodloader.modloader.ModRegistry.formatStatus(trimmed, status));
         }
     }
 
@@ -383,6 +413,9 @@ public class ConsoleGMCommandRouter {
         System.out.println("    Schedule server shutdown");
         System.out.println("  #serverinfo");
         System.out.println("    Display server statistics");
+        System.out.println("  #reloadmods [modname]");
+        System.out.println("    Re-read .properties/.config files and fire reload hooks");
+        System.out.println("    on every mod (or just <modname> if given)");
         System.out.println();
         System.out.println("TIME/WEATHER:");
         System.out.println("  #time <hours>");

@@ -360,7 +360,9 @@ public class ModDiscovery {
             }
         }
 
-        return new ModInfo(properties, modName);
+        Path resolvedPropsFile = (propsFile != null && Files.exists(propsFile, LinkOption.NOFOLLOW_LINKS)) ? propsFile : null;
+        Path resolvedConfigFile = Files.exists(configFile, LinkOption.NOFOLLOW_LINKS) ? configFile : null;
+        return new ModInfo(properties, modName, resolvedPropsFile, resolvedConfigFile);
     }
 
     /**

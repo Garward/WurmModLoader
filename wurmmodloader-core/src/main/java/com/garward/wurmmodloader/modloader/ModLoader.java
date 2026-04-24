@@ -200,6 +200,7 @@ public class ModLoader implements Versioned {
 				});
 
 		logger.info(String.format("[ModLoader] Successfully loaded %d mods", mods.size()));
+		ModRegistry.getInstance().register(mods);
 		return mods;
 	}
 
@@ -289,7 +290,7 @@ public class ModLoader implements Versioned {
 		private final WurmServerMod mod;
 
 		public Entry(ModInfo modInfo, WurmServerMod mod) {
-			super(modInfo.getProperties(), modInfo.getName());
+			super(modInfo.getProperties(), modInfo.getName(), modInfo.getPropsFile(), modInfo.getConfigFile());
 			this.mod = mod;
 		}
 
