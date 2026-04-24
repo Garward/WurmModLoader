@@ -153,10 +153,19 @@ public final class PowerScalingConfig {
      * @throws IOException If config file cannot be read
      */
     private PowerScalingConfig(Path configPath) throws IOException {
-        // Load properties file
+        this(loadFromFile(configPath));
+    }
+
+    private static Properties loadFromFile(Path configPath) throws IOException {
+        Properties p = new Properties();
         try (FileInputStream fis = new FileInputStream(configPath.toFile())) {
-            properties.load(fis);
+            p.load(fis);
         }
+        return p;
+    }
+
+    private PowerScalingConfig(Properties source) {
+        properties.putAll(source);
 
         // Parse and cache all values
         // Player Power Scaling
@@ -296,6 +305,14 @@ public final class PowerScalingConfig {
             throw new IllegalStateException("PowerScalingConfig already initialized");
         }
         instance = new PowerScalingConfig(configPath);
+    }
+
+    /** Initialize from properties already loaded by the framework's Configurable callback. */
+    public static void initialize(Properties properties) {
+        if (instance != null) {
+            throw new IllegalStateException("PowerScalingConfig already initialized");
+        }
+        instance = new PowerScalingConfig(properties);
     }
 
     /**

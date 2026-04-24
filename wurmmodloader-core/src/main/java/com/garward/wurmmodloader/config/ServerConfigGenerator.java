@@ -57,7 +57,7 @@ public class ServerConfigGenerator {
         } finally {
             if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
             if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
-            if (conn != null) try { conn.close(); } catch (SQLException ignored) {}
+            // Do not close — DbConnector singleton, closing poisons it for every other caller.
         }
     }
 
@@ -236,7 +236,7 @@ public class ServerConfigGenerator {
         } finally {
             if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
             if (ps != null) try { ps.close(); } catch (SQLException ignored) {}
-            if (conn != null) try { conn.close(); } catch (SQLException ignored) {}
+            // Do not close — DbConnector singleton, closing poisons it for every other caller.
         }
     }
 

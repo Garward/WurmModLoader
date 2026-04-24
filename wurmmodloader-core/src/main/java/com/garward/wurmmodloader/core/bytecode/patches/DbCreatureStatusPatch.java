@@ -1,9 +1,12 @@
 package com.garward.wurmmodloader.core.bytecode.patches;
 
 import com.garward.wurmmodloader.modloader.internal.classhooks.HookManager;
+import javassist.CannotCompileException;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
+import javassist.expr.ExprEditor;
+import javassist.expr.NewExpr;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -115,6 +118,28 @@ public class DbCreatureStatusPatch {
                 "}";
 
             saveMethod.insertBefore(beforeSaveCode);
+
+            // Chain the hidden SQLException as cause of the IOException vanilla throws,
+            // and log the full context (SQL + params) at SEVERE so we actually see what's
+            // failing. CreatureStatusBatcher's cause-unwrap already surfaces the IOException,
+            // but vanilla strips cause chaining. This also logs directly because the
+            // vanilla logger.log(WARNING, ..., sqex) never reaches our file handler.
+            saveMethod.instrument(new ExprEditor() {
+                @Override
+                public void edit(NewExpr e) throws CannotCompileException {
+                    if ("java.io.IOException".equals(e.getClassName())) {
+                        e.replace(
+                            "{ " +
+                            "  java.util.logging.Logger.getLogger(\"DbCreatureStatusPatch\")" +
+                            "    .log(java.util.logging.Level.SEVERE, " +
+                            "         \"[DbCreatureStatus.save] SQL failure for wurmId=\" + id + " +
+                            "         \" inventoryId=\" + this.inventoryId + \" bodyId=\" + this.bodyId + " +
+                            "         \" statusExists=\" + this.isStatusExists(), sqex); " +
+                            "  $_ = new java.io.IOException($1, sqex); " +
+                            "}");
+                    }
+                }
+            });
 
             LOGGER.info("[BytecodePatch] Patched DbCreatureStatus.save() for save events");
 

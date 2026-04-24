@@ -104,7 +104,16 @@ public final class StarterTownImporter {
 
         importedStructureIds.clear();
 
-        try (Connection conn = DatabaseConnectionUtil.getZonesDbConnection()) {
+        // DbConnector returns a shared/pooled connection — do not close it.
+        Connection conn;
+        try {
+            conn = DatabaseConnectionUtil.getZonesDbConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE,
+                "[WorldSeed] Starter-town import failed — " + e.getMessage(), e);
+            return;
+        }
+        try {
             boolean prevAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
             try {
@@ -564,7 +573,17 @@ public final class StarterTownImporter {
 
     private static int writeItemsInItemDb(JsonArray items, int deltaX, int deltaY, int wsy) {
         if (items.size() == 0) return 0;
-        try (Connection itemConn = DatabaseConnectionUtil.getItemDbConnection()) {
+        // DbConnector returns a shared/pooled connection — do not close it.
+        Connection itemConn;
+        try {
+            itemConn = DatabaseConnectionUtil.getItemDbConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING,
+                "[WorldSeed] Could not open wurmitems.db connection — item import skipped: "
+                    + e.getMessage(), e);
+            return 0;
+        }
+        try {
             boolean prevAuto = itemConn.getAutoCommit();
             itemConn.setAutoCommit(false);
             try {
@@ -603,8 +622,16 @@ public final class StarterTownImporter {
         }
         final String sql = "UPDATE STRUCTURES SET VILLAGE = ? WHERE WURMID IN (" + placeholders + ")";
 
-        try (Connection conn = DatabaseConnectionUtil.getZonesDbConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        // DbConnector returns a shared/pooled connection — do not close it.
+        Connection conn;
+        try {
+            conn = DatabaseConnectionUtil.getZonesDbConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING,
+                "[WorldSeed] Failed to backfill STRUCTURES.VILLAGE — " + e.getMessage(), e);
+            return;
+        }
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, villageId);
             for (int i = 0; i < importedStructureIds.size(); i++) {
                 ps.setLong(2 + i, importedStructureIds.get(i));

@@ -56,7 +56,7 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
     // Action IDs
     public static int ACTION_VIEW_POWER_STATS;
 
-    private Path configPath;
+    private Properties pendingProps;
 
     private PowerScalingConfig config;
     private PowerScalingManager manager;
@@ -71,13 +71,8 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
      */
     @Override
     public void configure(Properties properties) {
-        logger.info("PowerScalingMod: Loading configuration...");
-
-        // Get config file path (powerscaling.config in mod directory)
-        String modDir = System.getProperty("user.dir");
-        configPath = Paths.get(modDir, "mods", "powerscaling.config");
-
-        logger.info("PowerScalingMod: Config path: " + configPath);
+        logger.info("PowerScalingMod: Stashing framework-provided properties for preInit");
+        pendingProps = properties;
     }
 
     /**
@@ -87,17 +82,10 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
     public void preInit() {
         logger.info("PowerScalingMod: preInit - Loading configuration and registering actions...");
 
-        try {
-            // Initialize config ONLY in preInit - everything else happens in onServerStarted
-            PowerScalingConfig.initialize(configPath);
-            config = PowerScalingConfig.getInstance();
-
-            logger.info("PowerScalingMod: Configuration loaded successfully");
-
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "Failed to load PowerScaling configuration", e);
-            throw new RuntimeException("PowerScaling initialization failed", e);
-        }
+        // Initialize config ONLY in preInit - everything else happens in onServerStarted
+        PowerScalingConfig.initialize(pendingProps);
+        config = PowerScalingConfig.getInstance();
+        logger.info("PowerScalingMod: Configuration loaded successfully");
     }
 
     // ========================================================================

@@ -341,24 +341,43 @@ public class PostgresBackendMod implements WurmServerMod, Configurable {
     private static final Path EXPORTED_MARKER = Paths.get("mods/postgresbackend/.exported");
 
     private void maybeExportToSqlite() {
-        if (CONFIG.exportToSqlite == null || CONFIG.exportToSqlite.isEmpty()) {
+        // Two paths: explicit one-shot snapshot (exportToSqlite=<dir>, marker-gated)
+        // OR auto-sync to the live world's sqlite/ on every clean shutdown so the
+        // mod can be cleanly disabled and WU boots off the up-to-date SQLite.
+        boolean explicit = CONFIG.exportToSqlite != null && !CONFIG.exportToSqlite.isEmpty();
+        Path targetDir;
+        boolean liveWorldSync;
+        if (explicit) {
+            targetDir = Paths.get(CONFIG.exportToSqlite);
+            liveWorldSync = false;
+        } else if (CONFIG.autoExportToWorldSqlite) {
+            String world = System.getProperty("wurmmodloader.launchWorldFolder", "").trim();
+            if (world.isEmpty()) {
+                logger.fine("[PostgresBackend] autoExportToWorldSqlite=true but no launch world set — skipping.");
+                return;
+            }
+            targetDir = Paths.get(System.getProperty("user.dir"), world, "sqlite");
+            liveWorldSync = true;
+        } else {
             return;
         }
-        if (Files.exists(EXPORTED_MARKER)) {
+
+        if (!liveWorldSync && Files.exists(EXPORTED_MARKER)) {
             logger.info("[PostgresBackend] exportToSqlite set but " + EXPORTED_MARKER
                 + " exists — skipping export.");
             return;
         }
-        Path targetDir = Paths.get(CONFIG.exportToSqlite);
         logger.info("[PostgresBackend] Exporting Postgres → SQLite into " + targetDir
-            + " (revert snapshot)");
+            + (liveWorldSync ? " (live-world sync for clean fallback)" : " (revert snapshot)"));
         try {
             int tables = SqliteExporter.exportAll(CONFIG, targetDir);
             logger.info("[PostgresBackend] Export complete — " + tables + " tables written.");
-            Files.createDirectories(EXPORTED_MARKER.getParent());
-            Files.write(EXPORTED_MARKER,
-                ("exported to " + targetDir.toAbsolutePath() + " at " + java.time.Instant.now() + "\n").getBytes());
-            logger.info("[PostgresBackend] Wrote marker " + EXPORTED_MARKER + " — remove to re-run.");
+            if (!liveWorldSync) {
+                Files.createDirectories(EXPORTED_MARKER.getParent());
+                Files.write(EXPORTED_MARKER,
+                    ("exported to " + targetDir.toAbsolutePath() + " at " + java.time.Instant.now() + "\n").getBytes());
+                logger.info("[PostgresBackend] Wrote marker " + EXPORTED_MARKER + " — remove to re-run.");
+            }
         } catch (Exception e) {
             logger.log(Level.SEVERE, "[PostgresBackend] SQLite export failed", e);
             // Don't rethrow — we're on the shutdown path and the user still

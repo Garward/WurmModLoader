@@ -205,17 +205,15 @@ public class DatabaseConnectionUtil {
     }
 
     /**
-     * Close a database connection safely.
+     * No-op. {@link #getConnectionViaDbConnector} returns Wurm's shared singleton
+     * per-db connection (via {@code DbConnector.getXxxDbCon()}). Closing it
+     * poisons every subsequent caller with {@code SQLException: database
+     * connection closed}. This method is kept for API compatibility with
+     * existing call sites — the singleton is owned and managed by Wurm itself.
      *
-     * @param conn Connection to close (can be null)
+     * @param conn ignored
      */
     public static void closeConnection(Connection conn) {
-        if (conn != null) {
-            try {
-                conn.close();
-            } catch (SQLException e) {
-                logger.fine("Failed to close connection: " + e.getMessage());
-            }
-        }
+        // intentionally empty — see above.
     }
 }

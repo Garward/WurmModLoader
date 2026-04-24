@@ -18,5 +18,6 @@ dependencies {
 tasks {
     jar {
         archiveBaseName.set("eventlister")
+        archiveVersion.set("")
     }
 }

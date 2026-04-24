@@ -19,15 +19,23 @@ import java.util.logging.Logger;
 import com.garward.wurmmodloader.modloader.internal.ModInfo;
 
 /**
- * Modern mod discovery system that supports multiple mod layout patterns.
+ * Mod discovery system that supports multiple mod layout patterns.
  *
- * <p>Supported layouts:
+ * <p>Supported layouts (tried in order; first match wins):
  * <ul>
- *   <li>Legacy subfolder: {@code mods/modname/modname.jar} + {@code mods/modname.properties}</li>
- *   <li>Flat with properties: {@code mods/modname.jar} + {@code mods/modname.properties}</li>
- *   <li>Modern flat: {@code mods/modname.jar} (metadata from JAR manifest)</li>
- *   <li>Versioned flat: {@code mods/modname-1.0.0.jar} (auto-detected)</li>
+ *   <li><b>Canonical self-contained (preferred):</b>
+ *       {@code mods/<name>/<name>.jar} + {@code mods/<name>/mod.properties} —
+ *       everything the mod ships (jar, manifest, config, resources) lives inside
+ *       its own folder. Config loaded from {@code mods/<name>/mod.config} if present.</li>
+ *   <li>Legacy subfolder: {@code mods/<name>/<name>.jar} + {@code mods/<name>.properties}</li>
+ *   <li>Flat with properties: {@code mods/<name>.jar} + {@code mods/<name>.properties}</li>
+ *   <li>Modern flat: {@code mods/<name>.jar} (metadata embedded in JAR)</li>
+ *   <li>Subfolder without properties: {@code mods/<name>/<name>.jar} only</li>
  * </ul>
+ *
+ * <p>All discovery phases consult {@link EnabledRegistry} ({@code mods/enabled.json}).
+ * A mod with an explicit {@code false} entry is skipped regardless of which layout
+ * it uses.</p>
  *
  * @since 1.0.0
  */
@@ -49,26 +57,73 @@ public class ModDiscovery {
 
         logger.info("[ModDiscovery] Scanning for mods in: " + modDir);
 
-        // Phase 1: Legacy layout - properties file + subfolder/jar
-        discoveredMods.addAll(discoverLegacySubfolderMods(modDir, handledMods));
+        EnabledRegistry enabled = EnabledRegistry.load(modDir);
 
-        // Phase 2: Flat layout - properties file + jar in same directory
-        discoveredMods.addAll(discoverFlatPropertiesMods(modDir, handledMods));
+        // Phase 0: Canonical - mods/<name>/<name>.jar + mods/<name>/mod.properties (self-contained)
+        discoveredMods.addAll(discoverCanonicalSubfolderMods(modDir, handledMods, enabled));
 
-        // Phase 3: Modern flat layout - JAR with embedded metadata
-        discoveredMods.addAll(discoverModernFlatMods(modDir, handledMods));
+        // Phase 1: Legacy subfolder - mods/<name>/<name>.jar + mods/<name>.properties
+        discoveredMods.addAll(discoverLegacySubfolderMods(modDir, handledMods, enabled));
+
+        // Phase 2: Legacy flat - mods/<name>.jar + mods/<name>.properties
+        discoveredMods.addAll(discoverFlatPropertiesMods(modDir, handledMods, enabled));
+
+        // Phase 3: Modern flat - mods/<name>.jar with embedded metadata
+        discoveredMods.addAll(discoverModernFlatMods(modDir, handledMods, enabled));
 
         // Phase 4: Subfolder without properties (legacy fallback)
-        discoveredMods.addAll(discoverSubfolderWithoutProperties(modDir, handledMods));
+        discoveredMods.addAll(discoverSubfolderWithoutProperties(modDir, handledMods, enabled));
 
         logger.info("[ModDiscovery] Discovered " + discoveredMods.size() + " mods");
         return discoveredMods;
     }
 
     /**
+     * Phase 0 (canonical): self-contained subfolder — {@code mods/<name>/<name>.jar}
+     * paired with {@code mods/<name>/mod.properties}. Config template (if any) lands
+     * at {@code mods/<name>/mod.config}.
+     */
+    private List<ModInfo> discoverCanonicalSubfolderMods(Path modDir, Set<String> handledMods,
+                                                         EnabledRegistry enabled) throws IOException {
+        List<ModInfo> mods = new ArrayList<>();
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(modDir,
+                path -> Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS))) {
+            for (Path subDir : stream) {
+                String modName = subDir.getFileName().toString();
+
+                if (handledMods.contains(modName)) {
+                    continue;
+                }
+
+                Path jarFile = subDir.resolve(modName + ".jar");
+                Path propsFile = subDir.resolve("mod.properties");
+
+                if (!Files.exists(jarFile) || !Files.exists(propsFile)) {
+                    continue;
+                }
+
+                if (enabled.isExplicitlyDisabled(modName)) {
+                    logger.info("[ModDiscovery] Skipping disabled mod (enabled.json): " + modName);
+                    handledMods.add(modName);
+                    continue;
+                }
+
+                logger.info("[ModDiscovery] Found canonical mod: " + modName);
+                ModInfo modInfo = loadModFromInfo(modName, propsFile, jarFile, null, subDir);
+                mods.add(modInfo);
+                handledMods.add(modName);
+            }
+        }
+
+        return mods;
+    }
+
+    /**
      * Phase 1: Legacy Ago layout - {@code modname.properties} + {@code modname/modname.jar}
      */
-    private List<ModInfo> discoverLegacySubfolderMods(Path modDir, Set<String> handledMods) throws IOException {
+    private List<ModInfo> discoverLegacySubfolderMods(Path modDir, Set<String> handledMods,
+                                                      EnabledRegistry enabled) throws IOException {
         List<ModInfo> mods = new ArrayList<>();
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(modDir, "*.properties")) {
@@ -83,6 +138,11 @@ public class ModDiscovery {
                 Path subfolderJar = modDir.resolve(modName).resolve(modName + ".jar");
 
                 if (Files.exists(subfolderJar)) {
+                    if (enabled.isExplicitlyDisabled(modName)) {
+                        logger.info("[ModDiscovery] Skipping disabled mod (enabled.json): " + modName);
+                        handledMods.add(modName);
+                        continue;
+                    }
                     logger.info("[ModDiscovery] Found legacy subfolder mod: " + modName);
                     ModInfo modInfo = loadModFromInfo(modName, propsFile, subfolderJar);
                     mods.add(modInfo);
@@ -97,7 +157,8 @@ public class ModDiscovery {
     /**
      * Phase 2: Flat layout with properties - {@code modname.properties} + {@code modname.jar}
      */
-    private List<ModInfo> discoverFlatPropertiesMods(Path modDir, Set<String> handledMods) throws IOException {
+    private List<ModInfo> discoverFlatPropertiesMods(Path modDir, Set<String> handledMods,
+                                                     EnabledRegistry enabled) throws IOException {
         List<ModInfo> mods = new ArrayList<>();
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(modDir, "*.properties")) {
@@ -112,6 +173,11 @@ public class ModDiscovery {
                 Path flatJar = modDir.resolve(modName + ".jar");
 
                 if (Files.exists(flatJar)) {
+                    if (enabled.isExplicitlyDisabled(modName)) {
+                        logger.info("[ModDiscovery] Skipping disabled mod (enabled.json): " + modName);
+                        handledMods.add(modName);
+                        continue;
+                    }
                     logger.info("[ModDiscovery] Found flat mod with properties: " + modName);
                     ModInfo modInfo = loadModFromInfo(modName, propsFile, flatJar);
                     mods.add(modInfo);
@@ -126,7 +192,8 @@ public class ModDiscovery {
     /**
      * Phase 3: Modern flat layout - {@code modname.jar} or {@code modname-version.jar} with embedded metadata
      */
-    private List<ModInfo> discoverModernFlatMods(Path modDir, Set<String> handledMods) throws IOException {
+    private List<ModInfo> discoverModernFlatMods(Path modDir, Set<String> handledMods,
+                                                 EnabledRegistry enabled) throws IOException {
         List<ModInfo> mods = new ArrayList<>();
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(modDir, "*.jar")) {
@@ -142,6 +209,11 @@ public class ModDiscovery {
                 Properties embeddedProps = loadPropertiesFromJar(modName, jarFile);
 
                 if (embeddedProps.containsKey("classname")) {
+                    if (enabled.isExplicitlyDisabled(modName)) {
+                        logger.info("[ModDiscovery] Skipping disabled mod (enabled.json): " + modName);
+                        handledMods.add(modName);
+                        continue;
+                    }
                     logger.info("[ModDiscovery] Found modern flat mod: " + modName + " (from " + fileName + ")");
                     ModInfo modInfo = loadModFromInfo(modName, null, jarFile, embeddedProps);
                     mods.add(modInfo);
@@ -158,7 +230,8 @@ public class ModDiscovery {
     /**
      * Phase 4: Subfolder without properties (legacy on-demand mods)
      */
-    private List<ModInfo> discoverSubfolderWithoutProperties(Path modDir, Set<String> handledMods) throws IOException {
+    private List<ModInfo> discoverSubfolderWithoutProperties(Path modDir, Set<String> handledMods,
+                                                             EnabledRegistry enabled) throws IOException {
         List<ModInfo> mods = new ArrayList<>();
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(modDir,
@@ -174,6 +247,11 @@ public class ModDiscovery {
                 Path jarFile = subDir.resolve(modName + ".jar");
 
                 if (Files.exists(jarFile)) {
+                    if (enabled.isExplicitlyDisabled(modName)) {
+                        logger.info("[ModDiscovery] Skipping disabled mod (enabled.json): " + modName);
+                        handledMods.add(modName);
+                        continue;
+                    }
                     logger.info("[ModDiscovery] Found subfolder mod without properties: " + modName);
                     ModInfo modInfo = loadModFromInfo(modName, null, jarFile);
                     mods.add(modInfo);
@@ -205,17 +283,30 @@ public class ModDiscovery {
     }
 
     /**
-     * Loads mod metadata from properties file, JAR, and config file.
+     * Loads mod metadata from properties file, JAR, and config file (legacy config path).
      */
     private ModInfo loadModFromInfo(String modName, Path propsFile, Path jarFile) throws IOException {
-        return loadModFromInfo(modName, propsFile, jarFile, null);
+        return loadModFromInfo(modName, propsFile, jarFile, null, null);
     }
 
     /**
-     * Loads mod metadata with optional pre-loaded embedded properties.
+     * Loads mod metadata with optional pre-loaded embedded properties (legacy config path).
      */
     private ModInfo loadModFromInfo(String modName, Path propsFile, Path jarFile, Properties embeddedProps) throws IOException {
-        Path configFile = Paths.get("mods", modName + ".config");
+        return loadModFromInfo(modName, propsFile, jarFile, embeddedProps, null);
+    }
+
+    /**
+     * Loads mod metadata.
+     *
+     * @param configDir canonical-layout subfolder; if non-null, config is read from
+     *                  {@code <configDir>/mod.config}, else from legacy {@code mods/<name>.config}
+     */
+    private ModInfo loadModFromInfo(String modName, Path propsFile, Path jarFile,
+                                    Properties embeddedProps, Path configDir) throws IOException {
+        Path configFile = (configDir != null)
+                ? configDir.resolve("mod.config")
+                : Paths.get("mods", modName + ".config");
         Path modsDir = Paths.get("mods");
         Properties properties = new Properties();
 

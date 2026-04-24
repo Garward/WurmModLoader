@@ -107,9 +107,127 @@ public final class SqliteExporter {
                 result.tables++;
                 result.rows += rows;
             }
+            writeSchemaVersion(sq, pgSchema);
             sq.commit();
         }
         return result;
+    }
+
+    /**
+     * Synthesize Flyway 3.x SCHEMA_VERSION so that vanilla SQLite-mode Wurm
+     * sees all migrations as already applied and skips them. Without this, the
+     * exported schema is at the latest version but Flyway's bookkeeping is empty,
+     * so it tries to re-run v6/v9/etc against tables that already have those
+     * columns and crashes. Scans {@code dist/migrations/<schema>/v*.sql} and
+     * computes Flyway's CRC32 (line-by-line, UTF-8, BOM-stripped) for each.
+     */
+    private static void writeSchemaVersion(Connection sq, String pgSchema) throws SQLException {
+        try (Statement st = sq.createStatement()) {
+            st.execute("CREATE TABLE \"SCHEMA_VERSION\" ("
+                + "\"installed_rank\" INT NOT NULL PRIMARY KEY, "
+                + "\"version\" VARCHAR(50), "
+                + "\"description\" VARCHAR(200) NOT NULL, "
+                + "\"type\" VARCHAR(20) NOT NULL, "
+                + "\"script\" VARCHAR(1000) NOT NULL, "
+                + "\"checksum\" INT, "
+                + "\"installed_by\" VARCHAR(100) NOT NULL, "
+                + "\"installed_on\" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f','now')), "
+                + "\"execution_time\" INT NOT NULL, "
+                + "\"success\" BOOLEAN NOT NULL)");
+            st.execute("CREATE INDEX \"SCHEMA_VERSION_s_idx\" ON \"SCHEMA_VERSION\" (\"success\")");
+        }
+
+        // Strip 'wurm' prefix → migrations subdir name (wurmcreatures → creatures).
+        String stem = pgSchema.startsWith("wurm") ? pgSchema.substring(4) : pgSchema;
+        Path migDir = java.nio.file.Paths.get("dist", "migrations", stem);
+
+        String insert = "INSERT INTO \"SCHEMA_VERSION\" "
+            + "(installed_rank, version, description, type, script, checksum, "
+            + "installed_by, execution_time, success) VALUES (?,?,?,?,?,?,?,?,?)";
+        try (PreparedStatement ps = sq.prepareStatement(insert)) {
+            int rank = 1;
+            // Baseline row, always present.
+            ps.setInt(1, rank++);
+            ps.setString(2, "1");
+            ps.setString(3, "<< Flyway Baseline >>");
+            ps.setString(4, "BASELINE");
+            ps.setString(5, "<< Flyway Baseline >>");
+            ps.setNull(6, Types.INTEGER);
+            ps.setString(7, "");
+            ps.setInt(8, 0);
+            ps.setInt(9, 1);
+            ps.executeUpdate();
+
+            if (!Files.isDirectory(migDir)) return;
+            List<Path> sqlFiles = new ArrayList<>();
+            try (java.util.stream.Stream<Path> s = Files.list(migDir)) {
+                s.filter(p -> {
+                    String n = p.getFileName().toString();
+                    return n.startsWith("v") && n.endsWith(".sql");
+                }).forEach(sqlFiles::add);
+            } catch (java.io.IOException io) {
+                throw new SQLException("listing migrations dir " + migDir, io);
+            }
+            sqlFiles.sort((a, b) -> Integer.compare(parseVersion(a), parseVersion(b)));
+            for (Path f : sqlFiles) {
+                String fname = f.getFileName().toString();
+                int version = parseVersion(f);
+                String desc = parseDescription(fname);
+                int checksum;
+                try {
+                    checksum = flywayChecksum(f);
+                } catch (java.io.IOException io) {
+                    throw new SQLException("checksumming " + f, io);
+                }
+                ps.setInt(1, rank++);
+                ps.setString(2, Integer.toString(version));
+                ps.setString(3, desc);
+                ps.setString(4, "SQL");
+                ps.setString(5, fname);
+                ps.setInt(6, checksum);
+                ps.setString(7, "");
+                ps.setInt(8, 0);
+                ps.setInt(9, 1);
+                ps.executeUpdate();
+            }
+        }
+    }
+
+    /** Parses leading version number from {@code vN__description.sql}. Returns 0 if malformed. */
+    private static int parseVersion(Path f) {
+        String n = f.getFileName().toString();
+        int us = n.indexOf("__");
+        if (us < 2 || n.charAt(0) != 'v') return 0;
+        try { return Integer.parseInt(n.substring(1, us)); }
+        catch (NumberFormatException e) { return 0; }
+    }
+
+    /** {@code v3__cooking_update.sql → "cooking update"}. */
+    private static String parseDescription(String fname) {
+        int us = fname.indexOf("__");
+        if (us < 0) return fname;
+        String tail = fname.substring(us + 2);
+        if (tail.endsWith(".sql")) tail = tail.substring(0, tail.length() - 4);
+        return tail.replace('_', ' ');
+    }
+
+    /**
+     * Flyway 3.x FileSystemResource.getChecksum: CRC32 over the UTF-8 bytes of
+     * each line (newlines stripped), BOM filtered from the first line.
+     */
+    private static int flywayChecksum(Path file) throws java.io.IOException {
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        try (java.io.BufferedReader br = new java.io.BufferedReader(
+                new java.io.InputStreamReader(Files.newInputStream(file), "UTF-8"))) {
+            String line = br.readLine();
+            if (line != null) {
+                if (!line.isEmpty() && line.charAt(0) == '﻿') line = line.substring(1);
+                do {
+                    crc.update(line.getBytes("UTF-8"));
+                } while ((line = br.readLine()) != null);
+            }
+        }
+        return (int) crc.getValue();
     }
 
     private static List<String> listTables(Connection pg, String pgSchema) throws SQLException {
@@ -134,7 +252,7 @@ public final class SqliteExporter {
         spec.name = tableName;
 
         String colQ =
-            "SELECT column_name, data_type, is_nullable " +
+            "SELECT column_name, data_type, is_nullable, column_default " +
             "FROM information_schema.columns " +
             "WHERE table_schema = ? AND table_name = ? " +
             "ORDER BY ordinal_position";
@@ -148,6 +266,7 @@ public final class SqliteExporter {
                     c.pgType = rs.getString("data_type");
                     c.notNull = "NO".equalsIgnoreCase(rs.getString("is_nullable"));
                     c.sqliteType = pgToSqliteType(c.pgType);
+                    c.defaultValue = pgDefaultToSqlite(rs.getString("column_default"), c.pgType);
                     spec.columns.add(c);
                 }
             }
@@ -198,6 +317,7 @@ public final class SqliteExporter {
             if (!first) sql.append(",\n");
             sql.append("  ").append(quote(c.name)).append(' ').append(c.sqliteType);
             if (c.notNull) sql.append(" NOT NULL");
+            if (c.defaultValue != null) sql.append(" DEFAULT ").append(c.defaultValue);
             first = false;
         }
         if (!spec.primaryKey.isEmpty()) {
@@ -308,6 +428,58 @@ public final class SqliteExporter {
         return "TEXT";
     }
 
+    /**
+     * Translate a Postgres {@code column_default} expression to a literal usable
+     * inside a SQLite {@code DEFAULT} clause. Returns {@code null} when the
+     * expression should be omitted (NULL, sequences, anything we can't safely
+     * round-trip — SQLite will fall back to NULL or NOT NULL enforcement).
+     *
+     * <p>Handles the shapes Postgres emits via information_schema.column_default:
+     * bare numerics ({@code 0}, {@code -10}, {@code (-10)}); typed casts
+     * ({@code '0'::bigint}, {@code 'foo'::character varying}); booleans
+     * ({@code true}/{@code false} → {@code 1}/{@code 0}); and NULL casts.
+     * Sequences ({@code nextval(...)}) and other function calls are dropped.</p>
+     */
+    private static String pgDefaultToSqlite(String pgDefault, String pgType) {
+        if (pgDefault == null) return null;
+        String s = pgDefault.trim();
+        if (s.isEmpty()) return null;
+
+        // Strip a trailing ::<type> cast (may itself be quoted/multi-word like 'character varying').
+        int castIdx = s.lastIndexOf("::");
+        if (castIdx > 0) s = s.substring(0, castIdx).trim();
+
+        // Drop redundant outer parens (Postgres wraps negatives: (-10)).
+        while (s.length() >= 2 && s.charAt(0) == '(' && s.charAt(s.length() - 1) == ')') {
+            s = s.substring(1, s.length() - 1).trim();
+        }
+
+        if (s.isEmpty()) return null;
+        if (s.equalsIgnoreCase("NULL")) return null;
+
+        // Sequences / function calls — can't represent these in a static SQLite default.
+        String lower = s.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("nextval(")) return null;
+
+        if (lower.equals("true"))  return "1";
+        if (lower.equals("false")) return "0";
+
+        // Already a quoted string literal — keep as-is. Doubled '' inside is the
+        // SQL standard escape and works in SQLite too.
+        if (s.length() >= 2 && s.charAt(0) == '\'' && s.charAt(s.length() - 1) == '\'') {
+            return s;
+        }
+
+        // Numeric literal (optional leading sign, digits, optional decimal/exponent).
+        if (s.matches("[+-]?\\d+(\\.\\d+)?([eE][+-]?\\d+)?")) {
+            return s;
+        }
+
+        // Anything else (e.g. a function call, expression we don't recognise) — skip
+        // rather than risk emitting invalid SQLite syntax. NOT NULL will still hold.
+        return null;
+    }
+
     private static String quote(String ident) { return "\"" + ident.replace("\"", "\"\"") + "\""; }
 
     private static void ensureSqliteDriver() {
@@ -334,6 +506,7 @@ public final class SqliteExporter {
         String pgType;
         String sqliteType;
         boolean notNull;
+        String defaultValue;  // already translated to a SQLite-safe literal, or null
     }
 
     private static final class IndexSpec {

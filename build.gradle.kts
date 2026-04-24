@@ -40,7 +40,7 @@ tasks.named<Jar>("jar") {
 
 allprojects {
     group = "com.garward.wurmmodloader"
-    version = "0.10.0"
+    version = "0.10.1"
 
     repositories {
         mavenCentral()
@@ -210,12 +210,24 @@ tasks.register<Zip>("dist") {
     }
 
     // ---- Bundled near-finished mods ----
+    // Canonical layout: each mod lives entirely under mods/<name>/
+    // (jar + mod.properties + mod.config + any resources together).
+    // Master toggle: mods/enabled.json — see distribution/mods/README.
+
+    // eventlister: diagnostic; lists every framework event on boot.
+    from(project(":mods:eventlister").buildDir.resolve("libs/eventlister.jar")) {
+        into("mods/eventlister")
+    }
+    from("mods/eventlister/src/dist") {
+        into("mods/eventlister")
+    }
+
     // livemap: enabled by default, drop-in web map.
     from(project(":mods:livemap").buildDir.resolve("libs/livemap.jar")) {
         into("mods/livemap")
     }
     from("mods/livemap/src/dist") {
-        into("mods")
+        into("mods/livemap")
     }
 
     // gmtools: enabled by default, in-game admin toolkit.
@@ -223,12 +235,11 @@ tasks.register<Zip>("dist") {
         into("mods/gmtools")
     }
     from("mods/gmtools/src/dist") {
-        into("mods")
+        into("mods/gmtools")
     }
 
     // postgresbackend: DISABLED by default — requires Postgres setup.
-    // Ship the jar + pgjdbc driver + scripts but rename the properties to
-    // .disabled so the modloader skips it. Server owners rename to enable.
+    // Ship the jar + pgjdbc driver + scripts. mods/enabled.json gates it off.
     from(project(":mods:postgresbackend").buildDir.resolve("libs/postgresbackend.jar")) {
         into("mods/postgresbackend")
     }
@@ -237,13 +248,9 @@ tasks.register<Zip>("dist") {
         into("mods/postgresbackend")
     }
     from("mods/postgresbackend/src/dist") {
-        into("mods")
-        exclude("**/.venv/**", "postgresbackend.properties")
+        into("mods/postgresbackend")
+        exclude("**/.venv/**")
         filesMatching("**/*.sh") { mode = Integer.parseInt("755", 8) }
-    }
-    from("mods/postgresbackend/src/dist/postgresbackend.properties") {
-        into("mods")
-        rename { "postgresbackend.properties.disabled" }
     }
 }
 

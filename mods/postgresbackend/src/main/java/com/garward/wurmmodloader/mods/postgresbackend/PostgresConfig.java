@@ -56,6 +56,13 @@ public final class PostgresConfig {
     // files back into the world's sqlite/ directory.
     public String exportToSqlite;
 
+    // When true (default), every clean shutdown re-exports all 9 schemas back into
+    // the live world's <world>/sqlite/ directory, so disabling the postgres mod
+    // later boots cleanly off SQLite with the latest state. Ignored when
+    // exportToSqlite is set explicitly. Set to false to skip (large worlds where
+    // shutdown export latency matters more than failover).
+    public boolean autoExportToWorldSqlite;
+
     // --- auto-backup --------------------------------------------------------
     // Opt-in scheduled pg_dump snapshots. See postgresbackend.config for the
     // full docstring. All fields are ignored when autoBackupEnabled=false.
@@ -87,6 +94,7 @@ public final class PostgresConfig {
         c.embeddedPostgresVersion = p.getProperty("embeddedPostgresVersion", "16.2.0");
         c.migrateFromSqlite = p.getProperty("migrateFromSqlite", "").trim();
         c.exportToSqlite    = p.getProperty("exportToSqlite", "").trim();
+        c.autoExportToWorldSqlite = Boolean.parseBoolean(p.getProperty("autoExportToWorldSqlite", "true"));
 
         c.autoBackupEnabled        = Boolean.parseBoolean(p.getProperty("autoBackupEnabled", "false"));
         c.autoBackupDir            = p.getProperty("autoBackupDir", "mods/postgresbackend/backups").trim();

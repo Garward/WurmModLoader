@@ -49,7 +49,10 @@ public final class VillagesGate {
     public static Result evaluate(int worldTileSizeX, int worldTileSizeY) {
         int total = 0;
         int inBounds = 0;
-        try (Connection c = DatabaseConnectionUtil.getZonesDbConnection()) {
+        try {
+            // DbConnector returns a shared/pooled connection — do NOT close it,
+            // or subsequent callers hit "database connection closed".
+            Connection c = DatabaseConnectionUtil.getZonesDbConnection();
             total = countPermanent(c);
             inBounds = countInBoundsPermanent(c, worldTileSizeX, worldTileSizeY);
         } catch (SQLException e) {
@@ -86,8 +89,17 @@ public final class VillagesGate {
      * @return token coords for the village, or {@code null} if none exists.
      */
     public static PrimaryVillage findPrimaryInBoundsVillage(int worldTileSizeX, int worldTileSizeY) {
-        try (Connection c = DatabaseConnectionUtil.getZonesDbConnection();
-             PreparedStatement ps = c.prepareStatement(
+        // DbConnector returns a shared/pooled connection — close only our own
+        // PreparedStatement/ResultSet, never the connection itself.
+        Connection c;
+        try {
+            c = DatabaseConnectionUtil.getZonesDbConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING,
+                "[WorldSeed] Could not query VILLAGES for primary-village lookup — " + e.getMessage(), e);
+            return null;
+        }
+        try (PreparedStatement ps = c.prepareStatement(
                 "SELECT ID, NAME, STARTX, ENDX, STARTY, ENDY FROM VILLAGES "
                 + "WHERE PERMANENT=1 AND (DISBANDED IS NULL OR DISBANDED=0) "
                 + "AND STARTX >= 0 AND STARTX < ? AND STARTY >= 0 AND STARTY < ? "

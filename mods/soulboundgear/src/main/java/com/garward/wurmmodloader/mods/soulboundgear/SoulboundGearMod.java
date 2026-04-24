@@ -62,21 +62,8 @@ public class SoulboundGearMod implements WurmServerMod, PreInitable, Configurabl
     @Override
     public void configure(Properties properties) {
         logger.info("SoulboundGearMod: Loading configuration...");
-
-        try {
-            // Determine mod directory (where config file is located)
-            // Assumes properties file is in mods/ directory
-            Path modDir = Paths.get("mods");
-            Path configPath = modDir.resolve("soulboundgear.config");
-
-            // Initialize config
-            SoulboundConfig.initialize(configPath);
-
-            logger.info("Configuration loaded: " + configPath.toAbsolutePath());
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "Failed to load configuration", e);
-            throw new RuntimeException("Configuration loading failed", e);
-        }
+        SoulboundConfig.initialize(properties);
+        logger.info("Configuration loaded from framework-provided properties");
     }
 
     /**

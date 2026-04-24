@@ -91,10 +91,19 @@ public final class SoulboundConfig {
      * @throws IOException If config file cannot be read
      */
     private SoulboundConfig(Path configPath) throws IOException {
-        // Load properties file
+        this(loadFromFile(configPath));
+    }
+
+    private static Properties loadFromFile(Path configPath) throws IOException {
+        Properties p = new Properties();
         try (FileInputStream fis = new FileInputStream(configPath.toFile())) {
-            properties.load(fis);
+            p.load(fis);
         }
+        return p;
+    }
+
+    private SoulboundConfig(Properties source) {
+        properties.putAll(source);
 
         // Parse and cache all values
         // Leveling System
@@ -169,6 +178,14 @@ public final class SoulboundConfig {
             throw new IllegalStateException("SoulboundConfig already initialized");
         }
         instance = new SoulboundConfig(configPath);
+    }
+
+    /** Initialize from properties already loaded by the framework's Configurable callback. */
+    public static void initialize(Properties properties) {
+        if (instance != null) {
+            throw new IllegalStateException("SoulboundConfig already initialized");
+        }
+        instance = new SoulboundConfig(properties);
     }
 
     /**

@@ -34,6 +34,7 @@ java {
 
 tasks.jar {
     archiveBaseName.set("materialsystem")
+    archiveVersion.set("")
 
     manifest {
         attributes(
@@ -56,7 +57,7 @@ tasks.register<Zip>("modDistribution") {
     }
 
     from("src/dist") {
-        into("mods")
+        into("mods/materialsystem")
     }
 
     from("README.md") {

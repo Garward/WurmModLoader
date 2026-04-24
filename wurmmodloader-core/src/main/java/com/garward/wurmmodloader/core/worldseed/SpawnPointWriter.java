@@ -29,7 +29,15 @@ public final class SpawnPointWriter {
 
     /** @return true if at least one SERVERS row was updated. */
     public static boolean updateAllKingdoms(int tileX, int tileY) {
-        try (Connection c = DatabaseConnectionUtil.getLoginDbConnection()) {
+        // DbConnector returns a shared/pooled connection — do not close it.
+        Connection c;
+        try {
+            c = DatabaseConnectionUtil.getLoginDbConnection();
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "[WorldSeed] Failed to update SERVERS spawn points — " + e.getMessage(), e);
+            return false;
+        }
+        try {
             int before = logCurrent(c);
             try (PreparedStatement ps = c.prepareStatement(
                 "UPDATE SERVERS SET "

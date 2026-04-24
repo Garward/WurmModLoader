@@ -76,7 +76,7 @@ tasks.register<Zip>("modDistribution") {
         into("mods/postgresbackend")
     }
     from("src/dist") {
-        into("mods")
+        into("mods/postgresbackend")
         filesMatching("**/migrate.sh") { mode = 0b111_101_101 /* 0755 */ }
         filesMatching("**/connect.sh") { mode = 0b111_101_101 /* 0755 */ }
         exclude("**/.venv/**")

@@ -68,7 +68,7 @@ tasks.register<Zip>("modDistribution") {
     }
 
     from("src/dist") {
-        into("mods")
+        into("mods/powerscaling")
     }
 
     from("README.md") {

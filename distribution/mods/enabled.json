@@ -1,0 +1,5 @@
+{
+  "_comment": "Master toggle for mods. Missing entries default to ENABLED. Set a mod to false to disable it without removing the folder. Names match the mod's subfolder under mods/.",
+
+  "postgresbackend": false
+}

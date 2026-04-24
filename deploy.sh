@@ -164,6 +164,17 @@ if [ -f "$VFIX_CFG_SRC" ] && [ ! -f "$VFIX_CFG_DEST" ]; then
     COPIED_FILES=$((COPIED_FILES + 1))
 fi
 
+# === SEED mods/enabled.json (non-destructive) ===
+# Permissive master toggle. Ship a baseline once; never overwrite user edits.
+ENABLED_SRC="$PROJECT_DIR/distribution/mods/enabled.json"
+ENABLED_DEST="$SERVER_DIR/mods/enabled.json"
+if [ -f "$ENABLED_SRC" ] && [ ! -f "$ENABLED_DEST" ]; then
+    mkdir -p "$(dirname "$ENABLED_DEST")"
+    cp "$ENABLED_SRC" "$ENABLED_DEST"
+    echo -e "  ${GREEN}✓${NC} Seeded mods/enabled.json (master mod toggle)"
+    COPIED_FILES=$((COPIED_FILES + 1))
+fi
+
 # === DEPLOY MODS ===
 echo -e "${BLUE}======================================================================${NC}"
 echo -e "${YELLOW}🎮 Deploying Mods${NC}"
@@ -183,10 +194,21 @@ for mod_dir in "$PROJECT_DIR"/mods/*/; do
 
             copy_if_changed "$mod_jar" "$server_mod_dir/$mod_name.jar" "Mod: $mod_name"
 
-            # Also copy .properties if exists
-            mod_props="$mod_dir/src/dist/${mod_name}.properties"
-            if [ -f "$mod_props" ]; then
-                copy_if_changed "$mod_props" "$SERVER_DIR/mods/${mod_name}.properties" "Config: ${mod_name}.properties"
+            # Canonical layout: mods/<name>/src/dist/mod.properties → ship the
+            # whole src/dist tree into the mod's subfolder. Anything else
+            # (configs, resources, server-packs, web assets) tags along.
+            canonical_props="$mod_dir/src/dist/mod.properties"
+            if [ -f "$canonical_props" ]; then
+                while IFS= read -r -d '' f; do
+                    rel="${f#"$mod_dir/src/dist/"}"
+                    copy_if_changed "$f" "$server_mod_dir/$rel" "Asset: $mod_name/$rel"
+                done < <(find "$mod_dir/src/dist" -type f -print0)
+            else
+                # Legacy flat layout
+                mod_props="$mod_dir/src/dist/${mod_name}.properties"
+                if [ -f "$mod_props" ]; then
+                    copy_if_changed "$mod_props" "$SERVER_DIR/mods/${mod_name}.properties" "Config: ${mod_name}.properties"
+                fi
             fi
         else
             echo -e "  ${YELLOW}⚠${NC}  Mod: $mod_name - JAR not built (run ./build.sh)"

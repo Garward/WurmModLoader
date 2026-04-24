@@ -43,6 +43,7 @@ java {
 
 tasks.jar {
     archiveBaseName.set("soulboundgear")
+    archiveVersion.set("")
 
     manifest {
         attributes(
@@ -65,7 +66,7 @@ tasks.register<Zip>("modDistribution") {
     }
 
     from("src/dist") {
-        into("mods")
+        into("mods/soulboundgear")
     }
 
     from("README.md") {
