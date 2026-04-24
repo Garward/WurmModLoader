@@ -1290,6 +1290,139 @@ public class ProxyServerHook extends ServerHook {
 	}
 
 	/**
+	 * Fires CreatureIsFlyingEvent from {@code Creature.isFlying}. Returns the
+	 * (possibly flipped) flag; on failure, returns the original.
+	 */
+	public static boolean fireCreatureIsFlyingEvent(Object creature, boolean flying) {
+		try {
+			return getInstance().fireCreatureIsFlying(
+				(com.wurmonline.server.creatures.Creature) creature, flying);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CreatureIsFlyingEvent", t);
+			return flying;
+		}
+	}
+
+	/**
+	 * Fires PosZCalculationEvent from {@code Zones.calculatePosZ}. Returns the
+	 * (possibly overridden) Z; on failure, returns the original.
+	 */
+	public static float firePosZCalculationEvent(float posX, float posY, Object tile,
+	                                             boolean onSurface, boolean floating,
+	                                             float currentPosZ, Object creature,
+	                                             long bridgeId, float resolvedZ) {
+		try {
+			return getInstance().firePosZCalculation(
+				posX, posY,
+				(com.wurmonline.server.zones.VolaTile) tile,
+				onSurface, floating, currentPosZ,
+				(com.wurmonline.server.creatures.Creature) creature,
+				bridgeId, resolvedZ);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire PosZCalculationEvent", t);
+			return resolvedZ;
+		}
+	}
+
+	/**
+	 * Fires PathFinderCanPassEvent from {@code PathFinder.canPass}. Returns the
+	 * (possibly overridden) passability; on failure, returns the original.
+	 */
+	public static boolean firePathFinderCanPassEvent(Object creature, Object from, Object to, boolean canPass) {
+		try {
+			return getInstance().firePathFinderCanPass(
+				(com.wurmonline.server.creatures.Creature) creature,
+				(com.wurmonline.server.creatures.ai.PathTile) from,
+				(com.wurmonline.server.creatures.ai.PathTile) to,
+				canPass);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire PathFinderCanPassEvent", t);
+			return canPass;
+		}
+	}
+
+	/**
+	 * Fires CreatureSetTargetEvent from {@code Creature.setTarget}. Returns the
+	 * (possibly rewritten) target id, or {@code Long.MIN_VALUE} to signal the
+	 * bytecode patch to skip the whole setTarget call. On failure, returns the
+	 * original target id.
+	 */
+	public static long fireCreatureSetTargetEvent(Object creature, long targetId, boolean switchTarget) {
+		try {
+			return getInstance().fireCreatureSetTarget(
+				(com.wurmonline.server.creatures.Creature) creature, targetId, switchTarget);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CreatureSetTargetEvent", t);
+			return targetId;
+		}
+	}
+
+	/**
+	 * Fires CreatureMovementTickEvent from {@code CreatureAI.creatureMovementTick}.
+	 * Returns {@code true} if the event was cancelled (the patch skips the tick).
+	 */
+	public static boolean fireCreatureMovementTickEvent(Object creature, boolean rotateFromBlocker) {
+		try {
+			return getInstance().fireCreatureMovementTick(
+				(com.wurmonline.server.creatures.Creature) creature, rotateFromBlocker);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CreatureMovementTickEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires ZoneSpawnAttemptEvent from {@code Zone.spawnCreature}. Returns
+	 * {@code true} if the event was cancelled (the patch skips the spawn).
+	 */
+	public static boolean fireZoneSpawnAttemptEvent(Object zone, int tileX, int tileY, boolean spawnKingdom) {
+		try {
+			return getInstance().fireZoneSpawnAttempt(
+				(com.wurmonline.server.zones.Zone) zone, tileX, tileY, spawnKingdom);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire ZoneSpawnAttemptEvent", t);
+			return false;
+		}
+	}
+
+	/**
+	 * Fires CreaturePollMovementEvent from {@code GenericCreatureAI.pollMovement}.
+	 * Returns the (possibly overridden) moved-flag; on failure, returns the original.
+	 */
+	/**
+	 * Fires CreaturePollMovementPreEvent from {@code GenericCreatureAI.pollMovement}.
+	 * Returns {@code true} if the event was cancelled (the patch skips vanilla
+	 * and returns {@code true} itself).
+	 */
+	public static boolean fireCreaturePollMovementPreEvent(Object creature, long delta) {
+		try {
+			return getInstance().fireCreaturePollMovementPre(
+				(com.wurmonline.server.creatures.Creature) creature, delta);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CreaturePollMovementPreEvent", t);
+			return false;
+		}
+	}
+
+	public static boolean fireCreaturePollMovementEvent(Object creature, long delta, boolean moved) {
+		try {
+			return getInstance().fireCreaturePollMovement(
+				(com.wurmonline.server.creatures.Creature) creature, delta, moved);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING, "Failed to fire CreaturePollMovementEvent", t);
+			return moved;
+		}
+	}
+
+	/**
 	 * Fires CreatureTemplateColorEvent from {@code CreatureTemplate.getColorRed/Green/Blue}.
 	 * Returns the (possibly modified) color value; on failure, returns the original.
 	 */
@@ -1467,6 +1600,31 @@ public class ProxyServerHook extends ServerHook {
 				.log(java.util.logging.Level.WARNING,
 					"Failed to fire SurfaceMiningSlopeLowerCheckEvent — falling back to vanilla roll", t);
 			return com.wurmonline.server.Server.rand.nextFloat() < naturalChance;
+		}
+	}
+
+	/**
+	 * Bytecode-injected from {@code SurfaceMiningSurroundCheckPatch}. Returns
+	 * {@code true} if the surround-rock requirement should still abort the
+	 * action (vanilla path — proxy emits the vanilla message itself), or
+	 * {@code false} if a listener requested the bypass (no message, mining
+	 * continues).
+	 */
+	public static boolean fireSurfaceMiningSurroundCheck(Object performer, Object source) {
+		try {
+			return getInstance().fireSurfaceMiningSurroundCheck(
+				(com.wurmonline.server.creatures.Creature) performer,
+				(com.wurmonline.server.items.Item) source);
+		} catch (Throwable t) {
+			java.util.logging.Logger.getLogger(ProxyServerHook.class.getName())
+				.log(java.util.logging.Level.WARNING,
+					"Failed to fire SurfaceMiningSurroundCheckEvent — preserving vanilla abort", t);
+			try {
+				((com.wurmonline.server.creatures.Creature) performer).getCommunicator()
+					.sendNormalServerMessage(
+						"The surrounding area needs to be rock before you mine.", (byte) 3);
+			} catch (Throwable ignore) {}
+			return true;
 		}
 	}
 

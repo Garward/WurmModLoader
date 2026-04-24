@@ -51,6 +51,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.ActionAllowedOnVehiclePat
 import com.garward.wurmmodloader.core.bytecode.patches.CaveTileActionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CaveTileGetBehavioursPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SurfaceMiningSlopeLowerPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SurfaceMiningSurroundCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SurfaceRockActionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SurfaceRockGetBehavioursPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.TerraformingDigInnerPatch;
@@ -71,8 +72,16 @@ import com.garward.wurmmodloader.core.bytecode.patches.SacrificePostPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ContainerInsertionCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.TrellisPruningPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.FaithGainResetPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreatureIsFlyingPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureMovementSpeedPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreatureMovementTickPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreaturePollMovementPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreaturePollMovementPrePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreatureSetTargetPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureTemplateColorPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.PathFinderCanPassPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.PosZCalculationPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ZoneSpawnAttemptPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.MaterialBonusExtendedPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.MountEquipmentCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.MovementBroadcastPatch;
@@ -165,6 +174,7 @@ public final class CoreBytecodePatches {
         new CaveTileGetBehavioursPatch(),
         new SurfaceRockActionPatch(),
         new SurfaceMiningSlopeLowerPatch(),
+        new SurfaceMiningSurroundCheckPatch(),
         new SurfaceRockGetBehavioursPatch(),
         new TerraformingDigInnerPatch(),
         new FlatteningInnerPatch(),
@@ -187,6 +197,14 @@ public final class CoreBytecodePatches {
         new FaithGainResetPatch(),
         new CreatureMovementSpeedPatch(),
         new CreatureTemplateColorPatch(),
+        new CreatureIsFlyingPatch(),
+        new PosZCalculationPatch(),
+        new PathFinderCanPassPatch(),
+        new CreatureSetTargetPatch(),
+        new CreatureMovementTickPatch(),
+        new ZoneSpawnAttemptPatch(),
+        new CreaturePollMovementPrePatch(),
+        new CreaturePollMovementPatch(),
         new ContainerVolumePatch(),
         new WeaponUsePatch(),
         new WeaponStatQueryPatch(),

@@ -2251,6 +2251,104 @@ public class ServerHook {
 	}
 
 	/**
+	 * Fires CreatureIsFlyingEvent. Returns the (possibly flipped) flag.
+	 */
+	public boolean fireCreatureIsFlying(com.wurmonline.server.creatures.Creature creature, boolean flying) {
+		com.garward.wurmmodloader.api.events.creature.CreatureIsFlyingEvent event =
+			new com.garward.wurmmodloader.api.events.creature.CreatureIsFlyingEvent(creature, flying);
+		eventBus.post(event);
+		return event.isFlying();
+	}
+
+	/**
+	 * Fires PosZCalculationEvent. Returns the (possibly overridden) Z.
+	 */
+	public float firePosZCalculation(float posX, float posY,
+	                                 com.wurmonline.server.zones.VolaTile tile,
+	                                 boolean onSurface, boolean floating,
+	                                 float currentPosZ,
+	                                 com.wurmonline.server.creatures.Creature creature,
+	                                 long bridgeId, float resolvedZ) {
+		com.garward.wurmmodloader.api.events.movement.PosZCalculationEvent event =
+			new com.garward.wurmmodloader.api.events.movement.PosZCalculationEvent(
+				posX, posY, tile, onSurface, floating, currentPosZ, creature, bridgeId, resolvedZ);
+		eventBus.post(event);
+		return event.getResolvedZ();
+	}
+
+	/**
+	 * Fires PathFinderCanPassEvent. Returns the (possibly overridden) passability.
+	 */
+	public boolean firePathFinderCanPass(com.wurmonline.server.creatures.Creature creature,
+	                                     com.wurmonline.server.creatures.ai.PathTile from,
+	                                     com.wurmonline.server.creatures.ai.PathTile to,
+	                                     boolean canPass) {
+		com.garward.wurmmodloader.api.events.movement.PathFinderCanPassEvent event =
+			new com.garward.wurmmodloader.api.events.movement.PathFinderCanPassEvent(creature, from, to, canPass);
+		eventBus.post(event);
+		return event.canPass();
+	}
+
+	/**
+	 * Fires CreatureSetTargetEvent. Returns the (possibly rewritten) target id,
+	 * or {@link com.garward.wurmmodloader.api.events.creature.CreatureSetTargetEvent#CANCEL_SENTINEL}
+	 * if the event was cancelled.
+	 */
+	public long fireCreatureSetTarget(com.wurmonline.server.creatures.Creature creature,
+	                                  long targetId, boolean switchTarget) {
+		com.garward.wurmmodloader.api.events.creature.CreatureSetTargetEvent event =
+			new com.garward.wurmmodloader.api.events.creature.CreatureSetTargetEvent(creature, targetId, switchTarget);
+		eventBus.post(event);
+		if (event.isCancelled()) {
+			return com.garward.wurmmodloader.api.events.creature.CreatureSetTargetEvent.CANCEL_SENTINEL;
+		}
+		return event.getTargetId();
+	}
+
+	/**
+	 * Fires CreatureMovementTickEvent. Returns {@code true} if cancelled.
+	 */
+	public boolean fireCreatureMovementTick(com.wurmonline.server.creatures.Creature creature,
+	                                        boolean rotateFromBlocker) {
+		com.garward.wurmmodloader.api.events.movement.CreatureMovementTickEvent event =
+			new com.garward.wurmmodloader.api.events.movement.CreatureMovementTickEvent(creature, rotateFromBlocker);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires ZoneSpawnAttemptEvent. Returns {@code true} if cancelled.
+	 */
+	public boolean fireZoneSpawnAttempt(com.wurmonline.server.zones.Zone zone,
+	                                    int tileX, int tileY, boolean spawnKingdom) {
+		com.garward.wurmmodloader.api.events.creature.ZoneSpawnAttemptEvent event =
+			new com.garward.wurmmodloader.api.events.creature.ZoneSpawnAttemptEvent(zone, tileX, tileY, spawnKingdom);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	/**
+	 * Fires CreaturePollMovementEvent. Returns the (possibly overridden) moved-flag.
+	 */
+	/**
+	 * Fires CreaturePollMovementPreEvent. Returns {@code true} if cancelled.
+	 */
+	public boolean fireCreaturePollMovementPre(com.wurmonline.server.creatures.Creature creature, long delta) {
+		com.garward.wurmmodloader.api.events.movement.CreaturePollMovementPreEvent event =
+			new com.garward.wurmmodloader.api.events.movement.CreaturePollMovementPreEvent(creature, delta);
+		eventBus.post(event);
+		return event.isCancelled();
+	}
+
+	public boolean fireCreaturePollMovement(com.wurmonline.server.creatures.Creature creature,
+	                                        long delta, boolean moved) {
+		com.garward.wurmmodloader.api.events.movement.CreaturePollMovementEvent event =
+			new com.garward.wurmmodloader.api.events.movement.CreaturePollMovementEvent(creature, delta, moved);
+		eventBus.post(event);
+		return event.didMove();
+	}
+
+	/**
 	 * Fires CreatureTemplateColorEvent. Returns the (possibly modified) color value.
 	 */
 	public int fireCreatureTemplateColor(com.wurmonline.server.creatures.CreatureTemplate template,
@@ -2425,6 +2523,34 @@ public class ServerHook {
 				naturalChance, override, decision));
 		}
 		return decision;
+	}
+
+	/**
+	 * Fires SurfaceMiningSurroundCheckEvent. Returns {@code true} if vanilla
+	 * abort should run (and emits the vanilla message itself in that case),
+	 * {@code false} if a listener overrode the check to allow mining despite
+	 * non-rock surroundings.
+	 */
+	public boolean fireSurfaceMiningSurroundCheck(com.wurmonline.server.creatures.Creature performer,
+	                                              com.wurmonline.server.items.Item source) {
+		com.garward.wurmmodloader.api.events.structure.SurfaceMiningSurroundCheckEvent event =
+			new com.garward.wurmmodloader.api.events.structure.SurfaceMiningSurroundCheckEvent(
+				performer, source);
+		eventBus.post(event);
+		Boolean override = event.getOverride();
+		boolean bypass = Boolean.TRUE.equals(override);
+		if (DEBUG) {
+			logger.info(String.format("[Event] SurfaceMiningSurroundCheck: override=%s bypass=%s",
+				override, bypass));
+		}
+		if (bypass) {
+			return false;
+		}
+		try {
+			performer.getCommunicator().sendNormalServerMessage(
+				"The surrounding area needs to be rock before you mine.", (byte) 3);
+		} catch (Throwable ignore) {}
+		return true;
 	}
 
 	/**

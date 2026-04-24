@@ -66,5 +66,8 @@ project(":mods:livemap").projectDir = file("mods/livemap")
 include("mods:gmtools")
 project(":mods:gmtools").projectDir = file("mods/gmtools")
 
+include("mods:surfaceminingfix")
+project(":mods:surfaceminingfix").projectDir = file("mods/surfaceminingfix")
+
 // Note: Community mods now live in WurmModLoader-CommunityMods repo
 // They depend on JARs from this repo's libs/ directory

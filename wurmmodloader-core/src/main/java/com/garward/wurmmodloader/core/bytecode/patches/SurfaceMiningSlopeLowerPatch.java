@@ -119,9 +119,31 @@ public final class SurfaceMiningSlopeLowerPatch implements BytecodePatch {
                 mi.rebuildStackMap(cp);
                 LOGGER.info("[BytecodePatch] Registered SurfaceMiningSlopeLowerPatch successfully.");
             } catch (NotFoundException nfe) {
-                LOGGER.log(Level.WARNING,
-                    "[SurfaceMiningSlopeLowerPatch] vanilla nextFloat<chance pattern not found — "
-                  + "WU build differs; SurfaceMiningSlopeLowerCheckEvent won't fire.", nfe);
+                StringBuilder dump = new StringBuilder();
+                dump.append("[SurfaceMiningSlopeLowerPatch] pattern not found.\n");
+                dump.append("  chance=").append(chanceIdx)
+                    .append(" performer=").append(performerIdx)
+                    .append(" source=").append(sourceIdx).append('\n');
+                dump.append("  searchBytes(").append(searchBytes.length).append("): ");
+                for (byte b : searchBytes) dump.append(String.format("%02X ", b & 0xff));
+                dump.append('\n');
+                byte[] code = ca.getCode();
+                int hit = -1;
+                outer:
+                for (int i = 0; i + 4 < code.length; i++) {
+                    if ((code[i] & 0xff) == 0xB2 && (code[i+3] & 0xff) == 0xB6
+                        && (code[i+6] & 0xff) == 0x17 && (code[i+8] & 0xff) == 0x96) {
+                        hit = i;
+                        break outer;
+                    }
+                }
+                dump.append("  candidate offset (B2..B6..17..96 sniff): ").append(hit).append('\n');
+                if (hit >= 0) {
+                    dump.append("  classBytes@").append(hit).append("(10): ");
+                    for (int i = hit; i < hit + 10 && i < code.length; i++)
+                        dump.append(String.format("%02X ", code[i] & 0xff));
+                }
+                LOGGER.warning(dump.toString());
             }
         } catch (NotFoundException | BadBytecode e) {
             LOGGER.log(Level.WARNING, "[SurfaceMiningSlopeLowerPatch] install failed", e);

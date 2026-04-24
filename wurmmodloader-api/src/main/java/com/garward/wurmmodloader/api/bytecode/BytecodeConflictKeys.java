@@ -135,4 +135,13 @@ public final class BytecodeConflictKeys {
     public static final String STRUCTURE_GATE_FLOOR_LEVEL = "structure.gate.floorLevel";
     public static final String GM_HELP_ADDENDUM = "console.gmHelpAddendum";
     public static final String SURFACE_MINING_SLOPE_LOWER = "terrain.surfaceMiningSlopeLower";
+    public static final String SURFACE_MINING_SURROUND_CHECK = "terrain.surfaceMiningSurroundCheck";
+    public static final String CREATURE_IS_FLYING = "creature.isFlying";
+    public static final String ZONES_POS_Z = "zones.calculatePosZ";
+    public static final String PATHFINDER_CAN_PASS = "ai.pathfinder.canPass";
+    public static final String CREATURE_SET_TARGET = "ai.creature.setTarget";
+    public static final String CREATURE_MOVEMENT_TICK = "ai.creature.movementTick";
+    public static final String ZONE_SPAWN_ATTEMPT = "ai.zone.spawnAttempt";
+    public static final String CREATURE_POLL_MOVEMENT = "ai.creature.pollMovement";
+    public static final String CREATURE_POLL_MOVEMENT_PRE = "ai.creature.pollMovement.pre";
 }
