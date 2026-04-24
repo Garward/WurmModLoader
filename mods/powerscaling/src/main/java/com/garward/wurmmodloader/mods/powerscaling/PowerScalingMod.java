@@ -1,12 +1,12 @@
 package com.garward.wurmmodloader.mods.powerscaling;
 
 import com.garward.wurmmodloader.api.events.creature.CombatDamageEvent;
+import com.garward.wurmmodloader.api.events.item.ItemEnchantmentStringsEvent;
 import com.garward.wurmmodloader.api.events.creature.CreatureDeathEvent;
 import com.garward.wurmmodloader.api.events.creature.CreatureSpawnEvent;
 import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
 import com.garward.wurmmodloader.api.events.player.BodyMenuPopulateEvent;
 import com.garward.wurmmodloader.api.events.item.ItemExamineEvent;
-import com.garward.wurmmodloader.api.events.item.ItemEnchantmentStringsEvent;
 import com.garward.wurmmodloader.api.events.ModQueryEvent;
 import com.garward.wurmmodloader.api.events.ModActionEvent;
 import com.garward.wurmmodloader.mods.powerscaling.events.CreaturePowerInitializedEvent;
@@ -61,6 +61,27 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
     private PowerScalingConfig config;
     private PowerScalingManager manager;
     private com.garward.wurmmodloader.mods.powerscaling.creature.PowerGrowthTicker growthTicker;
+
+    /**
+     * Lazily-computed. True iff DUSKombat's DamageMethods is on the classpath.
+     * When present, DUSKombat's own tooltip channel ({@code duskombat:item_tooltip})
+     * carries the Power-bonus line via {@link #onDUSKombatTooltip}, and the
+     * vanilla-examine fallback ({@link #onItemEnchantmentStrings}) steps aside.
+     * When absent, the fallback draws the same info using vanilla weapon stats.
+     */
+    private Boolean duskombatPresent;
+
+    private boolean isDuskombatPresent() {
+        if (duskombatPresent == null) {
+            try {
+                Class.forName("mod.piddagoras.duskombat.DamageMethods");
+                duskombatPresent = Boolean.TRUE;
+            } catch (ClassNotFoundException e) {
+                duskombatPresent = Boolean.FALSE;
+            }
+        }
+        return duskombatPresent.booleanValue();
+    }
 
     // ========================================================================
     // Lifecycle
@@ -548,82 +569,52 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
     }
 
     /**
-     * Handle item enchantment strings event - add power-scaled weapon damage.
-     * This shows the ACTUAL damage you'll do with power scaling applied.
+     * Fallback weapon-examine line used when DUSKombat is NOT installed.
+     * When DUSKombat is present, {@link #onDUSKombatTooltip} is the single source
+     * of truth for the Power-bonus line — this handler steps aside to prevent
+     * a duplicate display. This is a demo of cross-mod adaptation via generic
+     * events: no compile-time dependency on DUSKombat, pure runtime detection.
      */
     @SubscribeEvent
     public void onItemEnchantmentStrings(ItemEnchantmentStringsEvent event) {
-        // Skip if manager not initialized yet
         if (manager == null) {
             return;
         }
-
-        // Only process weapons for players
         if (!event.getItem().isWeapon() || !event.getExaminer().isPlayer()) {
             return;
         }
 
-        try {
-            // Get player power level
-            int totalPower = manager.getPlayerPowerLevel(event.getExaminer().getWurmId());
-            if (totalPower <= 0) {
-                return; // No power scaling to show
-            }
-
-            // Get damage multiplier
-            float damageMultiplier = manager.getDamageMultiplier(totalPower);
-
-            // Try to get DUSKombat's base damage calculation if available
-            double baseDamage = 0;
-            try {
-                // Use reflection to call DUSKombat's damage calculation
-                Class<?> damageMethodsClass = Class.forName("mod.piddagoras.duskombat.DamageMethods");
-                java.lang.reflect.Method getBaseWeaponDamage = damageMethodsClass.getMethod(
-                    "getBaseWeaponDamage",
-                    com.wurmonline.server.creatures.Creature.class,
-                    com.wurmonline.server.creatures.Creature.class,
-                    com.wurmonline.server.items.Item.class,
-                    boolean.class
-                );
-                baseDamage = (Double) getBaseWeaponDamage.invoke(null,
-                    event.getExaminer(), null, event.getItem(), true);
-            } catch (ClassNotFoundException e) {
-                // DUSKombat not loaded - skip
-                return;
-            } catch (Exception e) {
-                logger.warning("Failed to get DUSKombat base damage: " + e.getMessage());
-                return;
-            }
-
-            // Calculate power-scaled damage
-            double scaledDamage = baseDamage * damageMultiplier;
-
-            // Send colored message showing power-scaled damage
-            java.util.ArrayList<com.wurmonline.shared.util.MulticolorLineSegment> segments =
-                new java.util.ArrayList<>();
-
-            // Use same color scheme as DUSKombat
-            byte COLOR_ORANGE = 7;
-            byte COLOR_YELLOW = 8;
-            byte COLOR_WHITE = 0;
-
-            segments.add(new com.wurmonline.shared.util.MulticolorLineSegment(
-                "Power Scaled Damage: ", COLOR_ORANGE));
-            segments.add(new com.wurmonline.shared.util.MulticolorLineSegment(
-                String.format("%d", (int)scaledDamage), COLOR_YELLOW));
-            segments.add(new com.wurmonline.shared.util.MulticolorLineSegment(
-                String.format(" (%.1fx from power level %d)", damageMultiplier, totalPower), COLOR_WHITE));
-
-            PlayerUtil.sendColoredMessage(event.getExaminer(), segments);
-
-            if (config.isDebugLogging()) {
-                logger.info(String.format("[ItemEnchant] Player %s weapon damage: base=%.1f, scaled=%.1f (%.1fx)",
-                    event.getExaminer().getName(), baseDamage, scaledDamage, damageMultiplier));
-            }
-
-        } catch (Exception e) {
-            logger.log(Level.WARNING, "Failed to show power-scaled weapon damage", e);
+        // DUSKombat's tooltip channel covers this — don't double up.
+        if (isDuskombatPresent()) {
+            return;
         }
+
+        int totalPower = manager.getPlayerPowerLevel(event.getExaminer().getWurmId());
+        if (totalPower <= 0) {
+            return;
+        }
+
+        float damageMultiplier = manager.getDamageMultiplier(totalPower);
+
+        // Vanilla base damage — no DUSKombat dependency.
+        double baseDamage = com.wurmonline.server.combat.Weapon.getBaseDamageForWeapon(event.getItem());
+        double scaledDamage = baseDamage * damageMultiplier;
+
+        byte COLOR_ORANGE = 7;
+        byte COLOR_YELLOW = 8;
+        byte COLOR_WHITE = 0;
+
+        java.util.ArrayList<com.wurmonline.shared.util.MulticolorLineSegment> segments =
+                new java.util.ArrayList<>();
+        segments.add(new com.wurmonline.shared.util.MulticolorLineSegment(
+                "Power Scaled Damage: ", COLOR_ORANGE));
+        segments.add(new com.wurmonline.shared.util.MulticolorLineSegment(
+                String.format("%.1f", scaledDamage), COLOR_YELLOW));
+        segments.add(new com.wurmonline.shared.util.MulticolorLineSegment(
+                String.format(" (%.1fx from power level %d)", damageMultiplier, totalPower),
+                COLOR_WHITE));
+
+        PlayerUtil.sendColoredMessage(event.getExaminer(), segments);
     }
 
     // ========================================================================
@@ -725,7 +716,21 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
 
     /**
      * Integrate with DUSKombat's damage calculation.
-     * Scales damage based on player power level.
+     *
+     * <p>Two-sided power scaling applied BEFORE armor reduction in DUSKombat's pipeline:</p>
+     * <ul>
+     *   <li><strong>Attacker side:</strong> damage multiplied by
+     *       {@link PowerScalingManager#getDamageMultiplier(int)} (config
+     *       {@code damagePerPowerLevel} + tier breakpoint multiplier).</li>
+     *   <li><strong>Defender side ("power shell"):</strong> damage divided by
+     *       {@link PowerScalingManager#getDefenseMultiplier(int)}. Stacks WITH
+     *       armor — Wurm's wound-based HP system makes flat HP scaling
+     *       impractical, so high-power defenders shrug off damage instead
+     *       (oakshell-like, works through armor).</li>
+     * </ul>
+     *
+     * <p>Runs for both player and creature combatants so power-vs-power fights
+     * scale symmetrically.</p>
      */
     @SubscribeEvent
     public void onDUSKombatDamage(ModActionEvent event) {
@@ -739,26 +744,54 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
 
         try {
             long attackerId = event.getLong("attackerId");
-            // Only players have power levels — skip creature attackers silently
-            // (every non-player swing would otherwise throw + log SEVERE).
-            if (PlayerUtil.getPlayer(attackerId) == null) {
+            long defenderId = event.getLong("defenderId");
+
+            int attackerPower = resolvePowerLevel(attackerId);
+            int defenderPower = resolvePowerLevel(defenderId);
+
+            if (attackerPower <= 0 && defenderPower <= 0) {
                 return;
             }
-            int powerLevel = manager.getPlayerPowerLevel(attackerId);
 
-            // Scale damage by 5% per power level
-            double damageMultiplier = 1.0 + (powerLevel * 0.05);
+            float attackBonus = manager.getDamageMultiplier(attackerPower);
+            float defenseReduction = manager.getDefenseMultiplier(defenderPower);
 
-            // Read current multiplier and stack on top
+            // Net multiplier: attacker amplifies, defender's power shell absorbs.
+            double netMultiplier = attackBonus / defenseReduction;
+
             double currentMultiplier = (Double) event.get("damageMultiplier");
-            event.set("damageMultiplier", currentMultiplier * damageMultiplier);
+            event.set("damageMultiplier", currentMultiplier * netMultiplier);
             event.setHandled(true);
 
-            logger.fine(String.format("Player %d power bonus: %.2f%% (level %d)",
-                attackerId, (damageMultiplier - 1.0) * 100, powerLevel));
+            if (config.isLogCombatCalculations()) {
+                logger.info(String.format(
+                    "[DUSKombat] attacker=%d(pwr %d, x%.2f) defender=%d(pwr %d, /%.2f) net=x%.2f",
+                    attackerId, attackerPower, attackBonus,
+                    defenderId, defenderPower, defenseReduction, netMultiplier));
+            }
         } catch (Exception e) {
             logger.log(Level.WARNING, "Failed to integrate with DUSKombat damage", e);
         }
+    }
+
+    /**
+     * Resolve a combatant's power level from its wurm id, whether it's a
+     * player or creature. Returns 0 if the id doesn't match a live entity.
+     */
+    private int resolvePowerLevel(long wurmId) {
+        try {
+            if (PlayerUtil.getPlayer(wurmId) != null) {
+                return manager.getPlayerPowerLevel(wurmId);
+            }
+            com.wurmonline.server.creatures.Creature creature =
+                com.wurmonline.server.creatures.Creatures.getInstance().getCreatureOrNull(wurmId);
+            if (creature != null) {
+                return manager.getCreaturePowerLevel(creature);
+            }
+        } catch (Exception ignored) {
+            // Fall through to 0
+        }
+        return 0;
     }
 
     /**
@@ -789,16 +822,20 @@ public class PowerScalingMod implements WurmServerMod, PreInitable, Configurable
                 return; // No power, no tooltip
             }
 
-            // Calculate bonus damage
-            int bonusDamage = (int) (baseDamage * powerLevel * 0.05);
+            // Use real combat multiplier (config damagePerPowerLevel + tier breakpoint)
+            float damageMultiplier = manager.getDamageMultiplier(powerLevel);
+            float defenseMultiplier = manager.getDefenseMultiplier(powerLevel);
+            int bonusDamage = (int) (baseDamage * (damageMultiplier - 1.0f));
+            int damagePct = (int) ((damageMultiplier - 1.0f) * 100);
+            int defensePct = (int) ((defenseMultiplier - 1.0f) * 100);
 
             // Add custom tooltip line
             List<String> lines = (List<String>) event.get("tooltipLines");
             if (lines == null) {
                 lines = new ArrayList<>();
             }
-            lines.add(String.format("Power Bonus (Lvl %d): +%d damage (+%.0f%%)",
-                powerLevel, bonusDamage, powerLevel * 5.0));
+            lines.add(String.format("Power Bonus (Lvl %d): +%d dmg (+%d%% atk / +%d%% shell)",
+                powerLevel, bonusDamage, damagePct, defensePct));
 
             event.set("tooltipLines", lines);
             event.setHandled(true);

@@ -161,6 +161,30 @@ public enum PowerTier {
     }
 
     /**
+     * Get the combat multiplier for this tier. Applied multiplicatively on
+     * top of the per-power-level linear scaling in
+     * {@link PowerScalingManager#getDamageMultiplier(int)},
+     * {@link PowerScalingManager#getDefenseMultiplier(int)} and
+     * {@link PowerScalingManager#getHpMultiplier(int)}.
+     *
+     * <p>Values are config-driven so tier breakpoints can be tuned without
+     * recompiling the mod.</p>
+     *
+     * @param config The power scaling configuration
+     * @return The combat multiplier (1.0 = no tier bonus)
+     */
+    public float getCombatMultiplier(PowerScalingConfig config) {
+        switch (this) {
+            case ELITE:     return config.getEliteTierMultiplier();
+            case MYTHICAL:  return config.getMythicalTierMultiplier();
+            case LEGENDARY: return config.getLegendaryTierMultiplier();
+            case GODLIKE:   return config.getGodlikeTierMultiplier();
+            case NORMAL:
+            default:        return config.getNormalTierMultiplier();
+        }
+    }
+
+    /**
      * Get the model size multiplier for this tier (creature-specific).
      *
      * <p>Only applies to creatures. Players do not scale in size.</p>

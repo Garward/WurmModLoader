@@ -45,8 +45,8 @@ public class PowerScalingStatsQuestion implements ModQuestion {
         buf.append("text{type='bold';text='Power Scaling Stats'}");
         buf.append("text{text=''}");
         buf.append("text{text='Total Power: " + totalPower + "'}");
-        buf.append("text{text='Damage Multiplier: " + String.format("%.1fx", damageMultiplier) + "'}");
-        buf.append("text{text='Defense Multiplier: " + String.format("%.1fx", defenseMultiplier) + "'}");
+        buf.append("text{text='Damage Multiplier: " + String.format("%.2fx (+%.1f%%)", damageMultiplier, (damageMultiplier - 1f) * 100f) + "'}");
+        buf.append("text{text='Defense / Power Shell: " + String.format("%.2fx (+%.1f%%)", defenseMultiplier, (defenseMultiplier - 1f) * 100f) + "'}");
         buf.append(ModQuestions.createAnswerButton2(question));
 
         player.getCommunicator().sendBml(300, 300, true, true, buf.toString(), 200, 200, 200, "Power Scaling Stats");

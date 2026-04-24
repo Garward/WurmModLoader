@@ -417,31 +417,38 @@ public final class PowerScalingManager {
     /**
      * Get damage multiplier for attacker.
      *
+     * <p>Result = (1.0 + powerLevel × damagePerPowerLevel) × tier-multiplier.
+     * The tier factor lets Elite/Mythical/Legendary/Godlike breakpoints add
+     * a flat kick on top of the linear per-power curve.</p>
+     *
      * @param attackerPowerLevel Attacker's power level
      * @return Damage multiplier (1.0 = normal)
      */
     public float getDamageMultiplier(int attackerPowerLevel) {
-        return 1.0f + (attackerPowerLevel * config.getDamagePerPowerLevel());
+        float linear = 1.0f + (attackerPowerLevel * config.getDamagePerPowerLevel());
+        return linear * PowerTier.fromPower(attackerPowerLevel).getCombatMultiplier(config);
     }
 
     /**
-     * Get defense multiplier for defender.
+     * Get defense multiplier for defender. Tier multiplier applied as with damage.
      *
      * @param defenderPowerLevel Defender's power level
      * @return Defense multiplier (1.0 = normal)
      */
     public float getDefenseMultiplier(int defenderPowerLevel) {
-        return 1.0f + (defenderPowerLevel * config.getDefensePerPowerLevel());
+        float linear = 1.0f + (defenderPowerLevel * config.getDefensePerPowerLevel());
+        return linear * PowerTier.fromPower(defenderPowerLevel).getCombatMultiplier(config);
     }
 
     /**
-     * Get HP multiplier for creature/player.
+     * Get HP multiplier for creature/player. Tier multiplier applied as with damage.
      *
      * @param powerLevel Power level
      * @return HP multiplier (1.0 = normal)
      */
     public float getHpMultiplier(int powerLevel) {
-        return 1.0f + (powerLevel * config.getHpPerPowerLevel());
+        float linear = 1.0f + (powerLevel * config.getHpPerPowerLevel());
+        return linear * PowerTier.fromPower(powerLevel).getCombatMultiplier(config);
     }
 
     // ========================================================================

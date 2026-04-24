@@ -43,6 +43,15 @@ public final class PowerScalingConfig {
     private final float defensePerPowerLevel;
     private final float hpPerPowerLevel;
 
+    // Tier Combat Multipliers — applied multiplicatively on top of the
+    // per-power-level linear scaling. Lets tier thresholds actually bite
+    // (Normal→Elite adds a flat kick beyond the point-per-point curve).
+    private final float normalTierMultiplier;
+    private final float eliteTierMultiplier;
+    private final float mythicalTierMultiplier;
+    private final float legendaryTierMultiplier;
+    private final float godlikeTierMultiplier;
+
     // Critical Hits
     private final float baseCritChance;
     private final float critMultiplier;
@@ -184,6 +193,13 @@ public final class PowerScalingConfig {
         damagePerPowerLevel = getFloatProperty("damagePerPowerLevel", 0.02f);
         defensePerPowerLevel = getFloatProperty("defensePerPowerLevel", 0.01f);
         hpPerPowerLevel = getFloatProperty("hpPerPowerLevel", 0.05f);
+
+        // Tier Combat Multipliers — conservative defaults, tune via config.
+        normalTierMultiplier    = getFloatProperty("normalTierMultiplier",    1.0f);
+        eliteTierMultiplier     = getFloatProperty("eliteTierMultiplier",     1.25f);
+        mythicalTierMultiplier  = getFloatProperty("mythicalTierMultiplier",  1.6f);
+        legendaryTierMultiplier = getFloatProperty("legendaryTierMultiplier", 2.0f);
+        godlikeTierMultiplier   = getFloatProperty("godlikeTierMultiplier",   3.0f);
 
         // Critical Hits
         baseCritChance = getFloatProperty("baseCritChance", 0.05f);
@@ -418,6 +434,12 @@ public final class PowerScalingConfig {
     public float getDamagePerPowerLevel() { return damagePerPowerLevel; }
     public float getDefensePerPowerLevel() { return defensePerPowerLevel; }
     public float getHpPerPowerLevel() { return hpPerPowerLevel; }
+
+    public float getNormalTierMultiplier()    { return normalTierMultiplier;    }
+    public float getEliteTierMultiplier()     { return eliteTierMultiplier;     }
+    public float getMythicalTierMultiplier()  { return mythicalTierMultiplier;  }
+    public float getLegendaryTierMultiplier() { return legendaryTierMultiplier; }
+    public float getGodlikeTierMultiplier()   { return godlikeTierMultiplier;   }
 
     // ========================================================================
     // Public Getters - Critical Hits
@@ -659,6 +681,9 @@ public final class PowerScalingConfig {
         logger.info("Damage Per Power Level: " + damagePerPowerLevel);
         logger.info("Defense Per Power Level: " + defensePerPowerLevel);
         logger.info("HP Per Power Level: " + hpPerPowerLevel);
+        logger.info(String.format("Tier Multipliers: Normal=%.2f Elite=%.2f Mythical=%.2f Legendary=%.2f Godlike=%.2f",
+                normalTierMultiplier, eliteTierMultiplier, mythicalTierMultiplier,
+                legendaryTierMultiplier, godlikeTierMultiplier));
         logger.info("Base Crit Chance: " + baseCritChance);
         logger.info("Show Power Status Effect: " + showPowerLevelStatusEffect);
         logger.info("Integrate with SoulboundGear: " + integrateWithSoulboundGear);

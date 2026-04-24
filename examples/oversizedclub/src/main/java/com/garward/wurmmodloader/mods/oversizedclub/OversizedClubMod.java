@@ -2,6 +2,8 @@ package com.garward.wurmmodloader.mods.oversizedclub;
 
 import com.garward.wurmmodloader.api.capability.ICapabilityProvider;
 import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
+import com.garward.wurmmodloader.api.events.ModQueryEvent;
+import com.garward.wurmmodloader.api.events.combat.CombatAttackEvent;
 import com.garward.wurmmodloader.api.events.combat.CombatCriticalHitEvent;
 import com.garward.wurmmodloader.api.events.combat.OpportunityAttackEvent;
 import com.garward.wurmmodloader.api.events.combat.weapon.WeaponStatQueryEvent;
@@ -23,6 +25,7 @@ import com.wurmonline.server.items.CreationCategories;
 import com.wurmonline.server.items.CreationEntryCreator;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
+import com.wurmonline.server.Items;
 import com.wurmonline.server.items.ItemTemplate;
 import com.wurmonline.server.items.ItemTemplateFactory;
 import com.wurmonline.server.items.ItemTypes;
@@ -47,6 +50,11 @@ import java.util.logging.Logger;
  *   <li>Subscribing to framework events with {@code @SubscribeEvent}:
  *       item templates created, server started, capability registration,
  *       item examine, weapon stat query, critical hit, opportunity attack</li>
+ *   <li>Optional cross-mod integration (DUSKombat) via the generic
+ *       {@code ModQueryEvent} bus — no build-time dependency, runtime-detected,
+ *       and gracefully degrades when the other mod isn't installed. See the
+ *       tutorial block around {@code isDuskombatPresent()} and
+ *       {@code onDUSKombatTooltip}.</li>
  * </ul>
  *
  * <p>Weapon numbers are deliberately tuned on the strong side so the event hooks
@@ -74,6 +82,47 @@ public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable
     private double critChance = 0.002d;
 
     private static int oversizedClubTemplateId = -1;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TUTORIAL: Optional integration with another mod, without compiling against it
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Goal: light up a "nicer" feature when DUSKombat is installed, fall back
+    // to a plain version when it isn't — without adding a build dependency on
+    // DUSKombat, and without forcing users to install it.
+    //
+    // The trick is two framework primitives:
+    //
+    //   1. `Class.forName("...")` at runtime to detect the optional mod.
+    //      Cached in a Boolean so the lookup runs once. No compile-time reference
+    //      to any DUSKombat type ever appears in this file.
+    //
+    //   2. Generic `ModQueryEvent` / `ModActionEvent` buses to talk across mods.
+    //      DUSKombat fires a `ModQueryEvent("duskombat:item_tooltip")` when it
+    //      builds weapon tooltips. Anyone subscribed sees it — payload is just
+    //      a string-keyed map, so neither side needs the other's types.
+    //
+    // See {@link #isDuskombatPresent()} and {@link #onDUSKombatTooltip} below
+    // for the working pair. {@link #onItemExamine} demonstrates the other half
+    // of the pattern: step aside when the richer integration is available, so
+    // the player doesn't see the same bonus printed twice.
+    //
+    // This is how you build *optional enhancements* to other mods — the framework
+    // lets mods see each other and adapt, without turning their release artifacts
+    // into hard-linked dependencies.
+    private Boolean duskombatPresent;
+
+    private boolean isDuskombatPresent() {
+        if (duskombatPresent == null) {
+            try {
+                Class.forName("mod.piddagoras.duskombat.DamageMethods");
+                duskombatPresent = Boolean.TRUE;
+            } catch (ClassNotFoundException e) {
+                duskombatPresent = Boolean.FALSE;
+            }
+        }
+        return duskombatPresent.booleanValue();
+    }
 
     @Override
     public void configure(Properties properties) {
@@ -336,11 +385,23 @@ public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable
     // Gameplay hooks
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Adds level / damage-bonus lines to the examine text for oversized clubs. */
+    /**
+     * Adds level / damage-bonus lines to the examine text for oversized clubs.
+     *
+     * <p>When DUSKombat is installed, {@link #onDUSKombatTooltip} pushes the same
+     * info through DUSKombat's native tooltip channel instead — so this handler
+     * steps aside to prevent a duplicate display. The early-return is the other
+     * half of the cross-mod-adaptation pattern documented above.</p>
+     */
     @SubscribeEvent
     public void onItemExamine(ItemExamineEvent event) {
         Item item = event.getItem();
         if (item.getTemplateId() != oversizedClubTemplateId) {
+            return;
+        }
+
+        // DUSKombat path takes over via onDUSKombatTooltip — avoid a duplicate line.
+        if (isDuskombatPresent()) {
             return;
         }
 
@@ -357,6 +418,66 @@ public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable
             event.addDescription(String.format(Locale.US,
                     "\n[+%.0f%% DMG from level (%.1f bonus damage)]", percent, bonusDamage));
         }
+    }
+
+    /**
+     * TUTORIAL: optional cross-mod integration via a generic event bus.
+     *
+     * <p>DUSKombat fires {@code ModQueryEvent("duskombat:item_tooltip")} when it
+     * builds weapon tooltips. We subscribe without knowing anything about
+     * DUSKombat's types — payload is a string-keyed map, so the event type
+     * itself is all the handshake we need.</p>
+     *
+     * <p>If DUSKombat isn't installed, this handler simply never fires (the
+     * event type never appears on the bus), and {@link #onItemExamine}
+     * handles the fallback display.</p>
+     */
+    @SubscribeEvent
+    public void onDUSKombatTooltip(ModQueryEvent event) {
+        if (!"duskombat:item_tooltip".equals(event.getEventType())) {
+            return;
+        }
+
+        // DUSKombat's tooltip payload (see DUSKombat/ItemInfo.java:149+):
+        //   itemId     (long)    — target item's wurmId
+        //   playerId   (long)    — examining player's wurmId
+        //   isWeapon   (boolean) — true if target is a weapon
+        //   isArmour   (boolean) — true if target is armour
+        //   baseDamage (int)     — weapons only
+        //   damageType (String)  — weapons only, SLASH / PIERCE / CRUSH / UNARMED
+        if (!event.getBoolean("isWeapon")) {
+            return;
+        }
+
+        Item item;
+        try {
+            item = Items.getItem(event.getLong("itemId"));
+        } catch (Exception e) {
+            return;
+        }
+        if (item.getTemplateId() != oversizedClubTemplateId) {
+            return;
+        }
+
+        ItemLevel itemLevel = getItemLevelData(item);
+        if (itemLevel == null) {
+            return;
+        }
+
+        @SuppressWarnings("unchecked")
+        java.util.List<String> lines = (java.util.List<String>) event.get("tooltipLines");
+        if (lines == null) {
+            lines = new java.util.ArrayList<>();
+        }
+        lines.add("Oversized Club: " + itemLevel);
+        double bonusDamage = calculateDamageBonus(itemLevel.getLevel());
+        if (bonusDamage > 0) {
+            double percent = (bonusDamage / baseClubDamage) * 100.0d;
+            lines.add(String.format(Locale.US,
+                    "  Level Bonus: +%.0f%% DMG (%.1f bonus damage)", percent, bonusDamage));
+        }
+        event.set("tooltipLines", lines);
+        event.setHandled(true);
     }
 
     /**
@@ -393,7 +514,8 @@ public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable
         }
     }
 
-    /** Boosts the crit chance of a levelled oversized club, up to +25%. */
+
+    /** Boosts the crit chance of a levelled oversized club, up to +25%. Crits also grant bonus XP. */
     @SubscribeEvent
     public void onCombatCriticalHit(CombatCriticalHitEvent event) {
         Item weapon = event.getWeapon();
@@ -408,6 +530,38 @@ public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable
 
         float bonus = Math.min(0.25f, itemLevel.getLevel() * 0.01f);
         event.setCritChance(Math.min(1.0f, event.getCritChance() + bonus));
+
+        itemLevel.addExperience(5);
+    }
+
+    /**
+     * Award XP for every attack the player makes with an oversized club.
+     * This is what actually drives the capability forward — without it the item
+     * sits at Level 1 / 0 XP forever.
+     */
+    @SubscribeEvent
+    public void onCombatAttack(CombatAttackEvent event) {
+        Creature attacker = event.getAttacker();
+        if (attacker == null || !attacker.isPlayer()) {
+            return;
+        }
+
+        Item weapon = attacker.getPrimWeapon();
+        if (weapon == null || weapon.getTemplateId() != oversizedClubTemplateId) {
+            return;
+        }
+
+        ItemLevel itemLevel = getItemLevelData(weapon);
+        if (itemLevel == null) {
+            return;
+        }
+
+        int before = itemLevel.getLevel();
+        itemLevel.addExperience(1);
+        if (itemLevel.getLevel() > before) {
+            attacker.getCommunicator().sendNormalServerMessage(
+                    "Your " + weapon.getName() + " has reached level " + itemLevel.getLevel() + "!");
+        }
     }
 
     /**
