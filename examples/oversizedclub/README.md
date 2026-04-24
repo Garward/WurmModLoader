@@ -1,199 +1,77 @@
-# Oversized Club Mod
+# Oversized Club — Reference Tutorial Mod
 
-**Example mod demonstrating WurmModLoader's modern event system**
+The canonical example for WurmModLoader. Demonstrates every moving part a
+typical gameplay mod touches: custom item template, `Weapon` combat
+registration, crafting recipe, a persistent per-item capability (`ItemLevel`),
+and event subscriptions for examine / stat queries / crits / opportunity
+attacks.
 
-## Overview
+If you're writing your first mod, this is the file to read.
+See also [`WEAPON_CREATION_PITFALLS.md`](WEAPON_CREATION_PITFALLS.md) for the
+short list of gotchas this mod was built to demonstrate.
 
-This mod adds the "Oversized Club" - a massive two-handed weapon that deals devastating damage but is extremely slow to swing. It's perfect for strong, tanky characters who can afford to wait between swings for maximum impact.
+## Weapon
 
-## Weapon Stats
-
-| Property | Value | Comparison |
-|----------|-------|------------|
-| **Damage** | 40 | Highest of any club (Huge Club: ~28) |
-| **Speed** | 80 | Much slower than Huge Club (60) |
-| **Weight** | 12kg | Very heavy |
-| **Skill** | Huge Club | Part of club fighting tree |
-| **Hands** | Two-handed | Cannot use shield |
-| **Difficulty** | 40 | Medium-hard to craft |
-
-## Features
-
-- 🔨 **Devastating Damage:** Highest damage per hit of any club weapon
-- ⏱️ **Extremely Slow:** Swing speed is intentionally very slow for balance
-- 💪 **Strength Required:** Best for high-strength warriors
-- 🎯 **Huge Club Skill:** Uses existing skill progression
-- 🎨 **Dyeable:** Can be customized with dye
-- 🛠️ **Repairable:** Won't be lost forever when damaged
+| Stat | Value | Notes |
+| --- | --- | --- |
+| Damage | 19.0 | intentionally high so the level-scaling hooks are visible |
+| Swing speed | 8.0 s | very slow; DPS ≈ 2.38, close to a huge axe's 2.41 |
+| Reach | 2 | short — you close the gap |
+| Weight group | 5 | heavy |
+| Primary skill | `CLUB_HUGE` | shares progression with the huge club |
+| Damage type | Crush | `ITEM_TYPE_WEAPON_CRUSH` |
+| Material | Birch wood | `MATERIAL_WOOD_BIRCH` |
 
 ## Crafting
 
-1. **Requirements:**
-   - 40+ Carpentry skill
-   - Wooden shaft (x2)
+Log + carving knife, Carpentry (40 for 100% success).
 
-2. **Process:**
-   - Combine two wooden shafts
-   - Uses carpentry skill
+## What the mod demonstrates
 
-3. **Tips:**
-   - Heavy item - plan your inventory space
-   - High quality = better damage
-   - Can be improved with carpentry
+| Event | Purpose |
+| --- | --- |
+| `ItemTemplatesCreatedEvent` | register the template + Weapon + recipe |
+| `ServerStartedEvent` | log a short admin-visible ready message |
+| `CapabilityRegistrationEvent` | register `ItemLevelCapability` |
+| `ItemExamineEvent` | show level / damage bonus on examine |
+| `WeaponStatQueryEvent` | per-item tweaks to damage / speed / parry |
+| `CombatCriticalHitEvent` | scale crit chance with level |
+| `OpportunityAttackEvent` | block novice whiffs / speed up veteran counter-swings |
 
-## Combat Strategy
+## Capability — `ItemLevel`
 
-### Best For:
-- Tank builds with high strength
-- PvE against tough single targets
-- Crushing through armor
-- Boss fights where you can afford slow swings
+`ItemLevelCapability` is registered against `Item`, so every item in the game
+can lazily gain an `ItemLevel` the first time something asks for it. The
+framework handles persistence; the mod code just does
+`provider.getCapability(ItemLevelCapability.INSTANCE)` and reads / writes
+fields on the returned object.
 
-### Not Ideal For:
-- Fast-paced PvP
-- Fighting multiple enemies
-- Low-strength characters
-- Situations requiring quick reactions
+In this mod the capability only affects oversized clubs (we early-return on
+template id mismatch in every hook), but the capability itself is global — any
+other mod that wants to add "items can have levels" can use the same
+registration.
 
-## Code Example: Modern Event System
+## Installing (for testing)
 
-This mod demonstrates WurmModLoader's new event-driven architecture:
+Drop-in layout after build:
 
-### Old Way (Still Works):
-```java
-public class OversizedClubMod implements WurmServerMod, ItemTemplatesCreatedListener {
-    @Override
-    public void onItemTemplatesCreated() {
-        // Create item...
-    }
-}
+```
+mods/oversizedclub/oversizedclub.jar
+mods/oversizedclub.properties
 ```
 
-### New Way (Cleaner!):
-```java
-public class OversizedClubMod implements WurmServerMod {
-    @SubscribeEvent
-    public void onItemTemplatesCreated(ItemTemplatesCreatedEvent event) {
-        // Create item...
-    }
+## Adapting this as a starting template
 
-    @SubscribeEvent
-    public void onServerStarted(ServerStartedEvent event) {
-        // Log startup info...
-    }
-}
-```
+Most common modifications, and where to change them in
+`OversizedClubMod.java`:
 
-**Benefits:**
-- ✅ No need to implement multiple interfaces
-- ✅ Cleaner code organization
-- ✅ Better IDE support
-- ✅ More flexible (priority, cancellation, etc.)
-- ✅ Type-safe event handling
-
-## Installation
-
-### For Server Admins:
-
-1. **Download:**
-   - Download `oversizedclub-1.0.0.zip` from releases
-
-2. **Extract:**
-   ```bash
-   cd /path/to/wurm/server
-   unzip oversizedclub-1.0.0.zip
-   ```
-
-3. **Verify Structure:**
-   ```
-   mods/
-   ├── oversizedclub.properties
-   └── oversizedclub/
-       └── oversizedclub.jar
-   ```
-
-4. **Restart Server:**
-   ```bash
-   ./WurmServerLauncher-patched start=Adventure
-   ```
-
-5. **Verify:**
-   - Check logs for "Oversized Club Mod - Server Started"
-   - In-game: Craft with two wooden shafts
-
-### For Mod Developers:
-
-Study this mod to learn:
-- How to use `@SubscribeEvent` annotations
-- How to create custom items with `ItemTemplateBuilder`
-- How to handle multiple events in one mod
-- Best practices for logging and documentation
-
-## Technical Details
-
-### Dependencies:
-- WurmModLoader 1.0.0+ (with Phase 6 Event System)
-- Java 8+ (compiled for Java 8 bytecode)
-
-### Events Used:
-- `ItemTemplatesCreatedEvent` - Register custom item
-- `ServerStartedEvent` - Log startup information
-
-### Item Template ID:
-- `garward.oversizedclub` - Namespaced ID for uniqueness
-
-### Combat Mechanics:
-- **Damage Type:** Crush (effective against armor)
-- **Combat Moves:** 2 (limited attack variety)
-- **Body Spaces:** 18 (both hands - can't use shield)
-- **Weapon Type:** 1 (bludgeoning weapon)
-
-## Balance Considerations
-
-The Oversized Club is intentionally designed to be a **high-risk, high-reward** weapon:
-
-**Advantages:**
-- Highest damage per hit in club category
-- Crushes through armor effectively
-- Intimidating in PvE
-
-**Disadvantages:**
-- Very slow swing speed (combat disadvantage)
-- Heavy weight (limits inventory)
-- Two-handed (no shield defense)
-- Limited attack variety
-
-**Recommended For:**
-- PvE tank builds
-- Boss encounters
-- High-strength characters
-- Players who prefer "slow but deadly"
-
-## Future Enhancements
-
-Possible improvements for community versions:
-- Special attack moves (stun, knockback)
-- Custom sounds/particles
-- Crafting requirements (unique materials)
-- Level requirements
-- Special effects on hit
-
-## License
-
-MIT License - See main WurmModLoader repository
-
-## Credits
-
-- **Created by:** WurmModLoader Team
-- **Purpose:** Demonstration of Phase 6 Event System
-- **Based on:** Huge Club mechanics from Wurm Unlimited
-
-## Support
-
-- **Issues:** Report on WurmModLoader GitHub
-- **Questions:** WurmModLoader Discussions
-- **Mod Development:** See WurmModLoader documentation
-
----
-
-**This mod is an example of how easy it is to create custom content with WurmModLoader's modern event system!** 🎉
+- **Damage type** — swap the `ITEM_TYPE_WEAPON_*` entry in `.itemTypes(...)`.
+- **Material** — change `.material(...)` *and* the matching `ITEM_TYPE_*` in
+  `.itemTypes(...)` together. Mismatches cause subtle breakage
+  (see pitfall #2).
+- **Recipe** — change the `CreationEntryCreator.createSimpleEntry(...)` call.
+  Call it multiple times to allow multiple source materials.
+- **Combat numbers** — change the `new Weapon(...)` constructor arguments.
+  Remember `critParam` is divided by 5.0 internally (pitfall #4).
+- **Namespace** — change `"garward.oversizedclub"` to your own unique
+  namespace. Treat this as permanent once a server has run with it.
