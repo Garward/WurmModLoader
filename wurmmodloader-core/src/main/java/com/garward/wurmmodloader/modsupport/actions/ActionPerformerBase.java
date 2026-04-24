@@ -12,7 +12,7 @@ import com.wurmonline.server.structures.Floor;
 import com.wurmonline.server.structures.Wall;
 import com.wurmonline.shared.constants.CounterTypes;
 
-public interface ActionPerformerBase {
+public interface ActionPerformerBase extends org.gotti.wurmunlimited.modsupport.actions.ActionPerformerBase {
 
 	short getActionId();
 

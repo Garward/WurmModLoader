@@ -499,7 +499,9 @@ public class ServerConfig {
         // ACTION SPEED
         // ===================================================================
         /**
-         * Action timer multiplier (affects ALL timed actions globally).
+         * Action timer divisor (affects ALL timed actions globally).
+         * Vanilla {@code ACTIONTIMER} — Wurm divides hardcoded action durations
+         * by this value, so <strong>higher = faster</strong>.
          *
          * <p><strong>What This Controls:</strong></p>
          * <ul>
@@ -513,17 +515,17 @@ public class ServerConfig {
          * <p><strong>Examples:</strong></p>
          * <ul>
          *   <li>1.0 = Official Wurm Online speed (realistic, slow-paced)</li>
-         *   <li>0.5 = 2x faster actions (doubles action speed)</li>
-         *   <li>0.25 = 4x faster actions (very fast, good for small servers)</li>
-         *   <li>0.1 = 10x faster actions (extremely fast, instant gratification)</li>
-         *   <li>2.0 = 2x slower actions (more difficult, more tactical)</li>
+         *   <li>2.0 = 2x faster actions</li>
+         *   <li>4.0 = 4x faster actions (very fast, good for small servers)</li>
+         *   <li>10.0 = 10x faster actions (extremely fast, instant gratification)</li>
+         *   <li>0.5 = 2x slower actions (more difficult, more tactical)</li>
          * </ul>
          *
          * <p><strong>Notes:</strong></p>
          * <ul>
-         *   <li>Lower values = faster actions (0.5 = half timer = twice as fast)</li>
+         *   <li>Higher values = faster actions (2.0 = half the timer = twice as fast)</li>
          *   <li>This is one of the most impactful settings for server pacing</li>
-         *   <li>Most Wurm Unlimited servers use 0.25-0.5 (2x-4x faster)</li>
+         *   <li>Most Wurm Unlimited servers use 2.0-4.0 (2x-4x faster)</li>
          *   <li>Too fast can make the game feel rushed and reduce immersion</li>
          *   <li>Official WO uses 1.0 (actions can take 30+ seconds at low skills)</li>
          * </ul>

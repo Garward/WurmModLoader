@@ -58,6 +58,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.TerraformingDigInnerPatch
 import com.garward.wurmmodloader.core.bytecode.patches.FlatteningInnerPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.BehaviourDispatcherPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.BehaviourDispatcherMenuPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreateMenuIdOverflowPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CommunicatorMenuPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.TileDirtConsumePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PlanterItemAcceptPatch;
@@ -180,6 +181,7 @@ public final class CoreBytecodePatches {
         new FlatteningInnerPatch(),
         new BehaviourDispatcherPatch(),
         new BehaviourDispatcherMenuPatch(),
+        new CreateMenuIdOverflowPatch(),
         new CommunicatorMenuPatch(),
         new TileDirtConsumePatch(),
         new PlanterItemAcceptPatch(),

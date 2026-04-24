@@ -146,6 +146,19 @@ public class ServerConfigSync {
             DatabaseConnectionUtil.closeConnection(conn);
         }
 
+        // Also push the new values into Servers.localServer via reflection so
+        // runtime code (action timers, combat rating, etc.) picks them up this
+        // boot. Without this, Wurm already loaded the ServerEntry static fields
+        // from the DB with the OLD values — the DB write above would only take
+        // effect on the NEXT restart (the "two reboots" bug).
+        try {
+            applyConfigToServerMemory(config, serverId);
+        } catch (Exception e) {
+            logger.log(java.util.logging.Level.WARNING,
+                "[ServerConfigSync] DB updated but in-memory apply failed — changes will take effect next restart",
+                e);
+        }
+
         logger.info("[ServerConfigSync] Database sync completed successfully");
         logVerification(config, serverId);
         return true;

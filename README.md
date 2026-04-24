@@ -672,6 +672,46 @@ public class MyMod implements WurmServerMod, PreInitable, Configurable {
 }
 ```
 
+#### ♻️ Hot-Reloading Config (`#reloadmods`)
+
+GMs can run `#reloadmods` from the server console or in-game (`#reloadmods`
+for all mods, `#reloadmods <modname>` for one). On reload the framework
+re-reads each mod's `.properties` / `.config` from disk and re-fires
+`Configurable.configure(Properties)`. Mods that only consume Properties get
+this for free.
+
+For mods that load extra files (YAML, JSON, CSV, …) outside the Properties
+pipeline — the `MyConfig.load("mymod.config")` line in the example above is a
+typical case — implement the optional `Reloadable` interface so the custom
+load runs again on `#reloadmods`:
+
+```java
+import com.garward.wurmmodloader.modloader.interfaces.Reloadable;
+
+public class MyMod implements WurmServerMod, PreInitable, Configurable, Reloadable {
+
+    private MyConfig config;
+
+    @Override
+    public void preInit() {
+        config = MyConfig.load("mymod.config");   // boot-time load
+    }
+
+    @Override
+    public void onReload() {
+        // Fired AFTER configure(properties) has been re-applied with fresh
+        // values from mod.properties + mod.config.
+        config = MyConfig.load("mymod.config");   // re-load on #reloadmods
+    }
+}
+```
+
+**Idempotency caveat.** Reload does not tear the mod down — event
+subscriptions, registered items, and bytecode patches all stay in place.
+If your `configure()` or `onReload()` mutates collections, reset them
+before repopulating (e.g. `routes.clear()` then re-parse), and avoid
+re-registering listeners you registered at boot.
+
 ### Why this restriction?
 
 **Technical explanation:**
@@ -713,6 +753,7 @@ Event handlers run AFTER the framework sets everything up, so all game classes a
 | Use game classes (Item, Creature, etc.) | `@SubscribeEvent` on ServerStartedEvent |
 | Handle game events | `@SubscribeEvent` on specific events |
 | Integrate with other systems | `@SubscribeEvent` on ServerStartedEvent |
+| Re-read custom config files on `#reloadmods` | Implement `Reloadable.onReload()` |
 | Write bytecode patches | **Don't!** Framework handles this |
 
 ## 💬 Support

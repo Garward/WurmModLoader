@@ -10,14 +10,13 @@ repositories {
 }
 
 dependencies {
-    // WurmModLoader API - for event system
     implementation(project(":wurmmodloader-api"))
-
-    // WurmModLoader modsupport - for ItemTemplateBuilder
     implementation(project(":wurmmodloader-modsupport"))
 
-    // Wurm server dependencies (provided at runtime)
-    compileOnly(files("../../distribution/server.jar", "../../distribution/common.jar"))
+    compileOnly(files(
+        "${rootProject.projectDir}/distribution/server.jar",
+        "${rootProject.projectDir}/distribution/common.jar"
+    ))
 }
 
 java {
@@ -25,38 +24,19 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-tasks.jar {
-    archiveBaseName.set("oversizedclub")
+tasks {
+    jar {
+        archiveBaseName.set("oversizedclub")
+        archiveVersion.set("")
 
-    manifest {
-        attributes(
-            "Implementation-Title" to "Oversized Club Mod",
-            "Implementation-Version" to project.version,
-            "Built-By" to "WurmModLoader",
-            "Created-By" to "Gradle ${gradle.gradleVersion}",
-            "Build-Jdk" to "${System.getProperty("java.version")} (${System.getProperty("java.vendor")})"
-        )
+        manifest {
+            attributes(
+                "Implementation-Title" to "Oversized Club Mod",
+                "Implementation-Version" to project.version,
+                "Built-By" to "WurmModLoader",
+                "Created-By" to "Gradle ${gradle.gradleVersion}",
+                "Build-Jdk" to "${System.getProperty("java.version")} (${System.getProperty("java.vendor")})"
+            )
+        }
     }
-}
-
-// Task to create distribution structure
-tasks.register<Zip>("modDistribution") {
-    archiveBaseName.set("oversizedclub")
-    archiveVersion.set(project.version.toString())
-
-    from(tasks.jar) {
-        into("mods/oversizedclub")
-    }
-
-    from("src/dist") {
-        into("mods")
-    }
-
-    from("README.md") {
-        into("docs")
-    }
-}
-
-tasks.build {
-    dependsOn(tasks.named("modDistribution"))
 }

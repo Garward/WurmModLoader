@@ -491,7 +491,7 @@ public class ServerConfigGenerator {
         // Combat
         yaml.append("# Combat & Action Settings\n");
         yaml.append("combat:\n");
-        yaml.append("  actionSpeed: ").append(config.combat.actionSpeed).append("  # Action timer multiplier (1.0 = normal, 0.5 = 2x faster)\n");
+        yaml.append("  actionSpeed: ").append(config.combat.actionSpeed).append("  # Action timer divisor (1.0 = normal, 2.0 = 2x faster, 0.5 = 2x slower)\n");
         yaml.append("  ratingModifier: ").append(config.combat.ratingModifier).append("  # Combat rating modifier\n");
         yaml.append("  hotaDelay: ").append(config.combat.hotaDelay).append("  # Hunt of the Ancients delay (in Wurm hours)\n");
         yaml.append("\n");

@@ -144,4 +144,6 @@ public final class BytecodeConflictKeys {
     public static final String ZONE_SPAWN_ATTEMPT = "ai.zone.spawnAttempt";
     public static final String CREATURE_POLL_MOVEMENT = "ai.creature.pollMovement";
     public static final String CREATURE_POLL_MOVEMENT_PRE = "ai.creature.pollMovement.pre";
+    public static final String CREATE_MENU_ID_ENCODE = "actions.createMenuIdEncode";
+    public static final String CREATE_MENU_ID_DECODE = "actions.createMenuIdDecode";
 }

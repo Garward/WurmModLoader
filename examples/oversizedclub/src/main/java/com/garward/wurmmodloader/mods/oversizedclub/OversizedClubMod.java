@@ -11,8 +11,11 @@ import com.garward.wurmmodloader.api.events.server.CapabilityRegistrationEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStartedEvent;
 import com.garward.wurmmodloader.mods.oversizedclub.capability.ItemLevel;
 import com.garward.wurmmodloader.mods.oversizedclub.capability.ItemLevelCapability;
+import com.garward.wurmmodloader.modloader.interfaces.Configurable;
+import com.garward.wurmmodloader.modloader.interfaces.Reloadable;
 import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 import com.garward.wurmmodloader.modsupport.ItemTemplateBuilder;
+import com.garward.wurmmodloader.modsupport.combat.WeaponRegistry;
 import com.wurmonline.server.MiscConstants;
 import com.wurmonline.server.combat.Weapon;
 import com.wurmonline.server.creatures.Creature;
@@ -27,6 +30,7 @@ import com.wurmonline.server.items.Materials;
 import com.wurmonline.server.skills.SkillList;
 
 import java.util.Locale;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,15 +58,64 @@ import java.util.logging.Logger;
  * @see com.wurmonline.server.items.CreationEntryCreator
  * @see com.wurmonline.server.combat.Weapon
  */
-public class OversizedClubMod implements WurmServerMod {
+public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable {
 
     private static final Logger logger = Logger.getLogger(OversizedClubMod.class.getName());
 
-    private static final double BASE_CLUB_DAMAGE = 19.0d;
-    private static final double DAMAGE_PER_LEVEL = 0.5d;
-    private static final double MAX_LEVEL_DAMAGE_BONUS = 19.0d; // caps the level scaling at +100% of base
+    // Default balance values. configure() overwrites these from mod.config,
+    // and #reloadmods re-fires configure() + onReload() so live GM edits take
+    // effect without a restart. onReload() calls WeaponRegistry.reregister()
+    // to overwrite the existing Weapon() entry for this template id, so both
+    // examine-display math AND dealt combat damage refresh immediately.
+    private double baseClubDamage = 19.0d;
+    private double damagePerLevel = 0.5d;
+    private double maxLevelDamageBonus = 19.0d;
+    private double weaponSpeed = 8.0d;
+    private double critChance = 0.002d;
 
     private static int oversizedClubTemplateId = -1;
+
+    @Override
+    public void configure(Properties properties) {
+        this.baseClubDamage = readDouble(properties, "damageBase", this.baseClubDamage);
+        this.damagePerLevel = readDouble(properties, "damagePerLevel", this.damagePerLevel);
+        this.maxLevelDamageBonus = readDouble(properties, "maxLevelDamageBonus", this.maxLevelDamageBonus);
+        this.weaponSpeed = readDouble(properties, "weaponSpeed", this.weaponSpeed);
+        this.critChance = readDouble(properties, "critChance", this.critChance);
+        logger.log(Level.INFO,
+                "OversizedClub configured: damageBase={0}, damagePerLevel={1}, maxLevelDamageBonus={2}, speed={3}, crit={4}",
+                new Object[] { baseClubDamage, damagePerLevel, maxLevelDamageBonus, weaponSpeed, critChance });
+    }
+
+    /**
+     * Called after configure() on #reloadmods. Re-registers the Weapon() so
+     * dealt combat damage (not just examine text) picks up the new config
+     * values immediately. Skipped on first boot — the template doesn't
+     * exist yet until onItemTemplatesCreated() runs.
+     */
+    @Override
+    public void onReload() {
+        if (oversizedClubTemplateId < 0) {
+            return;
+        }
+        WeaponRegistry.reregister(
+                oversizedClubTemplateId,
+                (float) baseClubDamage,
+                (float) weaponSpeed,
+                (float) critChance,
+                2, 5, 0.3f, 0.0d);
+        logger.info("OversizedClub: Weapon() re-registered — new stats apply to the next swing.");
+    }
+
+    private static double readDouble(Properties properties, String key, double fallback) {
+        String raw = properties.getProperty(key);
+        if (raw == null || raw.trim().isEmpty()) return fallback;
+        try { return Double.parseDouble(raw.trim()); }
+        catch (NumberFormatException e) {
+            logger.warning("OversizedClub: invalid " + key + "=" + raw + ", using " + fallback);
+            return fallback;
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Item template + weapon registration
@@ -167,13 +220,15 @@ public class OversizedClubMod implements WurmServerMod {
             //   Regular club : (8.3f , 4.5f , 0.002f, 3, 3, 0.4f, 0.5d)
             //   Huge axe     : (14.2f, 5.9f , 0.012f, 4, 4, 0.6f, 0.0d)
             //   Titan weapons: (11f  , 5f   , 0.02f , 4, 4, 1.0f, 0.0d)
-            new Weapon(
+            // Using WeaponRegistry (thin wrapper around `new Weapon(...)`) so the
+            // same call site can be re-used on #reloadmods via onReload().
+            WeaponRegistry.register(
                     oversizedClubTemplateId,
-                    (float) BASE_CLUB_DAMAGE, // 19.0 — intentionally high so level hooks are visible
-                    8.0f,                     // very slow — 19.0 / 8.0 ≈ 2.38 DPS, close to huge axe's 2.41
-                    0.002f,                   // 0.04% actual crit; the critical-hit event hook boosts this at level
-                    2,                        // short reach — thematic, you have to close the gap
-                    5,                        // weight group 5 — heavy
+                    (float) baseClubDamage,  // config-backed; live-reloadable
+                    (float) weaponSpeed,     // config-backed; live-reloadable
+                    (float) critChance,      // config-backed; live-reloadable
+                    2,                       // short reach — thematic
+                    5,                       // weight group 5 — heavy
                     0.3f,
                     0.0d
             );
@@ -222,7 +277,7 @@ public class OversizedClubMod implements WurmServerMod {
 
             logger.log(Level.INFO,
                     "Oversized Club registered (template id {0}, base damage {1}, swing {2}s).",
-                    new Object[] { oversizedClubTemplateId, BASE_CLUB_DAMAGE, 8.0f });
+                    new Object[] { oversizedClubTemplateId, baseClubDamage, weaponSpeed });
 
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Failed to create Oversized Club item template", e);
@@ -274,7 +329,7 @@ public class OversizedClubMod implements WurmServerMod {
     }
 
     private double calculateDamageBonus(int level) {
-        return Math.min(level * DAMAGE_PER_LEVEL, MAX_LEVEL_DAMAGE_BONUS);
+        return Math.min(level * damagePerLevel, maxLevelDamageBonus);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -298,7 +353,7 @@ public class OversizedClubMod implements WurmServerMod {
 
         double bonusDamage = calculateDamageBonus(itemLevel.getLevel());
         if (bonusDamage > 0) {
-            double percent = (bonusDamage / BASE_CLUB_DAMAGE) * 100.0d;
+            double percent = (bonusDamage / baseClubDamage) * 100.0d;
             event.addDescription(String.format(Locale.US,
                     "\n[+%.0f%% DMG from level (%.1f bonus damage)]", percent, bonusDamage));
         }
