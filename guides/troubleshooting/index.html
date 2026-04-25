@@ -1,0 +1,3108 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Server-side modding framework for Wurm Unlimited">
+      
+      
+      
+        <link rel="canonical" href="https://garward.github.io/WurmModLoader/guides/troubleshooting/">
+      
+      
+        <link rel="prev" href="../extending-framework/">
+      
+      
+        <link rel="next" href="../legacy-mod-compatibility/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Troubleshooting - WurmModLoader (Server)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#troubleshooting-server-mods" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="WurmModLoader (Server)" class="md-header__button md-logo" aria-label="WurmModLoader (Server)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WurmModLoader (Server)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Troubleshooting
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/garward/WurmModLoader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    garward/WurmModLoader
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="WurmModLoader (Server)" class="md-nav__button md-logo" aria-label="WurmModLoader (Server)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    WurmModLoader (Server)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/garward/WurmModLoader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    garward/WurmModLoader
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../event-bus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Event Bus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extending-framework/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending the Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-look-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to look first
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-doesnt-load-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod doesn't load at all
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mod doesn&#39;t load at all">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom-no-startup-message-no-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: no startup message, no error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-classnotfoundexception-comyourorgyourmod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: ClassNotFoundException: com.yourorg.YourMod
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-modloadexception-dependency-not-satisfied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: ModLoadException: dependency not satisfied
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-loads-but-does-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod loads but does nothing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mod loads but does nothing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#event-handler-never-fires" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event handler never fires
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legacy-bridge-listener-not-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy-bridge listener not called
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bytecode-patch-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bytecode patch failed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bytecode patch failed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom-notfoundexception-comwurmonlineserverfoo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: NotFoundException: com.wurmonline.server.Foo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-notfoundexception-on-a-method-but-the-class-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: NotFoundException on a method (but the class exists)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-cannot-modify-frozen-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: cannot modify frozen class
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-patch-compiles-mod-loads-but-runtime-behavior-didnt-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: patch compiles, mod loads, but runtime behavior didn't change
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-conflicts-load-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod conflicts &amp; load order
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mod conflicts &amp; load order">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-mods-patch-the-same-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two mods patch the same method
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mod-a-needs-mod-bs-data-at-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod A needs Mod B's data at startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build problems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build problems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compileonly-vs-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compileOnly vs implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mod-jar-has-a-version-suffix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod jar has a version suffix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#java-version-mismatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Java version mismatch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-crashes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime crashes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runtime crashes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nosuchmethoderror-at-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NoSuchMethodError at runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#classcastexception-after-a-classloader-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClassCastException after a classloader boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-hangs-never-finishes-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server hangs / never finishes loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-crashes-during-shutdown-lost-world-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server crashes during shutdown (lost world data)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-log-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick log patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-you-really-cant-figure-it-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When you really can't figure it out
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../legacy-mod-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Mod Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ui-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — High-Level API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ui-api-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — API Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ui-api-submenus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Submenus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../questions-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Questions API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bml-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — BML Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade-tree-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Upgrade Tree
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../icon-system-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Icon System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Migration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/porting-existing-mods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Existing Mods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/from-legacy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Full From-Legacy Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/console-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Console Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/index-query-guide.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code-Index CLIs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ui-api-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI API Cheatsheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/COMMON_MOD_PATTERNS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_1" id="__nav_7_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Combat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Combat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/combat/duskombat-formula/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DUSKombat Formula
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/combat/event-surface-gap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Event-Surface Gap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/combat/mod-crossref/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mod Cross-Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/combat/visibility-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visibility Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Console / GM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Console / GM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/console-gm/commands-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/console-gm/commands-mvp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands MVP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/console-gm/hybrid-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hybrid System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creatures
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Creatures
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/creatures/hook-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/creatures/pet-class-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pet Class Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_4" id="__nav_7_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/database/connection-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/database/events-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Events Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/database/creature-optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creature Optimization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/database/village-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Village Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/database/zone-deity-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zone / Deity Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_5" id="__nav_7_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client ModLoader
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Client ModLoader
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/client-modloader/plan.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/client-modloader/custom-menu-progress.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom-Menu Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/server-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-look-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to look first
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-doesnt-load-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod doesn't load at all
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mod doesn&#39;t load at all">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom-no-startup-message-no-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: no startup message, no error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-classnotfoundexception-comyourorgyourmod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: ClassNotFoundException: com.yourorg.YourMod
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-modloadexception-dependency-not-satisfied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: ModLoadException: dependency not satisfied
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-loads-but-does-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod loads but does nothing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mod loads but does nothing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#event-handler-never-fires" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event handler never fires
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legacy-bridge-listener-not-called" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy-bridge listener not called
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bytecode-patch-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bytecode patch failed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bytecode patch failed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom-notfoundexception-comwurmonlineserverfoo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: NotFoundException: com.wurmonline.server.Foo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-notfoundexception-on-a-method-but-the-class-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: NotFoundException on a method (but the class exists)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-cannot-modify-frozen-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: cannot modify frozen class
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#symptom-patch-compiles-mod-loads-but-runtime-behavior-didnt-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom: patch compiles, mod loads, but runtime behavior didn't change
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mod-conflicts-load-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod conflicts &amp; load order
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mod conflicts &amp; load order">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-mods-patch-the-same-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two mods patch the same method
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mod-a-needs-mod-bs-data-at-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod A needs Mod B's data at startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build problems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build problems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#compileonly-vs-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compileOnly vs implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mod-jar-has-a-version-suffix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mod jar has a version suffix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#java-version-mismatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Java version mismatch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-crashes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime crashes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runtime crashes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nosuchmethoderror-at-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NoSuchMethodError at runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#classcastexception-after-a-classloader-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClassCastException after a classloader boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-hangs-never-finishes-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server hangs / never finishes loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-crashes-during-shutdown-lost-world-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server crashes during shutdown (lost world data)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-log-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick log patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-you-really-cant-figure-it-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When you really can't figure it out
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="troubleshooting-server-mods">Troubleshooting — Server Mods<a class="headerlink" href="#troubleshooting-server-mods" title="Permanent link">&para;</a></h1>
+<p>When something goes wrong, it's almost always one of these. Symptoms →
+root cause → fix. Read top-to-bottom the first time; bookmark it for
+next time.</p>
+<hr />
+<h2 id="where-to-look-first">Where to look first<a class="headerlink" href="#where-to-look-first" title="Permanent link">&para;</a></h2>
+<p>Every server mod problem eventually surfaces in one of these logs (relative
+to your server install dir, <code>&lt;wurm-server-dir&gt;</code>):</p>
+<ul>
+<li><code>&lt;wurm-server-dir&gt;/logs/wurmmodloader.0.log</code>
+  — framework + mod loading + startup stack traces</li>
+<li><code>&lt;wurm-server-dir&gt;/&lt;WORLDNAME&gt;/Logs/*.log</code>
+  — per-world gameplay logs</li>
+</ul>
+<p>Default Steam locations for <code>&lt;wurm-server-dir&gt;</code>:</p>
+<ul>
+<li><strong>Windows:</strong> <code>C:\Program Files (x86)\Steam\steamapps\common\Wurm Unlimited Dedicated Server\</code></li>
+<li><strong>Linux:</strong>   <code>~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/</code></li>
+</ul>
+<p>Useful one-liners (set <code>LOG=&lt;wurm-server-dir&gt;/logs/wurmmodloader.0.log</code> first):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;SEVERE|WARNING&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span><span class="w">                </span><span class="c1"># all errors/warnings</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grep<span class="w"> </span>-A<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="s2">&quot;SEVERE&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span><span class="w">                     </span><span class="c1"># errors with following stacktrace lines</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>grep<span class="w"> </span>-i<span class="w"> </span><span class="s2">&quot;yourmod&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span><span class="w">                       </span><span class="c1"># anything mentioning your mod</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>tail<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span><span class="w">                                 </span><span class="c1"># live tail</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>tail<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>--line-buffered<span class="w"> </span>YourMod<span class="w">  </span><span class="c1"># live tail filtered to your mod</span>
+</span></code></pre></div>
+<p>JUL log records are two lines (<code>&lt;timestamp&gt; &lt;class&gt; &lt;method&gt;</code> then <code>LEVEL: message</code>),
+so use <code>grep -A N</code> / <code>grep -B N</code> to keep stacktrace context glued to its <code>SEVERE</code>.</p>
+<hr />
+<h2 id="mod-doesnt-load-at-all">Mod doesn't load at all<a class="headerlink" href="#mod-doesnt-load-at-all" title="Permanent link">&para;</a></h2>
+<h3 id="symptom-no-startup-message-no-error">Symptom: no startup message, no error<a class="headerlink" href="#symptom-no-startup-message-no-error" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grep<span class="w"> </span>-i<span class="w"> </span><span class="s2">&quot;yourmod&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># (no output)</span>
+</span></code></pre></div>
+<p>The loader never saw the mod. Check:</p>
+<ol>
+<li><strong>Descriptor lives in the right place.</strong>
+   <code>~/.../mods/yourmod.properties</code> — directly in <code>mods/</code>, not in a
+   subfolder.</li>
+<li><strong>JAR filename matches the descriptor.</strong> <code>classpath=yourmod/yourmod.jar</code>
+   in the <code>.properties</code> means the jar must be at
+   <code>~/.../mods/yourmod/yourmod.jar</code> — <em>exactly</em>. A <code>-1.0.0</code> version
+   suffix on the jar breaks this.</li>
+<li><strong>Descriptor has <code>classname=</code>.</strong> Missing or misspelled is a silent
+   skip.</li>
+</ol>
+<h3 id="symptom-classnotfoundexception-comyourorgyourmod">Symptom: <code>ClassNotFoundException: com.yourorg.YourMod</code><a class="headerlink" href="#symptom-classnotfoundexception-comyourorgyourmod" title="Permanent link">&para;</a></h3>
+<p>The descriptor's <code>classname=</code> points at a class the loader can't find.
+Causes:</p>
+<ul>
+<li><code>classpath=</code> in the <code>.properties</code> doesn't match the jar location.</li>
+<li>The jar is empty or corrupt. Check <code>jar tf yourmod.jar</code> — your class
+  should be listed at <code>com/yourorg/YourMod.class</code>.</li>
+<li>You accidentally shipped <code>server.jar</code> / <code>common.jar</code> inside your mod
+  jar (you used <code>implementation</code> instead of <code>compileOnly</code> in gradle),
+  and the duplicate classloader breakage eats your own class.</li>
+</ul>
+<h3 id="symptom-modloadexception-dependency-not-satisfied">Symptom: <code>ModLoadException: dependency not satisfied</code><a class="headerlink" href="#symptom-modloadexception-dependency-not-satisfied" title="Permanent link">&para;</a></h3>
+<p>You have <code>depend.requires=foo</code> but <code>foo</code> isn't installed or failed to
+load. Either install it or drop the dependency. Load-order-only
+dependencies go in <code>depend.after</code>, not <code>depend.requires</code>.</p>
+<hr />
+<h2 id="mod-loads-but-does-nothing">Mod loads but does nothing<a class="headerlink" href="#mod-loads-but-does-nothing" title="Permanent link">&para;</a></h2>
+<h3 id="event-handler-never-fires">Event handler never fires<a class="headerlink" href="#event-handler-never-fires" title="Permanent link">&para;</a></h3>
+<p>Checklist, in order:</p>
+<ol>
+<li><strong><code>@SubscribeEvent</code> annotation present?</strong> The event bus only
+   dispatches to annotated methods. Forgetting the annotation is the
+   #1 silent failure.</li>
+<li><strong>Method is <code>public</code>?</strong> The bus ignores package-private methods.</li>
+<li><strong>Exactly one parameter, and it extends <code>Event</code>?</strong> <code>void
+   handler(String foo)</code> won't be picked up.</li>
+<li><strong>The class registered with the bus?</strong> For modern mods this happens
+   automatically when <code>classname=</code> in the descriptor points at the
+   class. If your handler is on a <em>different</em> class, that class needs
+   to be registered (framework handles the descriptor class; anything
+   else is on you).</li>
+<li><strong>The event actually fires during your test.</strong> Check with:
+   <code>grep "YourEvent" "$LOG"</code>. If the framework
+   never fired it, your handler has nothing to react to.</li>
+</ol>
+<h3 id="legacy-bridge-listener-not-called">Legacy-bridge listener not called<a class="headerlink" href="#legacy-bridge-listener-not-called" title="Permanent link">&para;</a></h3>
+<p>If you ported a mod with <code>implements ServerStartedListener</code> and
+<code>onServerStarted()</code> never runs:</p>
+<ul>
+<li>Confirm you implemented <code>WurmServerMod</code> (or <code>WurmMod</code>) too — the
+  bridge only looks at mods that declare themselves.</li>
+<li>The legacy bridge ignores listeners that aren't in the Ago interface
+  set. Custom listener interfaces won't work — use events instead.</li>
+</ul>
+<hr />
+<h2 id="bytecode-patch-failed">Bytecode patch failed<a class="headerlink" href="#bytecode-patch-failed" title="Permanent link">&para;</a></h2>
+<h3 id="symptom-notfoundexception-comwurmonlineserverfoo">Symptom: <code>NotFoundException: com.wurmonline.server.Foo</code><a class="headerlink" href="#symptom-notfoundexception-comwurmonlineserverfoo" title="Permanent link">&para;</a></h3>
+<p>Your patch target class doesn't exist, was renamed, or isn't in the
+Wurm version you're running.</p>
+<ol>
+<li>Confirm the class exists in the current <code>server.jar</code>:
+   <code>unzip -l server.jar | grep -i Foo</code>.</li>
+<li>If it does but the full path differs, fix the <code>classPool.getCtClass(...)</code>
+   argument.</li>
+<li>If it doesn't, you're targeting a class that was renamed between WU
+   patches — decompile <code>server.jar</code> (CFR / Vineflower / Procyon) and
+   search there.</li>
+</ol>
+<h3 id="symptom-notfoundexception-on-a-method-but-the-class-exists">Symptom: <code>NotFoundException</code> on a method (but the class exists)<a class="headerlink" href="#symptom-notfoundexception-on-a-method-but-the-class-exists" title="Permanent link">&para;</a></h3>
+<p>Method signature mismatch. Javassist needs the exact descriptor:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">ctClass</span><span class="p">.</span><span class="na">getMethod</span><span class="p">(</span><span class="s">&quot;breed&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;(Lcom/wurmonline/server/creatures/Creature;...)Z&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Use <code>javap -s -p -classpath server.jar com.wurmonline.server.Foo | grep -A1 methodname</code>
+to read the exact descriptor from the current jar, and copy it verbatim.</p>
+<h3 id="symptom-cannot-modify-frozen-class">Symptom: <code>cannot modify frozen class</code><a class="headerlink" href="#symptom-cannot-modify-frozen-class" title="Permanent link">&para;</a></h3>
+<p>Another mod already loaded and modified the class before yours. Two
+causes:</p>
+<ul>
+<li><strong>Load order.</strong> Add <code>depend.after=theothermod</code> to your <code>.properties</code>
+  so you run first. Or <code>depend.before</code> on the other mod if you own
+  both.</li>
+<li><strong>You're using <code>init()</code> instead of <code>preInit()</code>.</strong> Bytecode patches
+  must run in <code>preInit()</code>. By <code>init()</code>, Wurm classes are loaded and
+  frozen.</li>
+</ul>
+<h3 id="symptom-patch-compiles-mod-loads-but-runtime-behavior-didnt-change">Symptom: patch compiles, mod loads, but runtime behavior didn't change<a class="headerlink" href="#symptom-patch-compiles-mod-loads-but-runtime-behavior-didnt-change" title="Permanent link">&para;</a></h3>
+<p>Almost always: the patched class was loaded <em>before</em> your patch ran.
+Verify with:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;Applied .* to .*Foo&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span>
+</span></code></pre></div>
+<p>If the log line is there but the behavior didn't change, your patch
+code is wrong (wrong method, <code>$proceed</code> args mismatched, etc.). If
+it's <em>not</em> there, the patch silently didn't apply — check for a
+surrounding error and confirm <code>preInit()</code> was called.</p>
+<hr />
+<h2 id="mod-conflicts-load-order">Mod conflicts &amp; load order<a class="headerlink" href="#mod-conflicts-load-order" title="Permanent link">&para;</a></h2>
+<h3 id="two-mods-patch-the-same-method">Two mods patch the same method<a class="headerlink" href="#two-mods-patch-the-same-method" title="Permanent link">&para;</a></h3>
+<p>With legacy Javassist, the second mod to patch wins — but only if the
+first mod hasn't frozen the class. In practice you get either "second
+mod's patch silently replaces first mod's" or "second mod's patch
+throws <code>cannot modify frozen class</code>".</p>
+<p><strong>Fix:</strong> convert at least one of them to an event. If both patches
+need to run, events via the bus are ordered by <code>EventPriority</code> and
+both handlers run in sequence. See <a href="../event-bus/"><code>event-bus.md</code></a> for
+priority semantics.</p>
+<h3 id="mod-a-needs-mod-bs-data-at-startup">Mod A needs Mod B's data at startup<a class="headerlink" href="#mod-a-needs-mod-bs-data-at-startup" title="Permanent link">&para;</a></h3>
+<p>Use <code>depend.requires=modb</code> (hard) or <code>depend.after=modb</code> (soft, for
+load order only). Without it, nothing guarantees Mod B has finished
+<code>init()</code> when Mod A runs.</p>
+<hr />
+<h2 id="build-problems">Build problems<a class="headerlink" href="#build-problems" title="Permanent link">&para;</a></h2>
+<h3 id="compileonly-vs-implementation"><code>compileOnly</code> vs <code>implementation</code><a class="headerlink" href="#compileonly-vs-implementation" title="Permanent link">&para;</a></h3>
+<p>Wurm jars, Javassist, and the framework modules must be <strong><code>compileOnly</code></strong>.
+If they're <code>implementation</code>, gradle packs copies of Wurm classes into
+your mod jar → the mod classloader sees two copies of
+<code>com.wurmonline.server.Server</code> and fails with
+<code>LinkageError: loader constraint violated</code>.</p>
+<p>Correct:
+<div class="language-kotlin highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">compileOnly</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s">&quot;</span><span class="si">$</span><span class="n">wurm</span><span class="s">/server.jar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;</span><span class="si">$</span><span class="n">wurm</span><span class="s">/common.jar&quot;</span><span class="p">))</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">compileOnly</span><span class="p">(</span><span class="s">&quot;org.javassist:javassist:3.23.1-GA&quot;</span><span class="p">)</span>
+</span></code></pre></div></p>
+<h3 id="mod-jar-has-a-version-suffix">Mod jar has a version suffix<a class="headerlink" href="#mod-jar-has-a-version-suffix" title="Permanent link">&para;</a></h3>
+<p><code>archiveVersion.set("")</code> in the gradle build is non-negotiable. The
+loader matches jars by exact name against the <code>classpath=</code> in the
+<code>.properties</code>. <code>yourmod-1.0.0.jar</code> won't match <code>classpath=yourmod/yourmod.jar</code>.</p>
+<h3 id="java-version-mismatch">Java version mismatch<a class="headerlink" href="#java-version-mismatch" title="Permanent link">&para;</a></h3>
+<p>Wurm runs Java 8 bytecode. Your build uses Java 17 toolchain but must
+<em>emit</em> Java 8:</p>
+<div class="language-kotlin highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">java</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">sourceCompatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">JavaVersion</span><span class="p">.</span><span class="na">VERSION_1_8</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">targetCompatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">JavaVersion</span><span class="p">.</span><span class="na">VERSION_1_8</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">toolchain</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">languageVersion</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="n">JavaLanguageVersion</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="m">17</span><span class="p">))</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">tasks</span><span class="p">.</span><span class="na">withType</span><span class="o">&lt;</span><span class="n">JavaCompile</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">options</span><span class="p">.</span><span class="na">release</span><span class="p">.</span><span class="na">set</span><span class="p">(</span><span class="m">8</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+<p>Symptoms of wrong target: mod loads, but the first call into Wurm
+throws <code>UnsupportedClassVersionError</code>.</p>
+<hr />
+<h2 id="runtime-crashes">Runtime crashes<a class="headerlink" href="#runtime-crashes" title="Permanent link">&para;</a></h2>
+<h3 id="nosuchmethoderror-at-runtime"><code>NoSuchMethodError</code> at runtime<a class="headerlink" href="#nosuchmethoderror-at-runtime" title="Permanent link">&para;</a></h3>
+<p>The method existed when you compiled but not when the server ran.
+Causes:</p>
+<ul>
+<li>Wurm updated between your build and the current server jar. Rebuild
+  against the new jars.</li>
+<li>You compiled against framework v0.X but the deployed framework is
+  v0.Y with a different API. Redeploy the framework or rebuild.</li>
+</ul>
+<h3 id="classcastexception-after-a-classloader-boundary"><code>ClassCastException</code> after a classloader boundary<a class="headerlink" href="#classcastexception-after-a-classloader-boundary" title="Permanent link">&para;</a></h3>
+<p>A mod with <code>sharedClassLoader=false</code> passed an object to another
+classloader that re-loads the same class — two different <code>Class&lt;?&gt;</code>
+instances, one can't be cast to the other. Either:</p>
+<ul>
+<li>Use <code>sharedClassLoader=true</code> (simpler, what most mods want), or</li>
+<li>Pass only primitives / <code>String</code> / framework-owned types across the
+  boundary.</li>
+</ul>
+<h3 id="server-hangs-never-finishes-loading">Server hangs / never finishes loading<a class="headerlink" href="#server-hangs-never-finishes-loading" title="Permanent link">&para;</a></h3>
+<p>Usually a mod's <code>preInit()</code> or <code>init()</code> is in an infinite loop, or
+waiting on something that never arrives. Check:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>tail<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG</span><span class="s2">&quot;</span>
+</span></code></pre></div>
+<p>The last mod to log before the hang is your suspect. Thread dump with
+<code>jstack &lt;pid&gt;</code> if you can pin down the process.</p>
+<h3 id="server-crashes-during-shutdown-lost-world-data">Server crashes during shutdown (lost world data)<a class="headerlink" href="#server-crashes-during-shutdown-lost-world-data" title="Permanent link">&para;</a></h3>
+<p><strong>Don't</strong> <code>Ctrl-C</code> or <code>kill</code> the server — that skips the DB flush.
+Use the in-game GM console:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>#shutdown 5 &quot;restart for mod update&quot;
+</span></code></pre></div>
+<p>Or from server console with five minutes of warning. See
+<a href="../../reference/console-commands/"><code>../reference/console-commands.md</code></a>.</p>
+<hr />
+<h2 id="quick-log-patterns">Quick log patterns<a class="headerlink" href="#quick-log-patterns" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symptom in log</th>
+<th>Likely cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ClassNotFoundException</code> on your own class</td>
+<td>jar not deployed, <code>classpath=</code> wrong, or <code>implementation</code> vs <code>compileOnly</code> leak</td>
+</tr>
+<tr>
+<td><code>NotFoundException</code> on <code>com.wurmonline.*</code></td>
+<td>wrong class/method name in Javassist call</td>
+</tr>
+<tr>
+<td><code>cannot modify frozen class</code></td>
+<td>ran patch in <code>init()</code> or load-order issue, another mod got there first</td>
+</tr>
+<tr>
+<td><code>LinkageError: loader constraint violated</code></td>
+<td>duplicate Wurm classes shipped in your jar</td>
+</tr>
+<tr>
+<td><code>UnsupportedClassVersionError</code></td>
+<td>jar compiled for wrong Java target</td>
+</tr>
+<tr>
+<td><code>ModLoadException: dependency not satisfied</code></td>
+<td><code>depend.requires=</code> references a mod that isn't loaded</td>
+</tr>
+<tr>
+<td>Silent handler no-op</td>
+<td>missing <code>@SubscribeEvent</code> / wrong method signature</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="when-you-really-cant-figure-it-out">When you really can't figure it out<a class="headerlink" href="#when-you-really-cant-figure-it-out" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>grep -E "SEVERE|WARNING" -A 20 "$LOG"</code> — every error/warning with
+   following stacktrace lines.</li>
+<li><code>grep -B 1 -A 5 YourMod "$LOG"</code> — your mod's records with surrounding
+   context.</li>
+<li>Reproduce against <a href="../../examples/hellomod/"><code>examples/hellomod/</code></a> —
+   the smallest possible mod. If hellomod works and yours doesn't,
+   the problem is in your mod. If hellomod also fails, the framework
+   or deployment is broken.</li>
+<li>Compare your <code>.properties</code> and <code>build.gradle.kts</code> against a known-good
+   community mod — e.g.
+   <a href="../../../WurmModLoader-CommunityMods/mods/timerfix/"><code>mods/timerfix/</code></a> for a
+   legacy-bridge mod,
+   <a href="../../../WurmModLoader-CommunityMods/mods/powerscaling/"><code>mods/powerscaling/</code></a> for
+   a fully modernized one.</li>
+</ol>
+<hr />
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../migration/porting-existing-mods/"><code>../migration/porting-existing-mods.md</code></a> — how to bring an Ago-era mod over</li>
+<li><a href="../../migration/from-legacy/"><code>../migration/from-legacy.md</code></a> — full interface-by-interface migration</li>
+<li><a href="../event-bus/"><code>event-bus.md</code></a> — event system (priority, cancellation, catalog)</li>
+<li><a href="../../reference/console-commands/"><code>../reference/console-commands.md</code></a> — GM commands for safe shutdown / diagnostics</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/garward/WurmModLoader" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

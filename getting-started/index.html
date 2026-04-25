@@ -1,0 +1,3422 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Server-side modding framework for Wurm Unlimited">
+      
+      
+      
+        <link rel="canonical" href="https://garward.github.io/WurmModLoader/getting-started/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../guides/event-bus/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Getting Started - WurmModLoader (Server)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#getting-started-server-mods" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="WurmModLoader (Server)" class="md-header__button md-logo" aria-label="WurmModLoader (Server)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WurmModLoader (Server)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting Started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/garward/WurmModLoader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    garward/WurmModLoader
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="WurmModLoader (Server)" class="md-nav__button md-logo" aria-label="WurmModLoader (Server)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    WurmModLoader (Server)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/garward/WurmModLoader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    garward/WurmModLoader
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-wurmmodloader-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What WurmModLoader is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-can-i-actually-build-with-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What can I actually build with this?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-touch-what-you-dont" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you touch, what you don't
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-normal-workflow-idea-to-working-mod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The normal workflow — idea to working mod
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-layout-what-lives-where" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project layout — what lives where
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hello-mod-in-10-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hello-mod in 10 minutes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hello-mod in 10 minutes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-source-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Source code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-mod-descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Mod descriptor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-build-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Build script
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-register-with-the-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Register with the build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-build-deploy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Build + deploy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-start-the-server-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Start the server + verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#questions-you-probably-have-right-now" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Questions you probably have right now
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Questions you probably have right now">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#my-old-mod-implements-configurable-preinitable-initable-serverpolllistener-do-i-need-all-of-those" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My old mod implements Configurable, PreInitable, Initable, ServerPollListener… do I need all of those?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-mod-has-classes-in-comwurmonlineserverspells-is-that-still-ok" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My mod has classes in com.wurmonline.server.spells.* — is that still OK?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-buildgradle-pulls-orggottiwurmunlimitedserver-modlauncher043-from-gottis-maven-repo-that-repo-is-dead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My build.gradle pulls org.gotti.wurmunlimited:server-modlauncher:0.43 from gotti's maven repo. That repo is dead."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-about-sindusklibrary-other-mod-as-library-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "What about sindusklibrary / other mod-as-library dependencies?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-i-still-write-bytecode-patches-myself-with-javassist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Do I still write bytecode patches myself with Javassist?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-mod-reads-80-config-fields-with-propertiesgetproperty-is-there-something-better" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My mod reads 80 config fields with Properties.getProperty(...). Is there something better?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#java-version-do-i-target-java-8-like-always" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Java version — do I target Java 8 like always?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-no-version-suffix-in-the-jar-filename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Why no version suffix in the jar filename?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-orggottiwurmunlimitedmodloaderreflectionutil-still-available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "import org.gotti.wurmunlimited.modloader.ReflectionUtil — still available?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-i-still-need-sharedclassloadertrue-in-the-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Do I still need sharedClassLoader=true in the .properties?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-modsupport-or-extend-the-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API, modsupport, or extend the framework?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#i-want-to-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        I want to build…
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-5-mistakes-that-will-waste-your-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top 5 mistakes that will waste your time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-from-here-deeper-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to go from here — deeper docs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where to go from here — deeper docs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reference-lookup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference / lookup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reading-mod-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading mod source
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adjacent-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adjacent docs
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/event-bus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Event Bus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/extending-framework/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending the Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/legacy-mod-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Mod Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/ui-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — High-Level API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/ui-api-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — API Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/ui-api-submenus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Submenus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/questions-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Questions API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/bml-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — BML Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/upgrade-tree-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Upgrade Tree
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/icon-system-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Icon System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Migration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/porting-existing-mods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Existing Mods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/from-legacy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Full From-Legacy Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/console-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Console Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/index-query-guide.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code-Index CLIs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/ui-api-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI API Cheatsheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/COMMON_MOD_PATTERNS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_1" id="__nav_7_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Combat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Combat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/combat/duskombat-formula/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DUSKombat Formula
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/combat/event-surface-gap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Event-Surface Gap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/combat/mod-crossref/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mod Cross-Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/combat/visibility-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visibility Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Console / GM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Console / GM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/console-gm/commands-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/console-gm/commands-mvp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands MVP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/console-gm/hybrid-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hybrid System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creatures
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Creatures
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/creatures/hook-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/creatures/pet-class-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pet Class Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_4" id="__nav_7_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/database/connection-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/database/events-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Events Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/database/creature-optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creature Optimization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/database/village-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Village Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/database/zone-deity-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zone / Deity Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_5" id="__nav_7_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client ModLoader
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Client ModLoader
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/client-modloader/plan.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/client-modloader/custom-menu-progress.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom-Menu Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/server-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-wurmmodloader-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What WurmModLoader is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-can-i-actually-build-with-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What can I actually build with this?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-touch-what-you-dont" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you touch, what you don't
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-normal-workflow-idea-to-working-mod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The normal workflow — idea to working mod
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-layout-what-lives-where" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project layout — what lives where
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hello-mod-in-10-minutes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hello-mod in 10 minutes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hello-mod in 10 minutes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-source-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Source code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-mod-descriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Mod descriptor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-build-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Build script
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-register-with-the-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Register with the build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-build-deploy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Build + deploy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-start-the-server-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Start the server + verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#questions-you-probably-have-right-now" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Questions you probably have right now
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Questions you probably have right now">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#my-old-mod-implements-configurable-preinitable-initable-serverpolllistener-do-i-need-all-of-those" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My old mod implements Configurable, PreInitable, Initable, ServerPollListener… do I need all of those?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-mod-has-classes-in-comwurmonlineserverspells-is-that-still-ok" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My mod has classes in com.wurmonline.server.spells.* — is that still OK?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-buildgradle-pulls-orggottiwurmunlimitedserver-modlauncher043-from-gottis-maven-repo-that-repo-is-dead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My build.gradle pulls org.gotti.wurmunlimited:server-modlauncher:0.43 from gotti's maven repo. That repo is dead."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-about-sindusklibrary-other-mod-as-library-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "What about sindusklibrary / other mod-as-library dependencies?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-i-still-write-bytecode-patches-myself-with-javassist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Do I still write bytecode patches myself with Javassist?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-mod-reads-80-config-fields-with-propertiesgetproperty-is-there-something-better" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "My mod reads 80 config fields with Properties.getProperty(...). Is there something better?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#java-version-do-i-target-java-8-like-always" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Java version — do I target Java 8 like always?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-no-version-suffix-in-the-jar-filename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Why no version suffix in the jar filename?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-orggottiwurmunlimitedmodloaderreflectionutil-still-available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "import org.gotti.wurmunlimited.modloader.ReflectionUtil — still available?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-i-still-need-sharedclassloadertrue-in-the-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Do I still need sharedClassLoader=true in the .properties?"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-modsupport-or-extend-the-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API, modsupport, or extend the framework?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#i-want-to-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        I want to build…
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-5-mistakes-that-will-waste-your-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top 5 mistakes that will waste your time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-from-here-deeper-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to go from here — deeper docs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where to go from here — deeper docs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reference-lookup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference / lookup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reading-mod-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading mod source
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adjacent-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adjacent docs
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="getting-started-server-mods">Getting Started — Server Mods<a class="headerlink" href="#getting-started-server-mods" title="Permanent link">&para;</a></h1>
+<p>A modder's onramp to <strong>WurmModLoader (server)</strong>. If you've written an Ago-era
+<code>org.gotti.*</code> mod before, you'll recognize the shape; the changes since then
+are explained below. If this is your first Wurm mod, start at the top.</p>
+<blockquote>
+<p>Looking for <strong>client</strong> mods (UI, prediction, in-game overlays)? See the
+<a href="../../../WurmModLoader-Client/docs/getting-started/index.md">client getting-started hub</a>
+<em>(when written)</em>. The two repos are separate — server mods don't ship UI;
+client mods don't run game logic.</p>
+</blockquote>
+<hr />
+<h2 id="what-wurmmodloader-is">What WurmModLoader is<a class="headerlink" href="#what-wurmmodloader-is" title="Permanent link">&para;</a></h2>
+<p>A drop-in replacement for Ago's WurmServerLauncher. It boots Wurm Unlimited's
+dedicated server, applies bytecode patches, isolates each mod in its own
+classloader, and exposes a typed event bus mods subscribe to instead of
+patching the game themselves.</p>
+<blockquote>
+<p><strong>Windows users:</strong> every <code>./foo.sh</code> / <code>./gradlew</code> command shown below has
+a <code>foo.bat</code> / <code>gradlew.bat</code> equivalent. Run them from <code>cmd.exe</code> or
+PowerShell in the repo root.</p>
+</blockquote>
+<p><strong>What you get over the Ago-era loader:</strong></p>
+<ul>
+<li>Annotation-driven event bus (<code>@SubscribeEvent</code>) instead of marker interfaces</li>
+<li>Bytecode patches centralized in the framework — most mods never write one</li>
+<li>Capability system for attaching custom data to items / players / creatures
+  without writing schema or save code</li>
+<li>Reflection-safe mod-side helpers (<code>ItemTemplateBuilder</code>, <code>ModQuestion</code>, …)
+  so mods don't reach into <code>com.wurmonline.*</code> directly</li>
+<li>A single classloader rule: framework owns Wurm imports, mods don't</li>
+<li>Build via Gradle, ship via <code>./build-and-deploy.sh</code> — no Maven, no manual jar
+  copying</li>
+</ul>
+<p>Legacy <code>org.gotti.*</code> interfaces still work for compatibility — but <strong>new mods
+should use the <code>com.garward.*</code> namespace and <code>@SubscribeEvent</code></strong>.</p>
+<hr />
+<h2 id="what-can-i-actually-build-with-this">What can I actually build with this?<a class="headerlink" href="#what-can-i-actually-build-with-this" title="Permanent link">&para;</a></h2>
+<p>Server mods are server-authoritative — game logic, content, balance,
+systems. If your idea fits one of these, the framework has a lane for
+it:</p>
+<ul>
+<li><strong>Content</strong> — new items, creatures, recipes, skills, spells, deities</li>
+<li><strong>Balance / mechanics</strong> — damage formulas, skill-gain curves, combat
+  rules, timers (Spellcraft, DUSKombat, Armoury territory)</li>
+<li><strong>Systems</strong> — village perks, dungeon spawners, bounty, scaling,
+  power-trees, seasonal events</li>
+<li><strong>UI flows</strong> — server-authored popups, questionnaires, context-menu
+  commands (no client mod required; BML goes over the wire to vanilla
+  clients)</li>
+<li><strong>Admin tooling</strong> — GM commands, console extensions, live diagnostics,
+  auto-moderation</li>
+<li><strong>Cross-mod protocols</strong> — HTTP endpoints for external tools, ModComm
+  channels for typed packets to a client-side counterpart (see the
+  <a href="../../../WurmModLoader-Client/">client repo</a>)</li>
+</ul>
+<p>The framework runs purely server-side. If you need to paint pixels or
+read keyboard input, that's a <em>client</em> mod — separate repo.</p>
+<hr />
+<h2 id="what-you-touch-what-you-dont">What you touch, what you don't<a class="headerlink" href="#what-you-touch-what-you-dont" title="Permanent link">&para;</a></h2>
+<p>Three layers, clear ownership:</p>
+<p><strong>You own</strong>
+- Event handlers, your business logic
+- Your items, creatures, recipes, spells, templates
+- Your config files and wire formats</p>
+<p><strong>The framework owns</strong>
+- Bytecode patches and classloaders
+- The event bus and the widened API surface
+- Capability storage and <code>wurmmodloader-modsupport</code> helpers</p>
+<p><strong>Wurm owns</strong>
+- The game loop, rendering, persistence, network stack
+- Everything under <code>com.wurmonline.*</code></p>
+<p><strong>The practical rule.</strong> If you're about to type <code>import com.wurmonline.…</code>
+in mod code, stop and check whether a <code>wurmmodloader-modsupport</code> helper
+or an event already covers it. If nothing covers it, that's a signal
+to extend the framework — <em>not</em> to reach into Wurm directly from the
+mod. Every <code>com.wurmonline.*</code> import in a mod is a future liability.</p>
+<hr />
+<h2 id="the-normal-workflow-idea-to-working-mod">The normal workflow — idea to working mod<a class="headerlink" href="#the-normal-workflow-idea-to-working-mod" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Find your hook point.</strong> What moment in the game does your mod
+   react to? Item used, creature spawned, action performed, tick fires,
+   player logs in. That's your event.</li>
+<li><strong>Check the event catalog.</strong> <a href="../guides/event-bus/"><code>../guides/event-bus.md</code></a>
+   lists everything the framework already emits. ~80% of the time
+   it's there.</li>
+<li><strong>Scaffold from <code>examples/hellomod/</code>.</strong> Copy the directory, rename
+   the class + package, change the subscribed event type. Register it
+   in <code>settings.gradle.kts</code>.</li>
+<li><strong>Build and deploy.</strong> <code>./build-and-deploy.sh</code> — then start the
+   server and <code>grep &lt;YourMod&gt; &lt;wurm-server-dir&gt;/logs/wurmmodloader.0.log</code>.
+   Verify the event fires before writing behavior.</li>
+<li><strong>Write the behavior.</strong> If you need a helper, look in
+   <code>wurmmodloader-modsupport</code> first. If it's missing, add it to
+   modsupport — not inside your mod.</li>
+<li><strong>If the event you need doesn't exist</strong> → extend the framework per
+   <a href="../guides/extending-framework/"><code>../guides/extending-framework.md</code></a>.
+   Five-file recipe, reusable by every future mod.</li>
+</ol>
+<p><strong>The whole trip from empty folder to "my event handler ran" is
+under an hour</strong> if the event already exists — which it usually does.
+The only part that takes real time is the behavior itself.</p>
+<hr />
+<h2 id="project-layout-what-lives-where">Project layout — what lives where<a class="headerlink" href="#project-layout-what-lives-where" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wurmmodloader-api/</code></td>
+<td>Public API — events, annotations, mod interfaces. Mods compile against this.</td>
+</tr>
+<tr>
+<td><code>wurmmodloader-core/</code></td>
+<td>Engine internals — bytecode patches, hook installation, event bus. Mods don't import from here.</td>
+</tr>
+<tr>
+<td><code>wurmmodloader-modsupport/</code></td>
+<td>Helper APIs (<code>ItemTemplateBuilder</code>, <code>ModQuestion</code>, capabilities). Reflection-safe wrappers around Wurm internals.</td>
+</tr>
+<tr>
+<td><code>wurmmodloader-legacy/</code></td>
+<td>Bridges Ago <code>org.gotti.*</code> mods to the new event system. Don't depend on it from new mods.</td>
+</tr>
+<tr>
+<td><code>examples/hellomod/</code></td>
+<td><strong>Smallest possible mod.</strong> One class, one event handler. Start here.</td>
+</tr>
+<tr>
+<td><code>examples/oversizedclub/</code></td>
+<td><strong>Canonical tutorial mod.</strong> Heavily commented; covers items, capabilities, combat hooks, recipes.</td>
+</tr>
+<tr>
+<td><code>mods/&lt;name&gt;/</code></td>
+<td>First-party mods built on the framework.</td>
+</tr>
+</tbody>
+</table>
+<p>The full module map (and the load-bearing boot sequence) is in
+<a href="../../Architecture.MD"><code>../../Architecture.MD</code></a>.</p>
+<hr />
+<h2 id="hello-mod-in-10-minutes">Hello-mod in 10 minutes<a class="headerlink" href="#hello-mod-in-10-minutes" title="Permanent link">&para;</a></h2>
+<p>A complete, working mod that prints a banner when the server starts.</p>
+<h3 id="1-source-code">1. Source code<a class="headerlink" href="#1-source-code" title="Permanent link">&para;</a></h3>
+<p><code>examples/hellomod/src/main/java/com/garward/wurmmodloader/examples/hellomod/HelloMod.java</code>:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">package</span><span class="w"> </span><span class="nn">com.garward.wurmmodloader.examples.hellomod</span><span class="p">;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">com.garward.wurmmodloader.api.events.base.SubscribeEvent</span><span class="p">;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">com.garward.wurmmodloader.api.events.server.ServerStartedEvent</span><span class="p">;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">com.garward.wurmmodloader.modloader.interfaces.WurmServerMod</span><span class="p">;</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">java.util.logging.Logger</span><span class="p">;</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">HelloMod</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">WurmServerMod</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Logger</span><span class="w"> </span><span class="n">logger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Logger</span><span class="p">.</span><span class="na">getLogger</span><span class="p">(</span><span class="n">HelloMod</span><span class="p">.</span><span class="na">class</span><span class="p">.</span><span class="na">getName</span><span class="p">());</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nd">@SubscribeEvent</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">onServerStarted</span><span class="p">(</span><span class="n">ServerStartedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(</span><span class="s">&quot;HelloMod loaded — WurmModLoader is alive.&quot;</span><span class="p">);</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nd">@Override</span><span class="w"> </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">getVersion</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;1.0.0&quot;</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>That's the whole mod. No <code>com.wurmonline.*</code> imports. The <code>@SubscribeEvent</code>
+annotation is what wires the method to the event bus — you don't register
+listeners manually.</p>
+<h3 id="2-mod-descriptor">2. Mod descriptor<a class="headerlink" href="#2-mod-descriptor" title="Permanent link">&para;</a></h3>
+<p><code>examples/hellomod/src/dist/hellomod.properties</code>:</p>
+<div class="language-properties highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="na">classname</span><span class="o">=</span><span class="s">com.garward.wurmmodloader.examples.hellomod.HelloMod</span>
+</span></code></pre></div>
+<p>The framework finds your mod class via this file. Optional fields (<code>depends=</code>,
+custom config keys) live here too — see
+<a href="../guides/mod-config.md"><code>guides/mod-config.md</code></a> <em>(when written)</em>.</p>
+<h3 id="3-build-script">3. Build script<a class="headerlink" href="#3-build-script" title="Permanent link">&para;</a></h3>
+<p><code>examples/hellomod/build.gradle.kts</code>:</p>
+<div class="language-kotlin highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">plugins</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">java</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="n">project</span><span class="p">(</span><span class="s">&quot;:wurmmodloader-api&quot;</span><span class="p">))</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="n">compileOnly</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s">&quot;../../distribution/server.jar&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;../../distribution/common.jar&quot;</span><span class="p">))</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">java</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="n">sourceCompatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">JavaVersion</span><span class="p">.</span><span class="na">VERSION_1_8</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="n">targetCompatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">JavaVersion</span><span class="p">.</span><span class="na">VERSION_1_8</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Wurm's server jar is <code>compileOnly</code> — it's provided at runtime by the loader.
+Java 8 source level matches Wurm's runtime.</p>
+<h3 id="4-register-with-the-build">4. Register with the build<a class="headerlink" href="#4-register-with-the-build" title="Permanent link">&para;</a></h3>
+<p>In <code>settings.gradle.kts</code>, add:</p>
+<div class="language-kotlin highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">include</span><span class="p">(</span><span class="s">&quot;examples:hellomod&quot;</span><span class="p">)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">project</span><span class="p">(</span><span class="s">&quot;:examples:hellomod&quot;</span><span class="p">).</span><span class="na">projectDir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">file</span><span class="p">(</span><span class="s">&quot;examples/hellomod&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>(HelloMod is already registered in this repo — only needed if you fork.)</p>
+<h3 id="5-build-deploy">5. Build + deploy<a class="headerlink" href="#5-build-deploy" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./build-and-deploy.sh
+</span></code></pre></div>
+<p>Builds every module, packages the distribution zip, rsyncs only changed jars
+to your server install directory (<code>&lt;wurm-server-dir&gt;</code>). Default Steam locations:</p>
+<ul>
+<li><strong>Windows:</strong> <code>C:\Program Files (x86)\Steam\steamapps\common\Wurm Unlimited Dedicated Server\</code></li>
+<li><strong>Linux:</strong>   <code>~/.local/share/Steam/steamapps/common/Wurm Unlimited Dedicated Server/</code></li>
+</ul>
+<p>Set <code>WURM_SERVER_DIR</code> (or <code>wurmServerDir</code> in <code>~/.gradle/gradle.properties</code>) so
+the build scripts know where yours lives — see <code>gradle.properties.example</code>.</p>
+<h3 id="6-start-the-server-verify">6. Start the server + verify<a class="headerlink" href="#6-start-the-server-verify" title="Permanent link">&para;</a></h3>
+<p>From <code>&lt;wurm-server-dir&gt;</code>:</p>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>./wurmmodloader.sh<span class="w"> </span><span class="nv">start</span><span class="o">=</span>Riverweave<span class="w">    </span><span class="c1"># Linux/macOS — your world name</span>
+</span></code></pre></div>
+<div class="language-bat highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>wurmmodloader.bat start=Riverweave     :: Windows
+</span></code></pre></div></p>
+<p>Then in another terminal:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>grep<span class="w"> </span>HelloMod<span class="w"> </span>&lt;wurm-server-dir&gt;/logs/wurmmodloader.0.log
+</span></code></pre></div>
+<p>You should see:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>INFO: HelloMod loaded — WurmModLoader is alive.
+</span></code></pre></div>
+<p>If you don't, see <a href="../guides/">troubleshooting</a> <em>(when written)</em> — usually
+either the <code>.properties</code> file didn't get deployed or the mod folder name
+doesn't match the jar name.</p>
+<hr />
+<h2 id="questions-you-probably-have-right-now">Questions you probably have right now<a class="headerlink" href="#questions-you-probably-have-right-now" title="Permanent link">&para;</a></h2>
+<p>If you're coming from an Ago-era mod — Spellcraft, Bounty, Bestiary,
+Armoury, one of the Sindusk libraries — these are the "wait, why?"
+moments that hit on the first port. Answers are short on purpose; each
+points at the doc with the full story.</p>
+<h3 id="my-old-mod-implements-configurable-preinitable-initable-serverpolllistener-do-i-need-all-of-those">"My old mod implements <code>Configurable</code>, <code>PreInitable</code>, <code>Initable</code>, <code>ServerPollListener</code>… do I need all of those?"<a class="headerlink" href="#my-old-mod-implements-configurable-preinitable-initable-serverpolllistener-do-i-need-all-of-those" title="Permanent link">&para;</a></h3>
+<p>No. The modern framework replaces every one of those marker
+interfaces with <code>@SubscribeEvent</code>. <code>Configurable.configure()</code> →
+subscribe to the configuration event (or just parse the Properties
+yourself); <code>ServerStartedListener</code> → <code>ServerStartedEvent</code>;
+<code>ServerPollListener</code> → <code>ServerPollEvent</code>. One annotation, one method,
+one event type. The legacy bridge keeps old mods compiling — see
+<a href="../migration/from-legacy/"><code>../migration/from-legacy.md</code></a> for the
+per-interface mapping — but new code uses the bus.</p>
+<h3 id="my-mod-has-classes-in-comwurmonlineserverspells-is-that-still-ok">"My mod has classes in <code>com.wurmonline.server.spells.*</code> — is that still OK?"<a class="headerlink" href="#my-mod-has-classes-in-comwurmonlineserverspells-is-that-still-ok" title="Permanent link">&para;</a></h3>
+<p>It compiles, but it's a smell. Ago-era mods routinely put their own
+classes inside Wurm packages to reach package-private fields and
+methods. The modern framework widens the access it needs <em>centrally</em>
+(see <code>wurmmodloader-core/.../bytecode/patches/</code>) so mods can live in
+their own namespace. If you're porting, leave the classes where they
+are for the first pass — get it compiling, then migrate package by
+package. If you hit a field the framework hasn't widened yet, extend
+the patcher (recipe in
+<a href="../guides/extending-framework/"><code>../guides/extending-framework.md</code></a>)
+rather than burying the access inside a Wurm-package class.</p>
+<h3 id="my-buildgradle-pulls-orggottiwurmunlimitedserver-modlauncher043-from-gottis-maven-repo-that-repo-is-dead">"My <code>build.gradle</code> pulls <code>org.gotti.wurmunlimited:server-modlauncher:0.43</code> from gotti's maven repo. That repo is dead."<a class="headerlink" href="#my-buildgradle-pulls-orggottiwurmunlimitedserver-modlauncher043-from-gottis-maven-repo-that-repo-is-dead" title="Permanent link">&para;</a></h3>
+<p>Right. The modern layout is <strong>repo-local</strong>: your mod becomes a
+subproject of WurmModLoader (or a sibling with a <code>compileOnly(files(...))</code>
+pointing at a built <code>wurmmodloader-api</code> jar). No external maven, no
+JitPack. <code>examples/hellomod/build.gradle.kts</code> is the canonical
+template — copy it. And while you're there: <code>compile</code> → <code>implementation</code>,
+Groovy DSL → Kotlin DSL (optional but standard here),
+<code>archiveName "..."</code> → <code>archiveFileName.set("...")</code>.</p>
+<h3 id="what-about-sindusklibrary-other-mod-as-library-dependencies">"What about <code>sindusklibrary</code> / other mod-as-library dependencies?"<a class="headerlink" href="#what-about-sindusklibrary-other-mod-as-library-dependencies" title="Permanent link">&para;</a></h3>
+<p>Same answer: no external maven. Either vendor the library into your
+mod jar (if it's small and self-contained — a <code>Prop</code> helper is ~30
+lines), or port the library into the framework itself if other mods
+also need it. Many SinduskLibrary utilities are already covered by
+<code>wurmmodloader-modsupport</code> — check there first. <code>depend.import=Foo</code>
+in <code>.properties</code> still works for genuine cross-mod load ordering, but
+it's rarely needed once the shared helpers live in the framework.</p>
+<h3 id="do-i-still-write-bytecode-patches-myself-with-javassist">"Do I still write bytecode patches myself with Javassist?"<a class="headerlink" href="#do-i-still-write-bytecode-patches-myself-with-javassist" title="Permanent link">&para;</a></h3>
+<p>Usually no. The framework ships patches for the hook surface you'd
+have hand-written against — creature update, combat, actions, items,
+recipes, login, polling, shutdown. You subscribe to events instead.
+See <a href="../guides/event-bus/"><code>../guides/event-bus.md</code></a> for the
+catalog. If the event you need isn't there, the centralized-patch
+recipe is in
+<a href="../guides/extending-framework/"><code>../guides/extending-framework.md</code></a>
+— patches live in the framework, events live in the API, your mod
+just subscribes. The Spellcraft/DUSKombat-style pattern of shipping a
+<code>ClassPool</code> manipulator inside the mod jar is obsolete.</p>
+<h3 id="my-mod-reads-80-config-fields-with-propertiesgetproperty-is-there-something-better">"My mod reads 80 config fields with <code>Properties.getProperty(...)</code>. Is there something better?"<a class="headerlink" href="#my-mod-reads-80-config-fields-with-propertiesgetproperty-is-there-something-better" title="Permanent link">&para;</a></h3>
+<p>Nothing forces you to change it — the manual-parse pattern still
+works. But most modern mods use JSON or YAML config via the helpers
+in <code>wurmmodloader-modsupport</code>, which bind a file to a POJO in one
+line. For a port, keep the <code>Properties</code> logic verbatim in the first
+pass and migrate later if you care; it's not load-bearing.</p>
+<h3 id="java-version-do-i-target-java-8-like-always">"Java version — do I target Java 8 like always?"<a class="headerlink" href="#java-version-do-i-target-java-8-like-always" title="Permanent link">&para;</a></h3>
+<p>Yes. Wurm's server runs on Java 8. Set
+<code>sourceCompatibility / targetCompatibility = JavaVersion.VERSION_1_8</code>.
+The <em>build</em> toolchain can be 17 (and should be — modern Gradle wants
+it), but bytecode must be Java 8 or the classloader rejects it.</p>
+<h3 id="why-no-version-suffix-in-the-jar-filename">"Why no version suffix in the jar filename?"<a class="headerlink" href="#why-no-version-suffix-in-the-jar-filename" title="Permanent link">&para;</a></h3>
+<p>The loader matches <code>.jar</code> names against folder names. <code>spellcraft-4.3.jar</code>
+in <code>mods/spellcraft/</code> doesn't load — it has to be <code>mods/spellcraft/spellcraft.jar</code>.
+<code>archiveFileName.set("spellcraft.jar")</code> (or the equivalent for the old
+Groovy DSL) strips it.</p>
+<h3 id="import-orggottiwurmunlimitedmodloaderreflectionutil-still-available">"<code>import org.gotti.wurmunlimited.modloader.ReflectionUtil</code> — still available?"<a class="headerlink" href="#import-orggottiwurmunlimitedmodloaderreflectionutil-still-available" title="Permanent link">&para;</a></h3>
+<p>Yes, via the legacy bridge. But the same operations exist in
+<code>wurmmodloader-modsupport</code> with cleaner names and without the legacy
+namespace. Both work; new code should prefer the modsupport
+equivalents so the <code>org.gotti.*</code> package stays scoped to the
+compatibility bridge.</p>
+<h3 id="do-i-still-need-sharedclassloadertrue-in-the-properties">"Do I still need <code>sharedClassLoader=true</code> in the <code>.properties</code>?"<a class="headerlink" href="#do-i-still-need-sharedclassloadertrue-in-the-properties" title="Permanent link">&para;</a></h3>
+<p>Yes for anything that touches Wurm classes — which for a combat,
+spell, or item mod is "yes, always." Omitting it gives you an
+isolated <code>URLClassLoader</code> that can't see <code>com.wurmonline.*</code>, which is
+almost never what you want on the server side.</p>
+<hr />
+<h2 id="api-modsupport-or-extend-the-framework">API, modsupport, or extend the framework?<a class="headerlink" href="#api-modsupport-or-extend-the-framework" title="Permanent link">&para;</a></h2>
+<p>The three places your mod code interacts with the framework:</p>
+<ul>
+<li><strong><code>wurmmodloader-api</code></strong> — events, the <code>@SubscribeEvent</code> annotation,
+  mod interfaces. Import freely; this is the contract.</li>
+<li><strong><code>wurmmodloader-modsupport</code></strong> — typed helpers that wrap Wurm
+  internals safely (<code>ItemTemplateBuilder</code>, <code>ModQuestion</code>, capability
+  storage, <code>ModActions</code>, etc.). Import when a helper exists for what
+  you need.</li>
+<li><strong>Extending the framework</strong> — adding a new event + its bytecode
+  patch so every mod can subscribe. Lives in <code>wurmmodloader-core</code>.</li>
+</ul>
+<p>Decision flow:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>I need to react to something in-game.
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  ├── Does the event exist?
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  │     ├── Yes → subscribe via @SubscribeEvent (API)
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>  │     └── No → is it a real game hook I need?
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>  │           ├── Yes → extend the framework (new event + patch)
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>  │           └── No, it&#39;s &quot;how do I do X to a Wurm object&quot;
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>  │                 ├── modsupport already has a helper → use it
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>  │                 └── modsupport doesn&#39;t → add a helper there, not in your mod
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>  └── I just need data/config/state → that&#39;s your own code, no framework touch
+</span></code></pre></div>
+<p><strong>Hard rule:</strong> mod code never directly invokes Javassist or
+<code>ClassPool</code>. If you're reaching for bytecode tools, you're in
+"extend the framework" territory — move the patch to
+<code>wurmmodloader-core/.../bytecode/patches/</code> and expose it as an event.</p>
+<hr />
+<h2 id="i-want-to-build">I want to build…<a class="headerlink" href="#i-want-to-build" title="Permanent link">&para;</a></h2>
+<p>Decision tree by shape of mod. Each row points at the single doc that
+will unblock you first.</p>
+<table>
+<thead>
+<tr>
+<th>If you're building…</th>
+<th>Start here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A simple event-driven mod</strong> (chat tweak, pray-rate change, timer tweak)</td>
+<td><a href="../guides/event-bus/"><code>../guides/event-bus.md</code></a> — subscribe, log, test. ~50-100 LOC total.</td>
+</tr>
+<tr>
+<td><strong>New items, recipes, creatures</strong></td>
+<td><a href="../../examples/oversizedclub/"><code>examples/oversizedclub/</code></a> end-to-end. Uses <code>ItemTemplateBuilder</code>, <code>ModCreatures</code>, recipe API — no bytecode.</td>
+</tr>
+<tr>
+<td><strong>A balance / mechanics mod</strong> (damage formula, skill gain, combat rule)</td>
+<td><a href="../guides/event-bus/"><code>../guides/event-bus.md</code></a> for the event surface, then <a href="../research/combat/"><code>../research/combat/</code></a> if you're touching combat math specifically.</td>
+</tr>
+<tr>
+<td><strong>A player-facing popup, form, or questionnaire</strong></td>
+<td><a href="../guides/ui-api/"><code>../guides/ui-api.md</code></a> — works with vanilla clients, no client mod needed. Drop into <a href="../guides/bml-ui/"><code>../guides/bml-ui.md</code></a> only if the high-level API can't express what you want.</td>
+</tr>
+<tr>
+<td><strong>A context-menu entry or submenu</strong></td>
+<td><a href="../guides/ui-api-submenus/"><code>../guides/ui-api-submenus.md</code></a></td>
+</tr>
+<tr>
+<td><strong>A GM / admin console command</strong></td>
+<td><a href="../reference/console-commands/"><code>../reference/console-commands.md</code></a> — <code>#shutdown &lt;minutes&gt; &lt;reason&gt;</code> for safe shutdown (SIGTERM skips the DB flush)</td>
+</tr>
+<tr>
+<td><strong>Something the framework doesn't expose yet</strong> (new event, new widened class)</td>
+<td><a href="../guides/extending-framework/"><code>../guides/extending-framework.md</code></a> — five-file recipe</td>
+</tr>
+<tr>
+<td><strong>A client-server bridge</strong> (HTTP, ModComm)</td>
+<td>Server side: framework-owned helpers in modsupport. Client side: <a href="../../../WurmModLoader-Client/docs/guides/client-server-bridge.md"><code>../../../WurmModLoader-Client/docs/guides/client-server-bridge.md</code></a></td>
+</tr>
+<tr>
+<td><strong>A port of an Ago-era mod</strong></td>
+<td><a href="../migration/porting-existing-mods/"><code>../migration/porting-existing-mods.md</code></a> — "it mostly just works" + the repackage-only path</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="top-5-mistakes-that-will-waste-your-time">Top 5 mistakes that will waste your time<a class="headerlink" href="#top-5-mistakes-that-will-waste-your-time" title="Permanent link">&para;</a></h2>
+<p>In rough order of "how often I've seen this":</p>
+<ol>
+<li><strong>JAR filename with a version suffix.</strong> <code>mymod-1.0.0.jar</code> silently
+   doesn't load — the loader matches <code>classpath=</code> against the exact
+   filename. Set <code>archiveFileName.set("mymod.jar")</code> in
+   <code>build.gradle.kts</code> and <code>classpath=mymod.jar</code> in <code>.properties</code>.</li>
+<li><strong>Running Javassist from inside the mod jar</strong> (as Ago-era mods
+   often did). It works until the framework's own patches hit the
+   same class, and then you get <code>cannot modify frozen class</code> with no
+   hint of which side ran second. Move patches into the framework.</li>
+<li><strong>Importing <code>com.wurmonline.*</code> in mod code.</strong> Each one is a future
+   break. Check <code>wurmmodloader-modsupport</code> first; if nothing fits,
+   extend the framework rather than reaching into Wurm directly.</li>
+<li><strong>Not reading the server log before asking "why doesn't it work?"</strong>
+   <code>grep -E "SEVERE|WARNING" -A 20 &lt;wurm-server-dir&gt;/logs/wurmmodloader.0.log</code>
+   — bytecode patch failures, class-not-found errors, and mod-load
+   failures all show up there with the exact line that broke. The log
+   tells you the answer 90% of the time.</li>
+</ol>
+<hr />
+<h2 id="where-to-go-from-here-deeper-docs">Where to go from here — deeper docs<a class="headerlink" href="#where-to-go-from-here-deeper-docs" title="Permanent link">&para;</a></h2>
+<p>Each link below is one focused topic. Skip straight to the one matching
+what you're actually building.</p>
+<h3 id="core-systems">Core systems<a class="headerlink" href="#core-systems" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Event bus internals (priorities, cancellation, custom events)</td>
+<td><a href="../guides/event-bus/"><code>../guides/event-bus.md</code></a></td>
+</tr>
+<tr>
+<td>Adding events + bytecode patches</td>
+<td><a href="../guides/extending-framework/"><code>../guides/extending-framework.md</code></a></td>
+</tr>
+<tr>
+<td>Player UI — high-level</td>
+<td><a href="../guides/ui-api/"><code>../guides/ui-api.md</code></a></td>
+</tr>
+<tr>
+<td>Player UI — raw BML</td>
+<td><a href="../guides/bml-ui/"><code>../guides/bml-ui.md</code></a></td>
+</tr>
+<tr>
+<td>Context-menu submenus</td>
+<td><a href="../guides/ui-api-submenus/"><code>../guides/ui-api-submenus.md</code></a></td>
+</tr>
+<tr>
+<td>GM console commands</td>
+<td><a href="../reference/console-commands/"><code>../reference/console-commands.md</code></a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="reference-lookup">Reference / lookup<a class="headerlink" href="#reference-lookup" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Doc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What's in the public API</td>
+<td><a href="../reference/api-surface/"><code>reference/api-surface.md</code></a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="migration">Migration<a class="headerlink" href="#migration" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>From</th>
+<th>To</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Old Ago listener interfaces (<code>*Listener</code>)</td>
+<td><a href="../migration/from-legacy/"><code>migration/from-legacy.md</code></a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="reading-mod-source">Reading mod source<a class="headerlink" href="#reading-mod-source" title="Permanent link">&para;</a></h3>
+<p>When you want to see "how is this actually done in a real mod":</p>
+<ul>
+<li><strong><a href="../../examples/hellomod/"><code>examples/hellomod/</code></a></strong> — minimum viable mod</li>
+<li><strong><a href="../../examples/oversizedclub/"><code>examples/oversizedclub/</code></a></strong> — fully
+  worked tutorial: item template, custom capability, combat stat hooks,
+  crafting recipe, examine text. Read top-to-bottom.</li>
+<li><code>examples/templatemod/</code> — UI-focused starter (context menu + multi-page
+  questionnaire)</li>
+<li><code>examples/basic-item-mod/</code>, <code>examples/custom-creature/</code>,
+  <code>examples/action-system/</code> — single-topic focused examples</li>
+</ul>
+<hr />
+<h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
+<p>A few things to know before you start writing:</p>
+<ul>
+<li><strong>Namespace.</strong> New mods go under <code>com.garward.wurmmodloader.mods.&lt;name&gt;</code> (or
+  your own <code>com.&lt;you&gt;.*</code>). Don't put new code under <code>org.gotti.*</code> — that
+  namespace is reserved for the legacy compatibility bridge.</li>
+<li><strong>No vanilla imports in mods.</strong> If you find yourself typing
+  <code>import com.wurmonline.…</code> in mod code, stop and check whether there's a
+  helper in <code>wurmmodloader-modsupport</code> or an event you can subscribe to. If
+  there genuinely isn't, that's a signal to extend the framework — see
+  <a href="../guides/extending-framework/"><code>guides/extending-framework.md</code></a>.</li>
+<li><strong>JAR filenames must not include version numbers.</strong> The loader matches by
+  folder/file name. <code>hellomod.jar</code>, not <code>hellomod-1.0.0.jar</code>. The
+  <code>build.gradle.kts</code> snippet above sets <code>archiveBaseName</code> accordingly.</li>
+<li><strong>Configs load before <code>init()</code>.</strong> Properties and JSON files in <code>mods/</code> are
+  parsed before your mod runs, so reading them in <code>init()</code> is safe.</li>
+<li><strong>Always verify in logs, not in theory.</strong>
+  <code>grep -E "SEVERE|WARNING" -A 20 &lt;wurm-server-dir&gt;/logs/wurmmodloader.0.log</code>
+  is your first stop after any change. Patches that silently fail to apply
+  will show up there.</li>
+</ul>
+<hr />
+<h2 id="adjacent-docs">Adjacent docs<a class="headerlink" href="#adjacent-docs" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../Architecture.MD"><code>../../Architecture.MD</code></a> — module map and the
+  load-bearing boot sequence (read before touching <code>core/</code> or patches)</li>
+<li><a href="../../CONTRIBUTING.md"><code>../../CONTRIBUTING.md</code></a> — contribution rules</li>
+<li><a href="../README.md"><code>../README.md</code></a> — full documentation index</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/garward/WurmModLoader" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

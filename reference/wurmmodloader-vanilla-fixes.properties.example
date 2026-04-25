@@ -1,0 +1,31 @@
+# WurmModLoader — Vanilla Bug Fixes configuration
+# Drop this file at `<server-root>/config/wurmmodloader-vanilla-fixes.properties`
+# to override defaults. Every key is optional; missing keys use the default.
+#
+# Every setting here can also be overridden at runtime with a system property of
+# the form `-Dwurmmodloader.vanilla_fixes.<key>=<value>` for diagnostics.
+#
+# See docs/guides/vanilla-fixes.md for the current list of fixes and what each does.
+
+# === Master toggle ===
+# Set to false to disable every vanilla fix in one go.
+# enabled=true
+
+# === Per-fix toggles ===
+# Disable a specific fix if it collides with another mod. Default true.
+# nextint_guards=true
+# action_timer=true
+
+# === Action timer caps ===
+# Minimum spell casting time in seconds after the server action-timer multiplier is
+# applied. Prevents high-multiplier servers from dropping spells to effectively 0s.
+# Default 2.
+# action_timer.min_spell=2
+
+# Minimum pick-action timer in seconds. 0 disables the cap entirely.
+# Default 0 (disabled).
+# action_timer.min_pick=0
+
+# Minimum breed-action timer in seconds. 0 disables the cap entirely.
+# Default 0 (disabled).
+# action_timer.min_breed=0

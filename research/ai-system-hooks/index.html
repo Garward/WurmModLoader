@@ -1,0 +1,3277 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Server-side modding framework for Wurm Unlimited">
+      
+      
+      
+        <link rel="canonical" href="https://garward.github.io/WurmModLoader/research/ai-system-hooks/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Vanilla Wurm Unlimited AI Systems — Bytecode Hook Audit - WurmModLoader (Server)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#vanilla-wurm-unlimited-ai-systems-bytecode-hook-audit" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="WurmModLoader (Server)" class="md-header__button md-logo" aria-label="WurmModLoader (Server)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WurmModLoader (Server)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Vanilla Wurm Unlimited AI Systems — Bytecode Hook Audit
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/garward/WurmModLoader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    garward/WurmModLoader
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="WurmModLoader (Server)" class="md-nav__button md-logo" aria-label="WurmModLoader (Server)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    WurmModLoader (Server)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/garward/WurmModLoader" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    garward/WurmModLoader
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/event-bus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Event Bus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/extending-framework/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending the Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/legacy-mod-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Mod Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/ui-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — High-Level API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/ui-api-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — API Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/ui-api-submenus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Submenus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/questions-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Questions API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/bml-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — BML Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrade-tree-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Upgrade Tree
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/icon-system-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI — Icon System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Migration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/porting-existing-mods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Porting Existing Mods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/from-legacy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Full From-Legacy Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/console-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Console Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/index-query-guide.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code-Index CLIs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ui-api-quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI API Cheatsheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/COMMON_MOD_PATTERNS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_1" id="__nav_7_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Combat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Combat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../combat/duskombat-formula/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DUSKombat Formula
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../combat/event-surface-gap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Event-Surface Gap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../combat/mod-crossref/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mod Cross-Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../combat/visibility-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visibility Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Console / GM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Console / GM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../console-gm/commands-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../console-gm/commands-mvp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands MVP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../console-gm/hybrid-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hybrid System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creatures
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Creatures
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../creatures/hook-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hook Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../creatures/pet-class-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pet Class Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_4" id="__nav_7_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/connection-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/events-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Events Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/creature-optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creature Optimization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/village-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Village Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/zone-deity-events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zone / Deity Events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_5" id="__nav_7_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client ModLoader
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Client ModLoader
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-modloader/plan.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-modloader/custom-menu-progress.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom-Menu Progress
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-pathing-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Pathing System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Pathing System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Classes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-candidates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Candidates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hook Candidates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-obvious-must-haves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 (Obvious Must-Haves)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-nice-to-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 (Nice-to-Have)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-speculativerisky" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 (Speculative/Risky)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-gotchas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Gotchas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-target-selection-aggro" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Target Selection &amp; Aggro
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Target Selection &amp; Aggro">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-classes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Classes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-candidates_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Candidates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hook Candidates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-gotchas_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Gotchas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-restrictions-what-ai-cancant-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Restrictions (What AI Can/Can't Do)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Restrictions (What AI Can/Can&#39;t Do)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-classes_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Classes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-candidates_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Candidates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hook Candidates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-gotchas_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Gotchas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-spawn-positioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Spawn Positioning
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Spawn Positioning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-classes_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Classes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hook-candidates_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook Candidates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hook Candidates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-gotchas_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Gotchas
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-cutting-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Cutting Observations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Cutting Observations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#central-tick-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Central Tick Entry Point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2d-pathing-is-fundamental" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2D Pathing Is Fundamental
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#attacker-list-is-the-behavior-driver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attacker List Is the Behavior Driver
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spawn-validation-is-local-to-zone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spawn Validation is Local to Zone
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#blocking-check-is-expensive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Blocking Check is Expensive
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-of-highest-value-hooks-per-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary of Highest-Value Hooks Per System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Summary of Highest-Value Hooks Per System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pathing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pathing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#targeting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Targeting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#restrictions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restrictions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spawn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spawn
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-surprises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Surprises
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-hook-implementation-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Hook Implementation Sequence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#confidence-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confidence Levels
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="vanilla-wurm-unlimited-ai-systems-bytecode-hook-audit">Vanilla Wurm Unlimited AI Systems — Bytecode Hook Audit<a class="headerlink" href="#vanilla-wurm-unlimited-ai-systems-bytecode-hook-audit" title="Permanent link">&para;</a></h1>
+<p>System:Creatures
+Hooks:AI,Combat,Movement,Targeting,Spawning
+Class:com.wurmonline.server.creatures.ai.CreatureAI
+Class:com.wurmonline.server.creatures.ai.PathFinder
+Class:com.wurmonline.server.creatures.Creature
+Class:com.wurmonline.server.zones.Zone</p>
+<hr />
+<h2 id="1-pathing-system">1. Pathing System<a class="headerlink" href="#1-pathing-system" title="Permanent link">&para;</a></h2>
+<h3 id="key-classes">Key Classes<a class="headerlink" href="#key-classes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>CreatureAI</strong> (<code>com/wurmonline/server/creatures/ai/CreatureAI.java</code>) — abstract base orchestrating AI tick cycle</li>
+<li><strong>PathFinder</strong> (<code>com/wurmonline/server/creatures/ai/PathFinder.java</code>) — A-star + raycasting pathfinding; 2D only (ignores posZ in tile selection)</li>
+<li><strong>PathTile</strong> (<code>com/wurmonline/server/creatures/ai/PathTile.java</code>) — immutable path waypoint; stores tile X/Y + optional precise float coords</li>
+<li><strong>GenericCreatureAI</strong> (<code>com/wurmonline/server/creatures/ai/scripts/GenericCreatureAI.java</code>) — concrete impl; calls <code>pathedMovementTick()</code> and <code>simpleMovementTick()</code></li>
+</ul>
+<h3 id="hook-candidates">Hook Candidates<a class="headerlink" href="#hook-candidates" title="Permanent link">&para;</a></h3>
+<h4 id="tier-1-obvious-must-haves">Tier 1 (Obvious Must-Haves)<a class="headerlink" href="#tier-1-obvious-must-haves" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CreatureAI</code></td>
+<td><code>pathedMovementTick</code></td>
+<td><code>void pathedMovementTick(Creature c)</code></td>
+<td>Advances creature along computed Path; checks arrival at waypoints. Gets next PathTile from path.getFirst(), compares distance, removes tile when close enough.</td>
+<td><strong>Path progression is the central movement loop.</strong> Called every tick if path exists. Mutable: can inspect/modify path, skip waypoints, inject custom logic.</td>
+<td><strong>POST</strong> — after path step. Mutable: allow/veto step, modify next waypoint.</td>
+</tr>
+<tr>
+<td><code>PathFinder</code></td>
+<td><code>canPass</code></td>
+<td><code>boolean canPass(PathTile from, PathTile to)</code></td>
+<td>Checks if creature can move between two tiles during A-star. Tests: solid caves, lava, buildings, doors (with permissions), bridges, water depth restrictions (for submerged creatures).</td>
+<td><strong>Gatekeeper for every pathfinding decision.</strong> All movement restrictions flow through here. Stable signature.</td>
+<td><strong>PRE</strong> — veto a path segment. Returns <code>false</code> to block.</td>
+</tr>
+<tr>
+<td><code>CreatureAI</code></td>
+<td><code>creatureMovementTick</code></td>
+<td><code>void creatureMovementTick(Creature c, boolean rotateFromBlocker)</code></td>
+<td><strong>Core position update loop.</strong> Calculates velocity from rotation + speed + modifiers, applies Z from <code>Zones.calculatePosZ()</code>, checks ground contact, updates <code>status.posX/Y/Z</code>, fires <code>moved()</code> callback. Called by both pathed &amp; simple movement.</td>
+<td><strong>Only place creature position actually changes each tick.</strong> All movement goes through here. Can intercept/modify final position.</td>
+<td><strong>PRE</strong> — inspect/modify position delta before applying. <strong>POST</strong> — verify final position.</td>
+</tr>
+<tr>
+<td><code>PathFinder</code></td>
+<td><code>findPath</code></td>
+<td><code>Path findPath(Creature creature, int startX, int startY, int endX, int endY, boolean surface, int areaSize)</code> throws <code>NoPathException</code></td>
+<td>Entry point for pathfinding. Clamps end target to max distance (50 tiles). Tries raycasting first (surface only), falls back to A-star. Returns sorted <code>Path</code> or throws.</td>
+<td><strong>Single point where all paths originate.</strong> Pre-compute filtering (reject impossible targets), post-compute path modification (waypoint injection).</td>
+<td><strong>PRE</strong> — validate/reject path request. <strong>POST</strong> — modify returned path (inject detours, prune waypoints).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-2-nice-to-have">Tier 2 (Nice-to-Have)<a class="headerlink" href="#tier-2-nice-to-have" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CreatureAI</code></td>
+<td><code>simpleMovementTick</code></td>
+<td><code>void simpleMovementTick(Creature c)</code></td>
+<td>Random-walk fallback when no path exists. 5% chance to pick random tile ±2 tiles away, call <code>moveTowardsTile()</code>.</td>
+<td><strong>Opportunistic:</strong> can suppress random walks, inject custom idle behavior. Low call rate (only when no path).</td>
+<td><strong>PRE</strong> — skip/inject alternative idle move.</td>
+</tr>
+<tr>
+<td><code>CreatureAI</code></td>
+<td><code>getMovementTarget</code></td>
+<td><code>PathTile getMovementTarget(Creature c, int tilePosX, int tilePosY)</code></td>
+<td>Wraps raw tile X/Y into a PathTile. Checks height/swim restrictions. Returns null if unreachable.</td>
+<td><strong>Validation layer for manual tile targets.</strong> Can relax restrictions (e.g. allow land creatures into water).</td>
+<td><strong>POST</strong> — transform/reject PathTile.</td>
+</tr>
+<tr>
+<td><code>PathFinder</code></td>
+<td><code>step2</code></td>
+<td><code>int step2()</code> [private]</td>
+<td>Core A-star iteration. Picks lowest-cost open node, expands neighbors, detects finish.</td>
+<td><strong>Deep pathing control:</strong> can modify heuristic, alter expansion order. Risky: modifies shared <code>pathList</code>.</td>
+<td><strong>PRE</strong> — alter neighbor list or costs.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-3-speculativerisky">Tier 3 (Speculative/Risky)<a class="headerlink" href="#tier-3-speculativerisky" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PathMesh</code></td>
+<td><code>getAdjacent</code></td>
+<td><code>PathTile[] getAdjacent(PathTile tile)</code></td>
+<td>Returns 4 orthogonal neighbors for A-star expansion.</td>
+<td><strong>Can inject diagonal pathing or custom tile grids.</strong> Requires understanding mesh layout.</td>
+<td><strong>POST</strong> — modify neighbor array.</td>
+</tr>
+<tr>
+<td><code>PathFinder</code></td>
+<td><code>getCost</code></td>
+<td><code>static float getCost(int tile)</code></td>
+<td>Returns movement cost for a tile type. Solid caves: <code>MAX_VALUE</code>; water (height &lt; 1): <code>3.0f</code>; normal: <code>1.0f</code>.</td>
+<td><strong>Biome-based cost modifier.</strong> Can make swamps impassable, deserts slow. Static method, simple return.</td>
+<td><strong>POST</strong> — modify cost weight.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-gotchas">Known Gotchas<a class="headerlink" href="#known-gotchas" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Pathing is strictly 2D.</strong> PathFinder works on tile X/Y only; posZ is computed <em>after</em> movement (<code>Zones.calculatePosZ</code>). No Z-aware pathfinding (can't navigate vertical structures via pathfinding; Z is applied via terrain height only).</p>
+</li>
+<li>
+<p><strong><code>canPass()</code> has two code paths</strong> (creature vs. null creature). Null creature path is simpler (no structure/door checks). Pathing via <code>Creature.startPathingToTile()</code> always provides creature context, so null path rarely hit.</p>
+</li>
+<li>
+<p><strong>Blocking check is <em>expensive</em>:</strong> calls <code>Blocking.getBlockerBetween()</code> which evaluates structures, doors, fences on every A-star expansion. Hooking <code>canPass()</code> to bypass this is tempting but risks breaking door logic.</p>
+</li>
+<li>
+<p><strong>Door opening logic only in <code>canPass()</code>:</strong> if a creature encounters a door during pathfinding, it marks the tile as a door and returns <code>true</code> <em>only if</em> creature <code>canOpenDoors()</code>. No separate "request to open" event; door passages are silent successes.</p>
+</li>
+<li>
+<p><strong>Path mutations during movement are unsafe.</strong> If you <code>removeFirst()</code> from the path mid-tick, next call to <code>pathedMovementTick()</code> sees a shorter path. Better to hook <code>getFirst()</code> return or flag waypoints for skip.</p>
+</li>
+<li>
+<p><strong>Max path distance is hard-coded to 50 tiles</strong> in <code>findPath()</code>. Creatures can't path &gt; 50 tiles without multiple path recalculations. Check GenericCreatureAI's <code>addPathToInteresting()</code> for re-pathing frequency.</p>
+</li>
+</ol>
+<hr />
+<h2 id="2-target-selection-aggro">2. Target Selection &amp; Aggro<a class="headerlink" href="#2-target-selection-aggro" title="Permanent link">&para;</a></h2>
+<h3 id="key-classes_1">Key Classes<a class="headerlink" href="#key-classes_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Creature</strong> (<code>com/wurmonline/server/creatures/Creature.java</code>) — central <code>setTarget()</code> method; <code>target</code> field; <code>getLatestAttackers()</code></li>
+<li><strong>GenericCreatureAI</strong> (<code>scripts/GenericCreatureAI.java</code>) — concrete <code>pollMovement()</code> logic that picks targets from attacker list</li>
+<li><strong>CreatureAI</strong> (<code>CreatureAI.java</code>) — abstract <code>pollAttack()</code> (called by subclasses)</li>
+</ul>
+<h3 id="hook-candidates_1">Hook Candidates<a class="headerlink" href="#hook-candidates_1" title="Permanent link">&para;</a></h3>
+<h4 id="tier-1">Tier 1<a class="headerlink" href="#tier-1" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Creature</code></td>
+<td><code>setTarget</code></td>
+<td><code>void setTarget(long targ, boolean switchTarget)</code></td>
+<td><strong>Master target-setter.</strong> Validates target (checks prey status, vehicle ownership, spirit guard zone limits). Updates creature <code>target</code> field, broadcasts to players, persists state. Called by AI and player actions.</td>
+<td><strong>Single veto point for all target changes.</strong> Can reject hostile targets, suppress animal hunting, enforce faction rules.</td>
+<td><strong>PRE</strong> — veto/modify target ID. Returns early if rejected.</td>
+</tr>
+<tr>
+<td><code>GenericCreatureAI</code></td>
+<td><code>pollMovement</code></td>
+<td><code>boolean pollMovement(Creature c, long delta)</code></td>
+<td><strong>AI target acquisition loop.</strong> If no current path: checks if has target → path to it; else checks <code>getLatestAttackers()</code> → sorts by distance + player preference → picks first in range → sets target. Calls <code>addPathToInteresting()</code> if idle.</td>
+<td><strong>Entire target selection happens here.</strong> Can intercept attacker list, modify distance sorting, suppress target picks.</td>
+<td><strong>PRE</strong> — filter attacker list. <strong>POST</strong> — modify chosen target.</td>
+</tr>
+<tr>
+<td><code>Creature</code></td>
+<td><code>getLatestAttackers</code></td>
+<td><code>long[] getLatestAttackers()</code></td>
+<td>Returns array of creature IDs that have hit this creature recently. Stored in <code>attackers</code> HashMap with timestamps.</td>
+<td><strong>Attacker list is the basis for counter-aggro.</strong> Can filter/inject attackers.</td>
+<td><strong>POST</strong> — modify returned array.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-2">Tier 2<a class="headerlink" href="#tier-2" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Creature</code></td>
+<td><code>getMaxHuntDistance</code></td>
+<td><code>int getMaxHuntDistance()</code> [inferred from code]</td>
+<td>Returns max distance creature will pursue a target (checked in <code>pollMovement</code> when iterating attackers).</td>
+<td><strong>Range limiter for aggro.</strong> Can make creatures more/less aggressive. Likely returns template property.</td>
+<td><strong>POST</strong> — modify distance.</td>
+</tr>
+<tr>
+<td><code>CreatureAI</code></td>
+<td><code>pollAttack</code></td>
+<td><code>boolean pollAttack(Creature c, long delta)</code> [abstract]</td>
+<td>Abstract method subclasses implement. Called every tick if not fighting &amp; no special pre-attack block.</td>
+<td><strong>Attack decision point.</strong> Subclasses (MobBehaviour, etc.) decide here whether to swing/cast.</td>
+<td><strong>POST</strong> — inspect combat decision.</td>
+</tr>
+<tr>
+<td><code>Creature</code></td>
+<td><code>maybeAttackCreature</code></td>
+<td><code>boolean maybeAttackCreature(Creature c, VirtualZone vz, Creature mover)</code></td>
+<td>Hook in CreatureAI; returns false by default. Fired when a creature moves into same tile.</td>
+<td><strong>Opportunity attack trigger.</strong> Can suppress/inject attacks on entry.</td>
+<td><strong>PRE</strong> — veto attack.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-3">Tier 3<a class="headerlink" href="#tier-3" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Creature</code></td>
+<td><code>trimAttackers</code></td>
+<td><code>void trimAttackers(boolean...)</code></td>
+<td>Removes stale entries from <code>attackers</code> HashMap (timeout-based). Called in <code>pollMisc()</code>.</td>
+<td><strong>Cleanup for attacker tracking.</strong> Can extend timeout, prevent forgetting.</td>
+<td><strong>PRE</strong> — modify cleanup logic.</td>
+</tr>
+<tr>
+<td><code>GenericCreatureAI</code></td>
+<td><code>addPathToInteresting</code></td>
+<td><code>protected abstract boolean addPathToInteresting(Creature c, long delta)</code></td>
+<td>Abstract; subclasses implement idle path selection (e.g., wander to food, lair).</td>
+<td><strong>Subclass-specific.</strong> Concrete impl varies (HuntingAI seeks prey; DenAI nests).</td>
+<td><strong>POST</strong> — modify path destination.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-gotchas_1">Known Gotchas<a class="headerlink" href="#known-gotchas_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong><code>getLatestAttackers()</code> returns a <em>snapshot array</em>; mutating it doesn't affect the creature.</strong> Changes to returned array are lost. Need to hook the sorting/filtering inside <code>pollMovement()</code> instead.</p>
+</li>
+<li>
+<p><strong>Target switching is gated by combat rating check:</strong> <code>if (getBaseCombatRating() &gt; 10.0f || fleeCounter &lt;= 0)</code>. Low-CR creatures (fresh spawns, animals) rarely switch targets mid-fight. Hooking <code>setTarget()</code> alone won't force aggressive switching.</p>
+</li>
+<li>
+<p><strong>Spirit guards have zone restrictions:</strong> <code>setTarget()</code> explicitly checks if target is outside village perimeter ±5 tiles, zeroes the target, and sends a lore message. Kingdom guards (non-spirit) have no such restriction. Overriding this requires patching the zone check, not just the target setter.</p>
+</li>
+<li>
+<p><strong>Prey creatures are immune to targeting:</strong> first line of <code>setTarget()</code> is <code>if (isPrey()) return;</code>. Hooking won't override this without also patching <code>isPrey()</code> check.</p>
+</li>
+<li>
+<p><strong>Player preference modifier is in the <code>Comparator</code> inside <code>pollMovement()</code>:</strong> if <code>doesPreferPlayers()</code>, player attackers get distance multiplied by <code>getPrefersPlayersModifier()</code> (usually &lt; 1.0, making them appear closer). This is <em>local</em> to GenericCreatureAI; other AI subclasses don't implement player preference.</p>
+</li>
+</ol>
+<hr />
+<h2 id="3-restrictions-what-ai-cancant-do">3. Restrictions (What AI Can/Can't Do)<a class="headerlink" href="#3-restrictions-what-ai-cancant-do" title="Permanent link">&para;</a></h2>
+<h3 id="key-classes_2">Key Classes<a class="headerlink" href="#key-classes_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>CreatureAI.creatureMovementTick()</strong> — implicit restrictions via water depth, guarded zones, lava</li>
+<li><strong>Zone.spawnCreature()</strong> (<code>com/wurmonline/server/zones/Zone.java</code>) — spawn restrictions (steepness, water, biome)</li>
+<li><strong>PathFinder.canPass()</strong> — movement restrictions during pathfinding</li>
+</ul>
+<h3 id="hook-candidates_2">Hook Candidates<a class="headerlink" href="#hook-candidates_2" title="Permanent link">&para;</a></h3>
+<h4 id="tier-1_1">Tier 1<a class="headerlink" href="#tier-1_1" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CreatureAI</code></td>
+<td><code>creatureMovementTick</code></td>
+<td>[see Pathing]</td>
+<td>Implicitly enforces: guarded zones repel non-guard creatures (<code>!t.isGuarded()</code>), lava blocks non-fliers, submerged creatures can't enter shallow water.</td>
+<td><strong>Easiest place to override terrain restrictions.</strong> Can suppress guard zone repel, allow lava entry, enforce custom biome rules.</td>
+<td><strong>PRE</strong> — skip guard/lava checks.</td>
+</tr>
+<tr>
+<td><code>PathFinder</code></td>
+<td><code>canPass</code></td>
+<td>[see Pathing]</td>
+<td>Returns <code>false</code> for solid caves, lava (for non-ghosts), deep water (for non-submerged). Door blocks unless <code>canOpenDoors()</code>.</td>
+<td><strong>Gatekeeper for terrain passability.</strong> Can relax water/cave restrictions, enforce custom terrain rules.</td>
+<td><strong>POST</strong> — override return value.</td>
+</tr>
+<tr>
+<td><code>Zone</code></td>
+<td><code>spawnCreature</code></td>
+<td><code>void spawnCreature(int tx, int ty, boolean _spawnKingdom)</code> [line 620]</td>
+<td><strong>Spawn placement validation.</strong> Checks: steepness &gt;= 40 → reject; mine doors/holes → reject; kingdom spawn type (guard vs. wild creature); den-based spawning.</td>
+<td><strong>Controls which biomes accept creature spawns.</strong> Can suppress steepness check, relax biome rules, force spawn on mountains.</td>
+<td><strong>PRE</strong> — skip validation checks.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-2_1">Tier 2<a class="headerlink" href="#tier-2_1" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Creature</code></td>
+<td><code>isSwimming</code></td>
+<td><code>boolean isSwimming()</code> [inferred]</td>
+<td>Property checked in <code>creatureMovementTick()</code> line 163, 236. If true, water-blocked tiles become passable.</td>
+<td><strong>Swim permission toggle.</strong> Can force swimming on land creatures, suppress water penalty.</td>
+<td><strong>POST</strong> — override return.</td>
+</tr>
+<tr>
+<td><code>Creature</code></td>
+<td><code>isSubmerged</code></td>
+<td><code>boolean isSubmerged()</code> [inferred]</td>
+<td>Property checked in pathfinding (line 420: submerged creatures reject height &gt; -20).</td>
+<td><strong>Deep water permission.</strong> Can suppress submerged check.</td>
+<td><strong>POST</strong> — override return.</td>
+</tr>
+<tr>
+<td><code>Zone</code></td>
+<td><code>maySpawnCreatureTemplate</code></td>
+<td><code>static boolean maySpawnCreatureTemplate(CreatureTemplate ctemplate, boolean isDen, boolean _spawnKingdom)</code></td>
+<td>Validates whether a template is allowed to spawn. Likely checks creature type (animals only in dens, guards only kingdom-assigned).</td>
+<td><strong>Template-level spawn filter.</strong> Can suppress animal/guard restrictions.</td>
+<td><strong>POST</strong> — override return.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-3_1">Tier 3<a class="headerlink" href="#tier-3_1" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Creature</code></td>
+<td><code>canOpenDoors</code></td>
+<td><code>boolean canOpenDoors()</code></td>
+<td>Checked in PathFinder.canPass() when encountering a door. Animals/pets typically can't.</td>
+<td><strong>Door access control.</strong> Can allow animals to open doors (risky for world integrity).</td>
+<td><strong>POST</strong> — override return.</td>
+</tr>
+<tr>
+<td><code>Creature</code></td>
+<td><code>getTileSteepness</code></td>
+<td><code>static short[] getTileSteepness(int tx, int ty, boolean onSurface)</code></td>
+<td>Returns steepness values. Checked in spawn (&gt;= 40 → reject).</td>
+<td><strong>Steepness threshold.</strong> Can relax mountain spawn rules.</td>
+<td><strong>POST</strong> — modify steepness array.</td>
+</tr>
+<tr>
+<td><code>Blocking</code></td>
+<td><code>getBlockerBetween</code></td>
+<td>[external, not in AI file]</td>
+<td>Returns first structure/blocker in a line segment. Called from <code>canPass()</code>.</td>
+<td><strong>Deep structure checks.</strong> Can suppress specific structure blocks (risky).</td>
+<td><strong>POST</strong> — filter blockers.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-gotchas_2">Known Gotchas<a class="headerlink" href="#known-gotchas_2" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Water restrictions are fragmented:</strong></li>
+<li>Pathfinding (PathFinder): <code>isSubmerged()</code> check rejects height &gt; -20</li>
+<li>Movement (creatureMovementTick): shallow water penalty if lPosZ &lt; -0.7 and not submerged</li>
+<li>
+<p>Both checks are independent; patching one doesn't override the other</p>
+</li>
+<li>
+<p><strong>Guarded zone check is in <code>creatureMovementTick()</code>, not pathfinding.</strong> Creature <em>can</em> path to guarded tiles but <em>fails to move</em> into them mid-tick. Pathing doesn't know about guard zones.</p>
+</li>
+<li>
+<p><strong>Steepness check in spawning is hardcoded &gt;= 40.</strong> No setter; value is in-place calculated from height deltas.</p>
+</li>
+<li>
+<p><strong>Lava blocking is special-cased for animals:</strong> <code>c.isAnimal() &amp;&amp; t.hasFire()</code> in line 137. Creature type matters, not just template.</p>
+</li>
+<li>
+<p><strong>Bridge logic in <code>canPass()</code> is convoluted:</strong> if on a bridge, creature only moves perpendicular to bridge orientation. This is <em>not</em> obvious from reading the code path.</p>
+</li>
+</ol>
+<hr />
+<h2 id="4-spawn-positioning">4. Spawn Positioning<a class="headerlink" href="#4-spawn-positioning" title="Permanent link">&para;</a></h2>
+<h3 id="key-classes_3">Key Classes<a class="headerlink" href="#key-classes_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Zone.spawnCreature()</strong> (<code>com/wurmonline/server/zones/Zone.java</code> lines 620–850) — main spawn placement logic</li>
+<li><strong>Creature.doNew()</strong> (<code>Creature.java</code>) — factory; calls template + creates instance</li>
+<li><strong>Creatures</strong> (<code>com/wurmonline/server/creatures/Creatures.java</code>) — singleton registry</li>
+</ul>
+<h3 id="hook-candidates_3">Hook Candidates<a class="headerlink" href="#hook-candidates_3" title="Permanent link">&para;</a></h3>
+<h4 id="tier-1_2">Tier 1<a class="headerlink" href="#tier-1_2" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Zone</code></td>
+<td><code>spawnCreature</code></td>
+<td><code>void spawnCreature(int tx, int ty, boolean _spawnKingdom)</code></td>
+<td><strong>Master spawn placement.</strong> Given tile X/Y, validates biome, checks steepness, selects creature template (guard vs. wild vs. den), calls <code>Creature.doNew()</code>.</td>
+<td><strong>Single point for all land creature spawning.</strong> Can suppress validation, inject creature templates, modify spawn location.</td>
+<td><strong>PRE</strong> — veto spawn. <strong>POST</strong> — inject alternative template.</td>
+</tr>
+<tr>
+<td><code>Creature</code></td>
+<td><code>doNew</code></td>
+<td><code>static Creature doNew(int templateId, float posX, float posY, float rotation, int layer, String name, byte sex)</code> [inferred signature]</td>
+<td>Factory method. Creates creature instance, initializes position, registers in world.</td>
+<td><strong>Spawn instantiation.</strong> Can wrap to log spawns, enforce faction-based spawning.</td>
+<td><strong>POST</strong> — inspect/modify created creature.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-2_2">Tier 2<a class="headerlink" href="#tier-2_2" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Zone</code></td>
+<td><code>spawnSeaCreature</code></td>
+<td><code>void spawnSeaCreature(boolean spawnSeaHunter)</code> [line 490]</td>
+<td>Spawn sea creatures (huntsmiths, kraken). Picks random water tile, creates creature.</td>
+<td><strong>Water spawn control.</strong> Can suppress sea creature spawns, enforce ocean zones.</td>
+<td><strong>PRE</strong> — veto spawn.</td>
+</tr>
+<tr>
+<td><code>Zone</code></td>
+<td>[poll/tick]</td>
+<td><code>void poll(...)</code> [inferred]</td>
+<td>Main tick that decides when to spawn. Calls <code>spawnCreature()</code> or <code>spawnSeaCreature()</code> when density allows.</td>
+<td><strong>Spawn frequency gate.</strong> Can suppress spawns entirely, throttle to custom rate.</td>
+<td><strong>PRE</strong> — skip spawn decision.</td>
+</tr>
+<tr>
+<td><code>Creatures</code></td>
+<td>[constructor/respawn]</td>
+<td>[depends on Npc vs. Player logic]</td>
+<td>Creature resurrection post-death. Likely in death handler or respawn timer.</td>
+<td><strong>Respawn control.</strong> Can suppress respawn, relocate spawn.</td>
+<td><strong>PRE</strong> — veto/modify respawn.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="tier-3_2">Tier 3<a class="headerlink" href="#tier-3_2" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Method</th>
+<th>Signature</th>
+<th>What It Does</th>
+<th>Why Hook</th>
+<th>Event Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Offspring</code></td>
+<td>[breeding]</td>
+<td>[separate breeding system]</td>
+<td>Offspring creation post-breeding. Picks biome-based location.</td>
+<td><strong>Breeding spawn.</strong> Can force offspring into specific zones.</td>
+<td><strong>POST</strong> — modify spawn location.</td>
+</tr>
+<tr>
+<td><code>Den</code></td>
+<td>[spawning]</td>
+<td>[Den-based respawn]</td>
+<td>Den creatures respawn near den after death.</td>
+<td><strong>Den control.</strong> Can suppress den respawn.</td>
+<td><strong>PRE</strong> — veto respawn.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-gotchas_3">Known Gotchas<a class="headerlink" href="#known-gotchas_3" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Spawn tile selection is randomized; validation is <em>post-hoc</em>.</strong> Zone picks random tile from current zone, then checks if valid. If steepness &gt;= 40, tries again (no loop limit visible; infinite retry risk if zone is all mountains).</p>
+</li>
+<li>
+<p><strong>Kingdom spawn has fallback logic:</strong> if no kingdom found at exact tile, checks ±50 tiles in cardinal + diagonal directions (8 checks). If still none, sets <code>_spawnKingdom = false</code> and spawns wild creature instead.</p>
+</li>
+<li>
+<p><strong>Creature elevation is inferred from surrounding tiles:</strong> code scans 2×2 tile box to determine if spawning in lava, under trees, on rock. This is <em>approximate</em> and can fail on tile boundaries.</p>
+</li>
+<li>
+<p><strong>Sea creatures are spawned in separate method, not through Zone.spawnCreature().</strong> Patching one doesn't control the other. Check if <code>spawnSeaHunter</code> flag for sea hunter type.</p>
+</li>
+<li>
+<p><strong>Template selection is hardcoded by creature type:</strong> guards → template 37/39/40 (by kingdom); wild → den template or random spawn item template; sea → separate hardcoded list. No dynamic template factory; changes require patching select statements.</p>
+</li>
+<li>
+<p><strong>Position offset is always <code>(tx &lt;&lt; 2) + 2.0f, (ty &lt;&lt; 2) + 2.0f</code>.</strong> Creature spawns at center of tile (tile X*4 + 2). No randomization within the 4×4 tile grid; creatures always spawn at precise tile center.</p>
+</li>
+</ol>
+<hr />
+<h2 id="cross-cutting-observations">Cross-Cutting Observations<a class="headerlink" href="#cross-cutting-observations" title="Permanent link">&para;</a></h2>
+<h3 id="central-tick-entry-point">Central Tick Entry Point<a class="headerlink" href="#central-tick-entry-point" title="Permanent link">&para;</a></h3>
+<p><strong>All four systems flow through <code>CreatureAI.pollCreature()</code></strong> (line 248):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pollCreature(Creature c, long delta) {
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  → pollSpecialPreAttack()
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  → pollAttack()
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  → [check actions]
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  → pollSpecialPreBreeding()
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  → pollBreeding()
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  → pollSpecialPreMovement()
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  → pollMovement()  ← pathing + target selection
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    → pathedMovementTick() or simpleMovementTick()
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    → creatureMovementTick()  ← position update
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>}
+</span></code></pre></div></p>
+<p>Hooking this method with early-return capabilities would give broad control; however, the method is ~150 lines and calls many overrideable hooks, so granular hooks are safer.</p>
+<h3 id="2d-pathing-is-fundamental">2D Pathing Is Fundamental<a class="headerlink" href="#2d-pathing-is-fundamental" title="Permanent link">&para;</a></h3>
+<p><strong>All pathing is 2D (X/Y only); Z is always post-hoc.</strong> This means:
+- Creatures cannot path <em>around</em> tall buildings (pathfinding sees through them)
+- Creatures cannot navigate vertical multi-floor structures via pathfinding (only via manual Z movement)
+- Possible future hook: inject Z-aware pathfinding wrapper, or suppress guarded zone repel and let creatures brute-force through</p>
+<h3 id="attacker-list-is-the-behavior-driver">Attacker List Is the Behavior Driver<a class="headerlink" href="#attacker-list-is-the-behavior-driver" title="Permanent link">&para;</a></h3>
+<p><strong><code>getLatestAttackers()</code> array drives all counter-aggro.</strong> Modifying this array (or the sorting in <code>pollMovement()</code>) controls whether creatures chase that pesky player or turn on teammates. Mods like DUSKombat likely patch this.</p>
+<h3 id="spawn-validation-is-local-to-zone">Spawn Validation is Local to Zone<a class="headerlink" href="#spawn-validation-is-local-to-zone" title="Permanent link">&para;</a></h3>
+<p><strong>Spawning is per-zone; no global spawn gatekeeper.</strong> Each zone independently decides spawn density, template, location. To enforce global spawn rules (e.g., "no animals in caves"), must patch <code>Zone.spawnCreature()</code> or <code>Zone.maySpawnCreatureTemplate()</code>.</p>
+<h3 id="blocking-check-is-expensive">Blocking Check is Expensive<a class="headerlink" href="#blocking-check-is-expensive" title="Permanent link">&para;</a></h3>
+<p><strong>PathFinder.canPass() calls <code>Blocking.getBlockerBetween()</code> on <em>every A-star expansion</em>.</strong> For large paths, this is O(n * m) where n = path length, m = structure list size. Optimizing pathing requires either:
+- Caching blocker results (complex, stale-data risk)
+- Hooking <code>canPass()</code> to short-circuit checks for low-priority creatures
+- Suppressing structure checks entirely (risky for integrity)</p>
+<hr />
+<h2 id="summary-of-highest-value-hooks-per-system">Summary of Highest-Value Hooks Per System<a class="headerlink" href="#summary-of-highest-value-hooks-per-system" title="Permanent link">&para;</a></h2>
+<h3 id="pathing">Pathing<a class="headerlink" href="#pathing" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Tier 1:</strong> <code>CreatureAI.pathedMovementTick()</code> (path progression), <code>PathFinder.canPass()</code> (terrain access), <code>CreatureAI.creatureMovementTick()</code> (position update)</li>
+<li><strong>One-line hook:</strong> Veto movement into specific tiles via <code>canPass()</code> return value</li>
+</ul>
+<h3 id="targeting">Targeting<a class="headerlink" href="#targeting" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Tier 1:</strong> <code>Creature.setTarget()</code> (target veto), <code>GenericCreatureAI.pollMovement()</code> (attacker selection &amp; sorting)</li>
+<li><strong>One-line hook:</strong> Reject all hostile targets via early return in <code>setTarget()</code> (pacifism mode)</li>
+</ul>
+<h3 id="restrictions">Restrictions<a class="headerlink" href="#restrictions" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Tier 1:</strong> <code>CreatureAI.creatureMovementTick()</code> (implicit restrictions), <code>PathFinder.canPass()</code> (terrain restrictions), <code>Zone.spawnCreature()</code> (spawn validation)</li>
+<li><strong>One-line hook:</strong> Suppress guard zone repel by skipping the <code>t.isGuarded()</code> check</li>
+</ul>
+<h3 id="spawn">Spawn<a class="headerlink" href="#spawn" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Tier 1:</strong> <code>Zone.spawnCreature()</code> (placement + validation)</li>
+<li><strong>One-line hook:</strong> Force spawn on mountains by suppressing steepness &gt;= 40 check</li>
+</ul>
+<hr />
+<h2 id="architecture-surprises">Architecture Surprises<a class="headerlink" href="#architecture-surprises" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>No creature AI "decision tree".</strong> AI is just a tick loop calling abstract methods. Subclasses (GenericCreatureAI, FishAI, etc.) implement the actual logic. This is modular but scattered.</p>
+</li>
+<li>
+<p><strong>Pathfinding is synchronous, not async.</strong> <code>findPath()</code> runs A-star to completion on the calling thread (max 10,000 iterations). Large paths can stall the server. No visible async wrapper or priority queue.</p>
+</li>
+<li>
+<p><strong>Target selection is <em>reactive, not proactive</em>.</strong> Creatures only pick targets from existing <code>getLatestAttackers()</code> array or direct orders. No "scan nearby creatures for enemies" phase. Implies low CPU cost but passive aggression.</p>
+</li>
+<li>
+<p><strong>Spawn tiles are validated <em>by biome, not by creature properties</em>.</strong> Water creatures can spawn on land if the Zone biome allows it. Template swimming flag isn't checked during spawn validation, only during movement. Risk of water creatures spawning on mountains.</p>
+</li>
+<li>
+<p><strong>Bridge logic is implicit and fragile.</strong> Creatures track bridge ID; when moving between bridge tiles, special logic prevents moving perpendicular to bridge orientation. No explicit bridge-following pathfinding; bridges are treated as terrain with orientation constraints.</p>
+</li>
+<li>
+<p><strong>Spirit guards have hard-coded zone restrictions.</strong> Can't be generalized to other faction guards without duplicate logic. Vanilla hardcodes village perimeter ±5 checks only for spirit guards.</p>
+</li>
+</ol>
+<hr />
+<h2 id="recommended-hook-implementation-sequence">Recommended Hook Implementation Sequence<a class="headerlink" href="#recommended-hook-implementation-sequence" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Start with <code>PathFinder.canPass()</code> — lowest-impact, highest-value (control all movement restrictions)</li>
+<li>Add <code>Creature.setTarget()</code> — gate hostile targets (pacifism, faction rules)</li>
+<li>Add <code>CreatureAI.creatureMovementTick()</code> for position inspection (logging, mod action integration)</li>
+<li>Add <code>Zone.spawnCreature()</code> for spawn validation (biome rules, population control)</li>
+<li>Optional: <code>GenericCreatureAI.pollMovement()</code> for attacker list filtering (complex, AI-subclass-specific)</li>
+</ol>
+<hr />
+<h2 id="confidence-levels">Confidence Levels<a class="headerlink" href="#confidence-levels" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Tier 1 hooks:</strong> 95% confident — code is public, tested, stable signatures</li>
+<li><strong>Tier 2 hooks:</strong> 80% confident — rely on decompiler accuracy, signature inference</li>
+<li><strong>Tier 3 hooks:</strong> 60% confident — require diving into private methods, risky for breakage</li>
+</ul>
+<p>All hooks assume Javassist-style <code>insertAfter()</code> / <code>insertBefore()</code> patching with bytecode generation. Test each hook in isolation on a non-production server.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/garward/WurmModLoader" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
