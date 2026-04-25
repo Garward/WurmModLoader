@@ -37,6 +37,32 @@ public class ModComm {
         return ch;
     }
 
+    /**
+     * Drop a previously registered channel so it can be re-registered.
+     * Intended for {@code #reloadmods}: a fresh mod instance can call
+     * {@code unregisterChannel} before {@link #registerChannel} to replace its
+     * own listener cleanly. Safe to call when the channel is not registered.
+     *
+     * @param name channel name
+     * @return {@code true} if a channel was removed, {@code false} otherwise
+     */
+    public static boolean unregisterChannel(String name) {
+        Channel ch = channels.remove(name);
+        if (ch == null) return false;
+        idMap.remove(ch.id);
+        return true;
+    }
+
+    /**
+     * Look up a registered channel by name.
+     *
+     * @param name channel name
+     * @return the channel, or {@code null} if not registered
+     */
+    public static Channel getChannel(String name) {
+        return channels.get(name);
+    }
+
     // === internal stuff ===
 
     /**

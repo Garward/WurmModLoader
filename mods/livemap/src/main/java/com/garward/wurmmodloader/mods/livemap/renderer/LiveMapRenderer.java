@@ -94,6 +94,33 @@ public class LiveMapRenderer {
     }
 
     /**
+     * Strided render: covers a {@code worldW × worldH} world region but emits an
+     * image sized {@code outW × outH}. Used for zoomed-out tiles where allocating
+     * a full-resolution buffer (e.g. 2048×2048 per tile) would OOM or stall.
+     */
+    public BufferedImage createMapDumpScaled(int xo, int yo, int worldW, int worldH, int outW, int outH) {
+        if (xo < 0) xo = 0;
+        if (yo < 0) yo = 0;
+
+        final BufferedImage out = new BufferedImage(outW, outH, BufferedImage.TYPE_INT_RGB);
+
+        for (int py = 0; py < outH; py++) {
+            int worldY = yo + (int) ((long) py * worldH / outH);
+            for (int px = 0; px < outW; px++) {
+                int worldX = xo + (int) ((long) px * worldW / outW);
+
+                short h  = getSurfaceHeight(worldX,     worldY);
+                short hR = getSurfaceHeight(worldX + 1, worldY);
+                short hD = getSurfaceHeight(worldX,     worldY + 1);
+
+                int rgb = (h < 0) ? waterPixel(h) : landPixel(worldX, worldY, h, hR, hD);
+                out.setRGB(px, py, rgb);
+            }
+        }
+        return out;
+    }
+
+    /**
      * Directional hillshade from the surface normal. The normal of a mesh
      * corner is (h - hR, h - hD, 1) (height increases to the right/down
      * producing a normal pointing up-and-away). Normalize and dot with the
