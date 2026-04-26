@@ -181,7 +181,7 @@ public class ServerConfig {
         public int maxPlayers = 200;
 
         /**
-         * Default kingdom for players (1=Freedom/Jenn-Kellon, 2=Mol-Rehan, 3=HOTS, 4=Freedom).
+         * Default kingdom for players (1=Jenn-Kellon, 2=Mol-Rehan, 3=HOTS, 4=Freedom).
          * On Freedom servers, players can choose any kingdom. On PvP servers, this determines
          * which kingdom new players join by default.
          */

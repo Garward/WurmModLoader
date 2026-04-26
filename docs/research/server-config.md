@@ -236,7 +236,7 @@ server:
   name: "My Epic Server"
   motd: "Welcome to the best Wurm server!"
   steam_password: ""  # Leave empty for no password
-  kingdom: 4  # 1=Freedom, 2=Mol-Rehan, 3=JK, 4=HOTS
+  kingdom: 4  # 1=JK, 2=MR, 3=HOTS, 4=Freedom
 
   # Server Type
   pvp: true
