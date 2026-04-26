@@ -11,7 +11,8 @@ repositories {
 
 dependencies {
     implementation(project(":wurmmodloader-api"))
-    compileOnly(files("../../distribution/server.jar", "../../distribution/common.jar"))
+    compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
+    compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
 }
 
 java {

@@ -15,12 +15,10 @@ dependencies {
     compileOnly(project(":wurmmodloader-modsupport"))
     compileOnly(project(":wurmmodloader-legacy"))
 
-    compileOnly(files(
-        "${rootProject.projectDir}/distribution/server.jar",
-        "${rootProject.projectDir}/distribution/common.jar"
-    ))
+    compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
+    compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
 
-    compileOnly(files("${rootProject.projectDir}/distribution/javassist.jar"))
+    compileOnly("org.javassist:javassist:${project.property("javassistVersion")}")
 }
 
 java {

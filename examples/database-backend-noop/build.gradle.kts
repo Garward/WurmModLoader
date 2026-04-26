@@ -11,10 +11,16 @@ repositories {
 
 dependencies {
     implementation(project(":wurmmodloader-api"))
-    // server.jar / common.jar are only referenced at compile time (for ConnectionFactory,
-    // WurmDatabaseSchema, MigrationStrategy, MigrationResult, MigrationVersion).
-    // The live server-side classloader provides them at runtime.
-    compileOnly(files("../../distribution/server.jar", "../../distribution/common.jar"))
+    // ConnectionFactory / WurmDatabaseSchema / MigrationStrategy /
+    // MigrationResult / MigrationVersion live in the vanilla Wurm jars, pulled
+    // from the gotti.no-ip.org maven repo at compile time. The live server-side
+    // classloader provides them at runtime.
+    compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
+    compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
+    // Flyway is shaded into vanilla server.jar (Wurm bundles a 2016-vintage copy).
+    // The gotti maven artifact strips it out, so pull a normal copy at compile
+    // time — the running server's classloader still provides Wurm's shaded version.
+    compileOnly("org.flywaydb:flyway-core:5.2.4")
 }
 
 java {
@@ -22,24 +28,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-// server.jar / common.jar are gitignored proprietary Wurm binaries. On CI
-// they're absent, which makes this example's references to MigrationStrategy /
-// MigrationVersion unresolvable. Skip compilation in that case rather than
-// failing the build.
-val vanillaJarsPresent = file("../../distribution/server.jar").exists() &&
-        file("../../distribution/common.jar").exists()
-
-tasks.withType<JavaCompile>().configureEach {
-    onlyIf { vanillaJarsPresent }
-}
-
-tasks.withType<Javadoc>().configureEach {
-    onlyIf { vanillaJarsPresent }
-}
-
 tasks.jar {
     archiveBaseName.set("database-backend-noop")
-    onlyIf { vanillaJarsPresent }
 }
 
 tasks.register<Zip>("modDistribution") {

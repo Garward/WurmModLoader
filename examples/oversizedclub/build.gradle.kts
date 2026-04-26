@@ -13,10 +13,8 @@ dependencies {
     implementation(project(":wurmmodloader-api"))
     implementation(project(":wurmmodloader-modsupport"))
 
-    compileOnly(files(
-        "${rootProject.projectDir}/distribution/server.jar",
-        "${rootProject.projectDir}/distribution/common.jar"
-    ))
+    compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
+    compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
 }
 
 java {

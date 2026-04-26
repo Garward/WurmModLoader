@@ -26,7 +26,8 @@ dependencies {
     implementation(project(":mods:materialsystem"))
 
     // Wurm server dependencies (provided at runtime)
-    compileOnly(files("../../distribution/server.jar", "../../distribution/common.jar"))
+    compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
+    compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
 
     // SQLite for database
     implementation("org.xerial:sqlite-jdbc:3.36.0.3")

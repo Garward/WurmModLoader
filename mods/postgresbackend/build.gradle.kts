@@ -35,8 +35,21 @@ dependencies {
         exclude(group = "org.checkerframework", module = "checker-qual")
     }
 
+    // The gotti maven publication (4596061, last updated 2023-11) is stale —
+    // its Migrator$FlywayConfigurer declares configureMigrations() as default
+    // instead of abstract, so PostgresMigrator's lambda doesn't compile against
+    // it. Keep this mod on the local distribution jars and gate it on CI.
     compileOnly(files("../../distribution/server.jar", "../../distribution/common.jar"))
 }
+
+// Skip compilation entirely if the gitignored vanilla Wurm jars aren't present
+// (e.g. on CI). Locally these are shipped under distribution/.
+val vanillaJarsPresent = file("../../distribution/server.jar").exists() &&
+        file("../../distribution/common.jar").exists()
+
+tasks.withType<JavaCompile>().configureEach { onlyIf { vanillaJarsPresent } }
+tasks.withType<Javadoc>().configureEach { onlyIf { vanillaJarsPresent } }
+tasks.withType<Jar>().configureEach { onlyIf { vanillaJarsPresent } }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8

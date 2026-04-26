@@ -28,7 +28,8 @@ dependencies {
     // (UpgradeTree depends on PowerScaling for power spending)
 
     // Wurm server dependencies (provided at runtime)
-    compileOnly(files("../../distribution/server.jar", "../../distribution/common.jar"))
+    compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
+    compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
 
     // bdew loot system integration
     compileOnly(files("../../distribution/bdew_server_mod_tools.jar"))

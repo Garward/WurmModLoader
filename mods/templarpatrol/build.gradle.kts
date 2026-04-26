@@ -14,12 +14,10 @@ dependencies {
     compileOnly(project(":wurmmodloader-core"))
     compileOnly(project(":wurmmodloader-legacy"))
 
-    compileOnly(files(
-        "${rootProject.projectDir}/distribution/server.jar",
-        "${rootProject.projectDir}/distribution/common.jar"
-    ))
+    compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
+    compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")
 
-    compileOnly(files("${rootProject.projectDir}/distribution/snakeyaml-2.2.jar"))
+    compileOnly("org.yaml:snakeyaml:2.2")
 }
 
 java {
