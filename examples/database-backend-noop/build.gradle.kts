@@ -33,6 +33,10 @@ tasks.withType<JavaCompile>().configureEach {
     onlyIf { vanillaJarsPresent }
 }
 
+tasks.withType<Javadoc>().configureEach {
+    onlyIf { vanillaJarsPresent }
+}
+
 tasks.jar {
     archiveBaseName.set("database-backend-noop")
     onlyIf { vanillaJarsPresent }

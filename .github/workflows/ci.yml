@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main ]
 
+# Opt all JS-based actions (checkout, setup-java, upload-artifact,
+# wrapper-validation, …) into the Node 24 runtime ahead of the
+# 2026-06-02 forced cutover. Avoids deprecation warnings on every run.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: Build and Test
@@ -41,6 +47,7 @@ jobs:
           path: |
             **/build/test-results/test/*.xml
             **/build/reports/tests/
+          if-no-files-found: ignore
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
