@@ -84,3 +84,4 @@ Working design docs and investigation notes — not necessarily current implemen
 - [`../examples/basic-item-mod/`](../examples/basic-item-mod/), [`../examples/custom-creature/`](../examples/custom-creature/), [`../examples/action-system/`](../examples/action-system/) — Focused single-topic examples
 - [`examples/COMMON_MOD_PATTERNS.md`](examples/COMMON_MOD_PATTERNS.md) — Common patterns reference
 - [`examples/ui-api/`](examples/ui-api/) — UI API example Java snippets
+- [`examples/eventlogic-registries/`](examples/eventlogic-registries/) — **EventLogic registry schemas.** JSON examples for `MaterialProfileRegistry`, `SwingSpeedRegistry`, `WeaponTimerRegistry`, `DualWieldRegistry` plus a one page guide to wiring them up from a mod.

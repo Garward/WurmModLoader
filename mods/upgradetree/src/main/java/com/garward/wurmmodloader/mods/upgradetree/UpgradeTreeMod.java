@@ -1,5 +1,6 @@
 package com.garward.wurmmodloader.mods.upgradetree;
 
+import com.garward.wurmmodloader.api.events.ModActionEvent;
 import com.garward.wurmmodloader.api.events.server.CapabilityRegistrationEvent;
 import com.garward.wurmmodloader.api.events.server.ServerStartedEvent;
 import com.garward.wurmmodloader.api.events.base.SubscribeEvent;
@@ -7,12 +8,17 @@ import com.garward.wurmmodloader.api.ui.MenuEntry;
 import com.garward.wurmmodloader.api.ui.MenuTarget;
 import com.garward.wurmmodloader.core.event.EventBus;
 import com.garward.wurmmodloader.core.ui.ContextMenuRegistry;
+import com.garward.wurmmodloader.modcomm.Channel;
+import com.garward.wurmmodloader.modcomm.ModComm;
+import com.garward.wurmmodloader.modcomm.PlayerModConnection;
 import com.garward.wurmmodloader.mods.upgradetree.pets.PetEventHandlers;
 import com.garward.wurmmodloader.mods.upgradetree.pets.PlayerPetsCapability;
 import com.garward.wurmmodloader.mods.upgradetree.ui.UpgradeTreeWindow;
+import com.garward.wurmmodloader.mods.upgradetree.ui.UpgradeTreeWindowDeclarative;
 import com.garward.wurmmodloader.modloader.interfaces.Configurable;
 import com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 import com.wurmonline.server.creatures.Creature;
+import com.wurmonline.server.players.Player;
 
 import java.io.File;
 import java.util.Properties;
@@ -122,15 +128,71 @@ public class UpgradeTreeMod implements WurmServerMod, Configurable {
     }
 
     /**
-     * Opens the upgrade tree window for a player.
-     *
-     * @param player The player to show the window to
+     * Opens the upgrade tree window for a player. Players whose client has the
+     * declarativeui channel ({@code com.garward.ui}) get the rich graph
+     * window; everyone else falls back to the BML question window so vanilla
+     * clients still work.
      */
     private void openUpgradeTreeWindow(Creature player) {
         logger.info("Opening upgrade tree for player: " + player.getName());
 
-        UpgradeTreeWindow window = new UpgradeTreeWindow(player);
-        window.show();
+        if (hasDeclarativeUiChannel(player)) {
+            new UpgradeTreeWindowDeclarative(player).show();
+        } else {
+            new UpgradeTreeWindow(player).show();
+        }
+    }
+
+    private static boolean hasDeclarativeUiChannel(Creature creature) {
+        if (!(creature instanceof Player)) return false;
+        try {
+            PlayerModConnection conn = ModComm.getPlayerConnectionPublic((Player) creature);
+            if (conn == null || !conn.isActive() || conn.getChannels() == null) return false;
+            for (Channel ch : conn.getChannels()) {
+                if ("com.garward.ui".equals(ch.getName())) return true;
+            }
+            return false;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
+     * Handles {@code ui:action} events emitted by declarativeui when our
+     * window's buttons are clicked. Recognised actions:
+     * <ul>
+     *   <li>{@code unlock:<id>} — attempt to unlock the upgrade and refresh</li>
+     *   <li>{@code info:<id>} — locked/unlocked node click; surface details in chat</li>
+     *   <li>{@code tree:close} — dismiss the window</li>
+     * </ul>
+     */
+    @SubscribeEvent
+    public void onUiAction(ModActionEvent event) {
+        if (!"ui:action".equals(event.getEventType())) return;
+        if (!UpgradeTreeWindowDeclarative.WINDOW_ID.equals(event.getString("windowId"))) return;
+
+        Object playerObj = event.get("player");
+        if (!(playerObj instanceof Creature)) return;
+        Creature creature = (Creature) playerObj;
+        String action = event.getString("action");
+        if (action == null) return;
+
+        if ("tree:close".equals(action)) {
+            new UpgradeTreeWindowDeclarative(creature).close();
+            return;
+        }
+
+        if (action.startsWith("unlock:")) {
+            String upgradeId = action.substring("unlock:".length());
+            UpgradeUnlockHelper.attemptUnlock(creature, upgradeId);
+            new UpgradeTreeWindowDeclarative(creature).show();
+            return;
+        }
+
+        if (action.startsWith("info:")) {
+            String upgradeId = action.substring("info:".length());
+            UpgradeUnlockHelper.describe(creature, upgradeId);
+        }
     }
 
     @Override

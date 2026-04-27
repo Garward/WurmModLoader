@@ -1,0 +1,26 @@
+{
+  "_comment": "Example DualWieldRegistry data. Loaded by DualWieldRegistry.getInstance().load(path). Profiles describe which creatures and weapons are eligible for dual wielding. requirePlayer defaults to true. skipHugeWeapons defaults to true and excludes templates 12 (large maul) and 17 (large axe). templateBlacklist further excludes specific weapon templates.",
+
+  "profiles": [
+    {
+      "id": "playersDefault",
+      "requirePlayer": true,
+      "skipHugeWeapons": true,
+      "templateBlacklist": []
+    },
+
+    {
+      "id": "playersNoShieldsOrBows",
+      "requirePlayer": true,
+      "skipHugeWeapons": true,
+      "templateBlacklist": [60, 61, 62, 305, 374]
+    },
+
+    {
+      "id": "allCreaturesLightWeaponsOnly",
+      "requirePlayer": false,
+      "skipHugeWeapons": true,
+      "templateBlacklist": [12, 17, 81]
+    }
+  ]
+}

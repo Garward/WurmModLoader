@@ -1,0 +1,78 @@
+{
+  "_comment": "Example MaterialProfileRegistry data. Loaded by MaterialProfileRegistry.getInstance().loadFromJson(path). Every numeric field is an OPTIONAL multiplier applied to the vanilla base value (1.0 = no change). Omit a field to leave that aspect of the material untouched. Either materialId (byte) or material (lowercase name from Materials.convertMaterialStringIntoByte) is required per entry.",
+
+  "profiles": [
+    {
+      "material": "iron",
+      "damageModifier": 1.00,
+      "decayModifier": 1.00,
+      "improveModifier": 1.00,
+      "repairTimeModifier": 1.00
+    },
+
+    {
+      "material": "steel",
+      "damageModifier": 1.10,
+      "decayModifier": 0.85,
+      "improveModifier": 1.05,
+      "weaponStats": {
+        "DAMAGE": 1.10,
+        "SPEED": 1.00,
+        "PARRY": 1.05,
+        "ARMOUR_DAMAGE": 1.10,
+        "BASH": 1.05
+      }
+    },
+
+    {
+      "material": "glimmersteel",
+      "damageModifier": 1.30,
+      "decayModifier": 0.50,
+      "improveModifier": 1.20,
+      "actionSpeedModifier": 1.15,
+      "skillPowerModifier": 1.10,
+      "weaponStats": {
+        "DAMAGE": 1.30,
+        "SPEED": 1.15,
+        "ARMOUR_DAMAGE": 1.20
+      }
+    },
+
+    {
+      "material": "oakenwood",
+      "improveModifier": 1.10,
+      "decayModifier": 0.90,
+      "bonusMultipliers": {
+        "CREATION": 1.10,
+        "ANCHOR": 1.20,
+        "SHATTER": 0.80
+      }
+    },
+
+    {
+      "material": "willow",
+      "actionTimeModifier": 0.95,
+      "actionSpeedModifier": 1.05,
+      "skillDifficultyModifier": 0.90,
+      "bonusMultipliers": {
+        "PENDULUM": 1.25,
+        "LOCKPICK": 1.15
+      }
+    },
+
+    {
+      "material": "magic",
+      "damageModifier": 1.50,
+      "materialBonusModifier": 1.40,
+      "bonusMultipliers": {
+        "SPELL_POWER": 1.50,
+        "ARMOUR": 1.20
+      },
+      "spellPowerMultipliers": {
+        "12": 1.30,
+        "47": 1.50,
+        "53": 1.20
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "_comment": "Example SwingSpeedRegistry data. Loaded by SwingSpeedRegistry.getInstance().load(path). Each profile sets a minimum swing time (in seconds) plus optional rarity reduction. Profiles are matched against a weapon Item; the first profile whose templates and materials whitelist matches wins. An empty templates or materials list means 'match anything'.",
+
+  "profiles": [
+    {
+      "id": "defaultWeapons",
+      "minSwing": 3.0,
+      "rarityEnabled": true,
+      "rarityReduction": 0.10
+    },
+
+    {
+      "id": "fastBlades",
+      "minSwing": 2.0,
+      "rarityEnabled": true,
+      "rarityReduction": 0.15,
+      "templates": [16, 18, 20]
+    },
+
+    {
+      "id": "rareMetalBlades",
+      "minSwing": 1.6,
+      "rarityEnabled": true,
+      "rarityReduction": 0.20,
+      "templates": [16, 18, 20],
+      "materials": [56, 57, 67]
+    },
+
+    {
+      "id": "twoHandedMauls",
+      "minSwing": 4.5,
+      "rarityEnabled": true,
+      "rarityReduction": 0.05,
+      "templates": [12, 17]
+    }
+  ]
+}
