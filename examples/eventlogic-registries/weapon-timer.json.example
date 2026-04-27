@@ -1,0 +1,22 @@
+{
+  "_comment": "Example WeaponTimerRegistry data. Loaded by WeaponTimerRegistry.getInstance().load(path). Each policy sets a resetValue applied when WeaponUseEvent fires. An empty templates list means 'match any weapon'.",
+
+  "profiles": [
+    {
+      "id": "defaultReset",
+      "resetValue": 0.0
+    },
+
+    {
+      "id": "swordsQuickRecover",
+      "resetValue": 0.5,
+      "templates": [16, 18, 20]
+    },
+
+    {
+      "id": "polearmsSlowRecover",
+      "resetValue": 1.5,
+      "templates": [12, 17, 81]
+    }
+  ]
+}
