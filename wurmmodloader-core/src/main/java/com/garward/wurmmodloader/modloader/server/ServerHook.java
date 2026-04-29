@@ -41,6 +41,7 @@ import com.garward.wurmmodloader.api.events.action.ActionSpeedModifierEvent;
 import com.garward.wurmmodloader.api.events.movement.MovementBroadcastEvent;
 import com.garward.wurmmodloader.api.events.movement.PlayerMovementBroadcastEvent;
 import com.garward.wurmmodloader.api.events.skill.SkillAdvanceEvent;
+import com.garward.wurmmodloader.api.events.skill.SkillGainMultiplierEvent;
 import com.garward.wurmmodloader.api.events.player.PlayerDeathEvent;
 import com.garward.wurmmodloader.api.events.server.CapabilityRegistrationEvent;
 import com.garward.wurmmodloader.api.events.server.ServerPollEvent;
@@ -1129,6 +1130,30 @@ public class ServerHook {
         return event;
     }
 
+    public SkillGainMultiplierEvent fireSkillGainMultiplier(Skill skill,
+                                                            double check,
+                                                            double power,
+                                                            double learnMod,
+                                                            float times,
+                                                            double skillDivider,
+                                                            double vanillaBonus,
+                                                            double vanillaMultiplier,
+                                                            boolean vanillaWouldAdvance) {
+        if (DEBUG) {
+            EventCounter counter = eventCounters.computeIfAbsent("SkillGainMultiplierEvent", k -> new EventCounter());
+            if (counter.shouldLog()) {
+                long count = counter.getCountAndReset();
+                logger.info(String.format("[Event] SkillGainMultiplierEvent: fired %d times in last 30 seconds", count));
+            }
+        }
+
+        SkillGainMultiplierEvent event = new SkillGainMultiplierEvent(
+                skill, check, power, learnMod, times, skillDivider,
+                vanillaBonus, vanillaMultiplier, vanillaWouldAdvance);
+        eventBus.post(event);
+        return event;
+    }
+
 	public float fireCombatSwingSpeed(com.wurmonline.server.creatures.Creature attacker,
 	                                  com.wurmonline.server.items.Item weapon,
 	                                  float baseSpeed) {
@@ -2031,6 +2056,38 @@ public class ServerHook {
 			logger.info(String.format("[Event] TradeBalanceEvent: cancelled=%s", event.isCancelled()));
 		}
 		return event.isCancelled();
+	}
+
+	/**
+	 * Fires ShopDiffEvent. Returns the (possibly mutated) money value to be
+	 * added to {@code Trade.shopDiff}.
+	 */
+	public long fireShopDiff(com.wurmonline.server.items.Trade trade,
+	                         long money,
+	                         long currentShopDiff) {
+		com.garward.wurmmodloader.api.events.trade.ShopDiffEvent event =
+			new com.garward.wurmmodloader.api.events.trade.ShopDiffEvent(trade, money, currentShopDiff);
+		eventBus.post(event);
+		if (DEBUG) {
+			logger.info(String.format("[Event] ShopDiffEvent: in=%d shopDiff=%d out=%d",
+				money, currentShopDiff, event.getMoney()));
+		}
+		return event.getMoney();
+	}
+
+	/**
+	 * Fires MountSpeedPercentEvent. Returns a Float override or null if no
+	 * listener overrode the value (callers should then run vanilla logic).
+	 */
+	public Float fireMountSpeedPercent(com.wurmonline.server.creatures.Creature creature,
+	                                   boolean mounting) {
+		com.garward.wurmmodloader.api.events.vehicle.MountSpeedPercentEvent event =
+			new com.garward.wurmmodloader.api.events.vehicle.MountSpeedPercentEvent(creature, mounting);
+		eventBus.post(event);
+		if (event.isOverridden()) {
+			return Float.valueOf(event.getPercent());
+		}
+		return null;
 	}
 
 	/**

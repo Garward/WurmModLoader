@@ -40,6 +40,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.ItemTemplatesCreatedPatch
 import com.garward.wurmmodloader.core.bytecode.patches.ItemMoveCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ItemTradePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.TradeBalancePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ShopDiffPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.TradeSessionStartPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.VillageExpansionCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.TerrainModificationPatch;
@@ -80,6 +81,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.CreaturePollMovementPatch
 import com.garward.wurmmodloader.core.bytecode.patches.CreaturePollMovementPrePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureSetTargetPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureTemplateColorPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.CreatureTemplateFieldWideningPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PathFinderCanPassPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PosZCalculationPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ZoneSpawnAttemptPatch;
@@ -95,6 +97,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.PrayerFaithPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.PriestRestrictionPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ShieldCheckPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SkillAdvancePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.SkillGainMultiplierPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SpellCastingTimePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SpellCooldownPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.SpellCastAttemptPatch;
@@ -121,6 +124,8 @@ import com.garward.wurmmodloader.core.bytecode.patches.vanillafixes.VanillaNextI
 import com.garward.wurmmodloader.core.bytecode.patches.VehicleMountCreaturePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.VehicleMountItemPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.VehicleSpeedPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.MountSpeedPercentPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.TitleInjectionPatch;
 import com.garward.wurmmodloader.core.registry.RuntimeRegistries;
 
 import java.util.Arrays;
@@ -133,6 +138,7 @@ public final class CoreBytecodePatches {
 
     private static final List<BytecodePatch> CORE_PATCHES = Arrays.asList(
         new RemoveActionsFinalModifierPatch(),  // CRITICAL: Must run FIRST before mods register actions
+        new CreatureTemplateFieldWideningPatch(),  // Must run before mods build CreatureTemplates with reflective field writes
         new ItemEnchantmentConstructorPatch(),  // CRITICAL: Must run early so mods can extend ItemEnchantment
         new ServerConfigLoadPatch(),  // CRITICAL: Syncs YAML config to DB before server reads config
         new ServerPreInitPatch(),     // Fires before Villages.loadVillages so subsystems can seed wurmzones.db
@@ -165,6 +171,7 @@ public final class CoreBytecodePatches {
         new ItemMoveCheckPatch(),
         new TradeSessionStartPatch(),
         new TradeBalancePatch(),
+        new ShopDiffPatch(),
         new VillageExpansionCheckPatch(),
         new TerrainModificationPatch(),
         new TerrainFlattenPatch(),
@@ -220,6 +227,7 @@ public final class CoreBytecodePatches {
         new ActionTimingPatch(),
         new ActionSpeedPatch(),
         new SkillAdvancePatch(),
+        new SkillGainMultiplierPatch(),
         new PlayerLoginPatch(),
         new GmHelpAddendumPatch(),
         new PlayerLogoutPatch(),
@@ -243,7 +251,9 @@ public final class CoreBytecodePatches {
         new VehicleMountCreaturePatch(),
         new VehicleMountItemPatch(),
         new VehicleSpeedPatch(),
+        new MountSpeedPercentPatch(),
         new MountEquipmentCheckPatch(),
+        new TitleInjectionPatch(),
         // Database backend SPI
         new ConnectionFactoryCtorWidenPatch(),
         new DbConnectorInitPatch(),

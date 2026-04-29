@@ -41,11 +41,13 @@ public final class BytecodeConflictKeys {
     public static final String VEHICLE_MOUNT_CREATURE = "vehicle.mount.creature";
     public static final String VEHICLE_MOUNT_ITEM = "vehicle.mount.item";
     public static final String VEHICLE_SPEED = "vehicle.speed";
+    public static final String CREATURE_MOUNT_SPEED_PERCENT = "creature.mountSpeedPercent";
     public static final String VEHICLE_EQUIPMENT_CHECK = "vehicle.equipment";
     public static final String ACTION_TIME = "actions.time";
     public static final String ACTION_STAMINA = "actions.stamina";
     public static final String ACTION_FATIGUE = "actions.fatigue";
     public static final String SKILL_ADVANCE = "skill.advance";
+    public static final String SKILL_GAIN_MULTIPLIER = "skill.gainMultiplier";
     public static final String COMBAT_SWING_SPEED = "combat.swingSpeed";
     public static final String COMBAT_WEAPON_USE = "combat.weaponUse";
     public static final String COMBAT_OPPORTUNITY = "combat.opportunity";
@@ -99,6 +101,7 @@ public final class BytecodeConflictKeys {
     public static final String TRADE_INITIATE = "trade.initiate";
     public static final String TRADE_PERMISSION_CHECK = "trade.permissionCheck";
     public static final String TRADE_BALANCE = "trade.balance";
+    public static final String TRADE_SHOP_DIFF = "trade.shopDiff";
     public static final String ITEM_MOVE_CHECK = "item.moveCheck";
     public static final String VILLAGE_EXPANSION_CHECK = "village.expansionCheck";
     public static final String TERRAIN_MODIFICATION = "terrain.modification";
@@ -146,4 +149,5 @@ public final class BytecodeConflictKeys {
     public static final String CREATURE_POLL_MOVEMENT_PRE = "ai.creature.pollMovement.pre";
     public static final String CREATE_MENU_ID_ENCODE = "actions.createMenuIdEncode";
     public static final String CREATE_MENU_ID_DECODE = "actions.createMenuIdDecode";
+    public static final String TITLES_CLINIT = "players.titlesClinit";
 }
