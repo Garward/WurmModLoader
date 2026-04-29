@@ -268,15 +268,32 @@ public class ServerHook {
 		logger.info("[ServerHook] DEBUG: Bootstrapping runtime registries");
 		SystemBootstrap.initializeAll();
 
-		// DIRECT CALL like Ago's original - legacy ModComm is now in core module
-		logger.info("[ServerHook] DEBUG: Calling legacy ModComm.serverStarted()");
-		org.gotti.wurmunlimited.modcomm.ModComm.serverStarted();
-		logger.info("[ServerHook] DEBUG: Successfully called legacy ModComm.serverStarted()");
+		// Each call is isolated: a legacy shim throwing must not skip the
+		// canonical garward ModComm init or the WML channels below — otherwise
+		// the first client handshake NPEs.
+		try {
+			logger.info("[ServerHook] DEBUG: Calling legacy ModComm.serverStarted()");
+			org.gotti.wurmunlimited.modcomm.ModComm.serverStarted();
+			logger.info("[ServerHook] DEBUG: Successfully called legacy ModComm.serverStarted()");
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerHook] legacy ModComm.serverStarted() failed (continuing)", t);
+		}
 
-		// Also call new package ModComm
-		logger.info("[ServerHook] DEBUG: Calling new ModComm.serverStarted()");
-		ModComm.serverStarted();
-		ModIntraServer.serverStarted();
+		try {
+			logger.info("[ServerHook] DEBUG: Calling new ModComm.serverStarted()");
+			ModComm.serverStarted();
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerHook] garward ModComm.serverStarted() failed (continuing)", t);
+		}
+
+		try {
+			ModIntraServer.serverStarted();
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ServerHook] ModIntraServer.serverStarted() failed (continuing)", t);
+		}
 
 		// Initialize WML_SYNC channel for client-server prediction
 		logger.info("[ServerHook] DEBUG: Initializing WML_SYNC channel");
@@ -374,6 +391,13 @@ public class ServerHook {
 	}
 
 	public void fireOnServerShutdown() {
+		// Capture the caller stack of Server.shutDown() — the bytecode hook
+		// fires us before any cleanup runs, so the calling frames are still
+		// on the stack and tell us who triggered the shutdown.
+		try {
+			com.garward.wurmmodloader.debug.ShutdownForensics.logServerShutdownCaller();
+		} catch (Throwable ignore) {}
+
 		// Flush + stop the creature-save batcher *before* anything else so its
 		// scheduled executor doesn't race with DB shutdown. Its flushes open
 		// fresh JDBC connections; if a backend (e.g. embedded Postgres) has

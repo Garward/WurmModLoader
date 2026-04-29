@@ -8,6 +8,7 @@ import com.garward.wurmmodloader.modloader.internal.classhooks.HookManager;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,6 +19,11 @@ public class ModComm {
     private static int nextChannelId = 1;
 
     private static Field fPlayerConnection;
+
+    // Fallback when the Javassist field-add on Player didn't take (class
+    // loaded too early, legacy shim crashed, etc). Keyed weakly so logged-out
+    // players don't pin connections.
+    private static final WeakHashMap<Player, PlayerModConnection> sideTable = new WeakHashMap<>();
 
     private static final Logger logger = Logger.getLogger("ModComm");
 
@@ -69,10 +75,21 @@ public class ModComm {
      * Get player connection state
      */
     static PlayerModConnection getPlayerConnection(Player player) {
-        try {
-            return (PlayerModConnection) fPlayerConnection.get(player);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+        if (fPlayerConnection != null) {
+            try {
+                PlayerModConnection conn = (PlayerModConnection) fPlayerConnection.get(player);
+                if (conn != null) return conn;
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        synchronized (sideTable) {
+            PlayerModConnection conn = sideTable.get(player);
+            if (conn == null) {
+                conn = new PlayerModConnection();
+                sideTable.put(player, conn);
+            }
+            return conn;
         }
     }
 

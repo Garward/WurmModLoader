@@ -116,6 +116,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.ServerPollPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerPreInitPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerShutdownPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerStartPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ServerStartShutdownLoggingPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.WeaponStatQueryPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.WeaponUsePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.vanillafixes.ActionTimerFix;
@@ -144,6 +145,7 @@ public final class CoreBytecodePatches {
         new ServerPreInitPatch(),     // Fires before Villages.loadVillages so subsystems can seed wurmzones.db
         new ServerStartPatch(),
         new ServerShutdownPatch(),
+        new ServerStartShutdownLoggingPatch(),  // Diagnostic: logs caller stack of every startShutdown(int, String)
         new ItemTemplatesCreatedPatch(),
         // ActionConstructorSafetyPatch removed - addCatch() fails on complex constructors
         new ActionArrayBoundsCheckPatch(),  // CRITICAL: Prevents crashes from unregistered ModActions
