@@ -61,6 +61,18 @@ public class DelegatedLauncher {
 			System.out.println("[DelegatedLauncher] Capability hooks installed");
 			LOGGER.info("Capability hooks installed successfully");
 
+			// CRITICAL: Initialize ModComm IMMEDIATELY after capability hooks, BEFORE
+			// any mod code runs. ModComm.init() adds the `modConnection` field to the
+			// Player CtClass and instruments Communicator.reallyHandle. Both must be
+			// in the CtClass before the JVM resolves these classes — and mod preInit/
+			// init bodies routinely reference Player, which forces it to load via the
+			// HookManager Loader and freeze the bytecode.
+			System.out.println("[DelegatedLauncher] Initializing ModComm...");
+			LOGGER.info("Initializing ModComm before mod load...");
+			com.garward.wurmmodloader.modcomm.ModComm.init();
+			System.out.println("[DelegatedLauncher] ModComm initialized");
+			LOGGER.info("ModComm initialized successfully");
+
 			// CRITICAL: Load mods and run preInit() SECOND, BEFORE SystemBootstrap
 			// This allows legacy mods to patch classes BEFORE bytecode patches load/freeze them
 			// For drag-and-drop legacy mod compatibility (e.g., bag of holding, old mods)
@@ -131,14 +143,6 @@ public class DelegatedLauncher {
 			com.garward.wurmmodloader.core.bytecode.patches.CommandReaderPatch.apply();
 			LOGGER.info("CommandReaderPatch applied successfully");
 
-			// Initialize ModComm BEFORE bytecode patches
-			// ModComm needs to modify Player class before patches that reference PlayerInfo/DbPlayerInfo load it
-			System.out.println("[DelegatedLauncher] Initializing ModComm...");
-			LOGGER.info("Initializing ModComm before bytecode patches...");
-			com.garward.wurmmodloader.modcomm.ModComm.init();
-			System.out.println("[DelegatedLauncher] ModComm initialized");
-			LOGGER.info("ModComm initialized successfully");
-
 			// CRITICAL: Apply bytecode patches AFTER mods' preInit(), ModSupport, and ModComm
 			// Legacy mods patch classes first, ModSupport adds callbacks, ModComm modifies Player, then bytecode patches freeze classes
 			// This allows drag-and-drop legacy mod compatibility
@@ -182,6 +186,25 @@ public class DelegatedLauncher {
 			// Add mods to ServerHook and initialize
 			serverHook.addMods(wurmMods);
 			serverHook.addVersionHandler(modLoader.getVersion(), modLoader.getGameVersion(), wurmMods);
+
+			// Built-in framework service: declarative UI bridge. Registers the
+			// `com.garward.ui` ModComm channel and subscribes to `ui:*`
+			// ModActionEvents so server mods can drive client windows without
+			// shipping a matching mod jar. Loaded reflectively because the
+			// service lives in modsupport (which depends on core), and core
+			// can't compile-depend on modsupport — modsupport's jar is still
+			// bundled into the framework dist, so the class is always present
+			// at runtime.
+			try {
+				Class<?> svcCls = Class.forName(
+						"com.garward.wurmmodloader.modsupport.declarativeui.DeclarativeUiService");
+				Object svc = svcCls.getDeclaredConstructor().newInstance();
+				svcCls.getMethod("init").invoke(svc);
+				LOGGER.info("Registered built-in DeclarativeUiService");
+			} catch (Throwable t) {
+				LOGGER.log(java.util.logging.Level.SEVERE,
+						"Failed to register built-in DeclarativeUiService", t);
+			}
 
 			LOGGER.info("===================================");
 			LOGGER.info("Inspecting active classloaders before server launch...");

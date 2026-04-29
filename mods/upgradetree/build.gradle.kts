@@ -22,11 +22,6 @@ dependencies {
     // PowerScaling integration - compile-time dependency for type safety
     compileOnly(project(":mods:powerscaling"))
 
-    // declarativeui (CommunityMods) - compile-time access to Widgets/WidgetNode for
-    // building the declarative UI tree. Pure factory API; declarativeui mod itself is
-    // an optional runtime dep — the BML window stays the fallback when absent.
-    compileOnly(files("${rootProject.projectDir}/lib/declarativeui.jar"))
-
     // Wurm server dependencies (provided at runtime)
     compileOnly("org.gotti.wurmunlimited:common:${project.property("wurmVersion")}")
     compileOnly("org.gotti.wurmunlimited:server:${project.property("wurmVersion")}")

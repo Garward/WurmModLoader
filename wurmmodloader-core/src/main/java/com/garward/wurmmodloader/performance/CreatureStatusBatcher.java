@@ -137,14 +137,18 @@ public class CreatureStatusBatcher {
         // Hook save() method - returns boolean
         hookMethodWithReturn(ctClass, "save", "boolean (save)");
 
-        // Hook high-frequency setter methods (priority order)
-        hookVoidMethod(ctClass, "updateAge", "updateAge()");
-        hookVoidMethod(ctClass, "updateFat", "updateFat()");
-        hookVoidMethod(ctClass, "setLoyalty", "setLoyalty(float)");
-        hookVoidMethod(ctClass, "setDead", "setDead(boolean)");
-        hookVoidMethod(ctClass, "setKingdom", "setKingdom(byte)");
+        // NOTE: Setter methods (setKingdom, setLoyalty, setDead, updateAge, updateFat)
+        // were previously hooked here, but they are *setter+persister* methods —
+        // the original body mutates the in-memory field (e.g. `this.kingdom = kingd`)
+        // before doing its own direct UPDATE. Skipping them via `return` left the
+        // in-memory state stale, so the next save() flushed the OLD value back to
+        // disk. Most visible symptom: new players ended up with PLAYERS.KINGDOM=0
+        // even though SelectSpawnQuestion called setKingdomId(4) on a Freedom
+        // home server. The single-column UPDATE these setters issue is cheap,
+        // and save() is still batched, so deferring just save() captures the
+        // dominant write cost without breaking correctness.
 
-        logger.info("[CreatureStatusBatcher] Successfully hooked all priority methods");
+        logger.info("[CreatureStatusBatcher] Successfully hooked save() (setters left intact for correctness)");
     }
 
     /**
