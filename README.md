@@ -35,7 +35,6 @@ The framework is in active use. See [`Architecture.MD`](Architecture.MD) for the
 
 ### Planned / Upcoming
 - 🚧 Additional eventlogic modules (shield enchant resolvers, diagnostics command, capability-integrated combat DSL)
-- 🚧 `mod.json` descriptors + dependency graph tooling
 - 🚧 CLI & UI utilities (mod list, registry dumps, profile hot-reload, event bus inspector)
 - 🚧 DatabaseOptimizer configuration + telemetry, optional Vector API accelerators
 - 🚧 Expanded docs, sample data packs (Armoury-style profiles), migration guides
@@ -44,7 +43,8 @@ The framework is in active use. See [`Architecture.MD`](Architecture.MD) for the
 
 ### Prerequisites
 
-- **Java 17 or later** (GraalVM recommended, Adoptium works great)
+- **Java to run a server** — Java 8 (the JRE bundled with Wurm Unlimited works out of the box; system OpenJDK 8 is also fine)
+- **Java to build from source** — JDK 17+ (Adoptium recommended). Not needed for users who just want to run a server with prebuilt mods.
 - **Wurm Unlimited Dedicated Server** (version 4596061+)
 - **Wurm server location** — defaults:
   - **Windows:** `C:\Program Files (x86)\Steam\steamapps\common\Wurm Unlimited Dedicated Server\`
@@ -110,26 +110,26 @@ The framework is in active use. See [`Architecture.MD`](Architecture.MD) for the
 
 #### Required Directory Structure
 
-Each mod lives in its own subfolder under `mods/`. The descriptor (`mod.properties`),
-optional config (`mod.config`), and the JAR all sit *inside* that subfolder:
+Each mod lives in its own subfolder under `mods/`. The full canonical layout is:
 
 ```
 mods/
-├── announcer/
-│   ├── mod.properties        ← REQUIRED (descriptor: classname, classpath)
-│   ├── mod.config            ← Optional mod-specific settings
-│   └── announcer.jar         ← Mod code
-├── bagofholding/
-│   ├── mod.properties
-│   ├── mod.config
-│   └── bagofholding.jar
+├── enabled.json                ← optional master toggle (see below)
+├── oversizedclub/
+│   ├── mod.properties          ← REQUIRED (descriptor: classname, classpath)
+│   ├── mod.config              ← optional mod-specific settings
+│   ├── icons/                  ← optional PNG icons (auto-scanned & packed)
+│   │   └── *.png
+│   └── oversizedclub.jar       ← REQUIRED (mod code, unversioned filename)
 ├── livemap/
 │   ├── mod.properties
-│   └── livemap.jar
+│   └── livemap.jar             ← minimum: just descriptor + JAR
 ...
 ```
 
-⚠️ **Critical:** the JAR filename **must not contain a version suffix**. The loader matches by folder name — `announcer.jar`, not `announcer-0.47.jar`.
+Only `mod.properties` + `<modname>.jar` are required. `mod.config` and `icons/` are optional — most mods won't ship either.
+
+⚠️ **Critical:** the JAR filename **must not contain a version suffix**. The loader matches by folder name — `oversizedclub.jar`, not `oversizedclub-0.47.jar`.
 
 > **Legacy layout still works.** Older Ago-style mods that use top-level
 > `mods/<modname>.properties` + `mods/<modname>/<modname>.jar` continue to
@@ -150,6 +150,48 @@ After adding mods, verify they load:
 ```
 
 You should see: `INFO com.garward.wurmmodloader.serverlauncher.DelegatedLauncher main Loaded N mods`
+
+### Enabling / disabling mods (`mods/enabled.json`)
+
+`mods/enabled.json` is the **canonical master toggle** for installed mods. It's a flat JSON object mapping mod folder name → boolean. **Missing entries default to enabled** — you only need to list mods you want to turn off.
+
+```json
+{
+  "_comment": "Set a mod to false to disable it without removing the folder. Names match the mod's subfolder under mods/.",
+
+  "experimentalmod": false,
+  "anothermod": false
+}
+```
+
+To re-enable a mod, flip the value to `true` or just delete the line. The framework reads this file on every boot. There is no per-mod `enabled=` property in `mod.properties` — `enabled.json` is the single source of truth.
+
+### Mod assets — icons and server packs
+
+#### `icons/` (per-mod PNGs, auto-handled)
+
+Drop 32×32 PNGs into `mods/<modname>/icons/<subpath>.png` and the framework's `ModIconScanner` picks them up at `ItemTemplatesCreated` time, packs them into a single synthesized JAR at `mods/serverpacks/framework-icons.jar`, and registers it with `serverpacks` (PREPEND + FORCE) so connected clients fetch the icons automatically.
+
+You don't write any code for this — registering an icon URI through `IconRegistry.register("modname", "subpath.png")` and dropping the PNG into `icons/<subpath>.png` is enough. The pack is rebuilt fresh on every boot, so adding or removing icons just requires a restart.
+
+#### Larger server packs (textures, models, custom resources)
+
+For mods that ship their own pack JARs (custom textures, kingdom skins, models — not just icons), the canonical staging directory is `mods/serverpacks/`. Drop your `<your-pack>.jar` there and register it from your mod's `init()` or a `ServerStartedEvent` handler:
+
+```java
+import com.garward.wurmmodloader.api.serverpacks.ServerPacks;
+import com.garward.wurmmodloader.api.serverpacks.ServerPackOptions;
+
+ServerPacks.getInstance().addServerPack(
+    "my-textures",                                   // pack name
+    Paths.get("mods/serverpacks/my-textures.jar"),   // path on disk
+    ServerPackOptions.PREPEND, ServerPackOptions.FORCE
+);
+```
+
+The framework owns pack hosting (channel registration, HTTP serving, manifest hashing) — your mod just hands it the JAR and a name.
+
+> ⚠️ **Tested surface so far:** the framework's serverpacks subsystem was promoted from a community mod into the framework recently. The end-to-end flow has been validated for **icon packs** (the `framework-icons.jar` pipeline) and **the legacy `iconpack` graphics jar**. Larger pack mods (kingdom skins, custom textures, world resource packs) haven't been tested through the new framework path yet. The wire formats and ModComm channels are unchanged from the original community mod, so existing pack-based mods should keep working — but expect to file issues if you hit one of the first untested mods through the new path.
 
 ### Configuration & EventLogic Profiles
 
@@ -302,16 +344,17 @@ cd WurmModLoader
 
 | Feature | WurmServerModLauncher | WurmModLoader |
 |---------|----------------------|---------------|
-| Java Version | Java 8 | Java 17+ (compiles to Java 8 bytecode) |
-| Build System | Maven | Gradle |
-| Package | `org.gotti.wurmunlimited` | `com.garward.wurmmodloader` (modern), `org.gotti.*` (legacy compat) |
-| Interface Support | Legacy only | Both modern (`com.garward.*`) and legacy (`org.gotti.*`) |
-| Legacy Support | N/A | Full compatibility via legacy bridge |
-| Registry System | String-based IDs | Namespaced ResourceLocations + runtime registries |
-| Event System | Listener interfaces | Annotations + interfaces + eventlogic modules |
-| Mod Descriptor | .properties | .properties + mod.json (planned) |
+| Server runtime | Java 8 | Java 8 (bundled WU JRE or system OpenJDK 8) |
+| Build toolchain | Java 8 + Maven | Java 17 + Gradle (outputs Java 8 bytecode) |
+| Package | `org.gotti.wurmunlimited` | `com.garward.wurmmodloader` (canonical), `org.gotti.*` (legacy bridge) |
+| Mod interface | Legacy listeners only | Both modern (`com.garward.*`) and legacy (`org.gotti.*`) implementations work |
+| Registry System | String-based IDs | Namespaced `ResourceLocation` + runtime registries |
+| Event System | Listener interfaces | `@SubscribeEvent` annotations + listener interfaces + eventlogic modules |
+| Master toggle | N/A | `mods/enabled.json` (per-mod on/off without uninstalling) |
 
-**All existing mods work without modification** - the legacy bridge ensures 100% backward compatibility. New mods can use the modern interface (`com.garward.wurmmodloader.modloader.interfaces.WurmServerMod`) as the preferred method.
+**Legacy mods load and run on their own**, but they may conflict with framework bytecode patches and classloader isolation — that's unavoidable when two systems instrument the same Wurm classes. In practice most Ago-style mods work; the failure mode is that a legacy mod's own Javassist patches can freeze a class before the framework's patches apply, suppressing framework events on that class. See [`docs/guides/legacy-mod-compatibility.md`](docs/guides/legacy-mod-compatibility.md) for the trade-offs and which subsystems are most affected.
+
+New mods should use the modern interface (`com.garward.wurmmodloader.modloader.interfaces.WurmServerMod`) with `@SubscribeEvent` annotations — the framework's events fire reliably and there is no instrumentation collision.
 
 ## 🔄 Updating
 
@@ -378,7 +421,7 @@ This project includes:
 A: WurmModLoader if you want the modern event API, the bytecode patch pipeline, the database backend SPI, and the legacy bridge that runs Ago-style mods unmodified. Stick with the original WurmServerModLauncher if your existing setup works and you don't need any of that.
 
 **Q: Will my existing mods work with WurmModLoader?**
-A: Yes — the legacy bridge runs Ago-style mods (`org.gotti.wurmunlimited.modloader.interfaces.*`) without modification.
+A: In most cases, yes. The legacy bridge runs Ago-style mods (`org.gotti.wurmunlimited.modloader.interfaces.*`) without source changes. The caveat: legacy mods that ship their own Javassist bytecode patches against Wurm classes can collide with framework patches — when both try to instrument the same class, one wins and the other silently doesn't fire. If a specific legacy mod misbehaves, see [`docs/guides/legacy-mod-compatibility.md`](docs/guides/legacy-mod-compatibility.md). For mods you don't want loaded at all, set them to `false` in `mods/enabled.json`.
 
 **Q: Why does it say "Loaded 0 mods"?**
 A: Either no mod folders exist under `mods/`, or the descriptors are missing. Each mod must have a `mod.properties` (new layout, inside `mods/<modname>/`) **or** a `mods/<modname>.properties` (legacy layout). See the [Troubleshooting](#-troubleshooting) section.
@@ -393,7 +436,7 @@ A: No, your mods work as-is. However, you can optionally modernize them to use n
 - **Registries:** Namespaced ResourceLocations for conflict-free IDs
 
 **Q: What Java version do I need?**
-A: Java 17+ to run. Mods can still target Java 8 bytecode for compatibility.
+A: To run a server: Java 8 (the JRE bundled with Wurm Unlimited works; system OpenJDK 8 also works). To build the framework or a mod from source: JDK 17+. The framework itself is compiled to Java 8 bytecode so it loads on the bundled JRE.
 
 **Q: Can I use this with existing server saves?**
 A: Yes! WurmModLoader doesn't change world data or save formats.
