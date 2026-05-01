@@ -2,154 +2,158 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://garward.github.io/WurmModLoader/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/examples/COMMON_MOD_PATTERNS/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/examples/eventlogic-registries/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/getting-started/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/bml-ui/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/custom-map-setup/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/database-backend-spi/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/event-bus/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/extending-framework/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/icon-system-reference/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/legacy-mod-compatibility/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/questions-api/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/troubleshooting/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/ui-api-overview/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/ui-api-submenus/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/ui-api/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/upgrade-tree-ui/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/guides/vanilla-fixes/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/migration/from-legacy/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/migration/porting-existing-mods/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/reference/api-surface/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/reference/console-commands/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/reference/ui-api-quick-reference/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/ai-system-hooks/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/kingdom-mechanics/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/server-config/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
+    </url>
+    <url>
+         <loc>https://garward.github.io/WurmModLoader/research/serverpacks-server-promotion-plan/</loc>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/world-generation-and-fixture-placement/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/combat/duskombat-formula/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/combat/event-surface-gap/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/combat/mod-crossref/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/combat/visibility-plan/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/console-gm/commands-mvp/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/console-gm/commands-research/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/console-gm/hybrid-system/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/creatures/hook-surface/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/creatures/pet-class-plan/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/database/connection-pattern/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
     <url>
          <loc>https://garward.github.io/WurmModLoader/research/database/village-structure/</loc>
-         <lastmod>2026-04-27</lastmod>
+         <lastmod>2026-05-01</lastmod>
     </url>
 </urlset>
