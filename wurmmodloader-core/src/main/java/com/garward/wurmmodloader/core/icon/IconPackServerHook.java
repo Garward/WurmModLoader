@@ -56,6 +56,17 @@ public final class IconPackServerHook {
 
         generatedThisStartup = true;
 
+        // Build + register the dynamic-icon serverpack first. This must land
+        // before the iconzz-style pack so its assets have predictable chain
+        // priority, and before players connect so the announce manifest
+        // includes it.
+        try {
+            FrameworkIconsPack.synthesizeAndRegister();
+        } catch (Throwable t) {
+            logger.log(java.util.logging.Level.WARNING,
+                "FrameworkIconsPack synthesis failed; continuing", t);
+        }
+
         try {
             logger.info("=== Icon Pack Generation (Iconzz Approach) ===");
 

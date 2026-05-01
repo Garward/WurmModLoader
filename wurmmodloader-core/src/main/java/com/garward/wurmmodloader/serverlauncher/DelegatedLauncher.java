@@ -177,11 +177,9 @@ public class DelegatedLauncher {
 				com.garward.wurmmodloader.httpserver.HttpServerSubsystem.register(mod);
 			}
 
-			// Register ServerPacks bridge for icon pack distribution
-			com.garward.wurmmodloader.core.icon.IconPackServerPacksBridge bridge = new com.garward.wurmmodloader.core.icon.IconPackServerPacksBridge();
-			for (ModEntry<WurmServerMod> mod : wurmMods) {
-				bridge.modInitialized(mod);
-			}
+			// Serverpacks is now framework-owned (Scope B promotion). The bridge
+			// is a static helper; no per-mod handshake needed — IconPackGenerator
+			// and FrameworkIconsPack call ServerPackHost directly through it.
 
 			// Add mods to ServerHook and initialize
 			serverHook.addMods(wurmMods);

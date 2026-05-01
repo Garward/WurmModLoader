@@ -150,4 +150,5 @@ public final class BytecodeConflictKeys {
     public static final String CREATE_MENU_ID_ENCODE = "actions.createMenuIdEncode";
     public static final String CREATE_MENU_ID_DECODE = "actions.createMenuIdDecode";
     public static final String TITLES_CLINIT = "players.titlesClinit";
+    public static final String OUTBOUND_ICON_GATE = "icons.outboundGate";
 }

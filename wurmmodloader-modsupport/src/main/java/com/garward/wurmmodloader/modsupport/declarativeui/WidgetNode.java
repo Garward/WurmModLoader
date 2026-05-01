@@ -29,6 +29,8 @@ public final class WidgetNode {
     public static final String IMAGE = "Image";
     public static final String BLIP = "Blip";
     public static final String VIEWPORT = "Viewport";
+    public static final String FRAME = "Frame";
+    public static final String HALO = "Halo";
 
     public final String type;
     public final Map<String, String> props = new LinkedHashMap<>();

@@ -61,9 +61,17 @@ public final class Icon {
 
     /**
      * First custom icon ID (start of mod icon range).
-     * Using free vanilla slots (Iconzz approach): 1501-1679
+     *
+     * <p>Custom icons live on sheets 7+ via {@code IconLoaderMergePatch} extension;
+     * the wire protocol caps at {@link Short#MAX_VALUE} (32767), giving 137 sheets
+     * × 240 = ~30k addressable custom slots above the vanilla range.
      */
-    public static final int FIRST_CUSTOM_ICON = 1501;
+    public static final int FIRST_CUSTOM_ICON = 1680;
+
+    /**
+     * Maximum custom icon ID (inclusive). Bound by the {@code short} wire protocol.
+     */
+    public static final int MAX_CUSTOM_ICON = Short.MAX_VALUE;
 
     /**
      * Default fallback icon ID (question mark).

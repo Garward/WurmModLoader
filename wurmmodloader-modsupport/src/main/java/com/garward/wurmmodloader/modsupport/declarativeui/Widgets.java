@@ -106,6 +106,42 @@ public final class Widgets {
     }
 
     /**
+     * Offset placement: position {@code child} at ({@code refX + dx},
+     * {@code refY + dy}) relative to a reference point. Sugar over {@link #at}
+     * for layouts that build off of named anchors (a node center, a region
+     * origin) — keeps the offset arithmetic local to the call site instead of
+     * scattered across {@code at(x, y, ...)} computations.
+     */
+    public static WidgetNode atOffset(int refX, int refY, int dx, int dy, WidgetNode child) {
+        return at(refX + dx, refY + dy, child);
+    }
+
+    /** Offset placement with explicit width/height. */
+    public static WidgetNode atOffset(int refX, int refY, int dx, int dy,
+                                      int width, int height, WidgetNode child) {
+        return at(refX + dx, refY + dy, width, height, child);
+    }
+
+    /**
+     * Grid placement: position {@code child} at integer-cell ({@code col},
+     * {@code row}) coordinates, snapping to a fixed cell size. Empty cells
+     * become visual gaps; adjacent cells touch exactly. Use a single
+     * {@code (cellW, cellH)} pair across an entire layout to guarantee every
+     * node lands on the same grid lattice.
+     *
+     * <pre>
+     *   final int CELL = 40;
+     *   atGrid(origin, origin, 0, 0, CELL, CELL, ...);  // touching
+     *   atGrid(origin, origin, 2, 0, CELL, CELL, ...);  // 1-cell gap (X o X)
+     *   atGrid(origin, origin, 4, 0, CELL, CELL, ...);  // 3-cell gap (X o o o X)
+     * </pre>
+     */
+    public static WidgetNode atGrid(int originX, int originY, int col, int row,
+                                    int cellW, int cellH, WidgetNode child) {
+        return at(originX + col * cellW, originY + row * cellH, child);
+    }
+
+    /**
      * Static image. {@code src} is one of:
      * <ul>
      *   <li>{@code "<name>"} — short form, resolved against declarativeui's
@@ -163,5 +199,76 @@ public final class Widgets {
                 .prop("fill", fill == null ? "1,1,1,1" : fill)
                 .prop("outlineThickness", Math.max(0, outlineThickness))
                 .prop("outline", outline == null ? "0,0,0,1" : outline);
+    }
+
+    /**
+     * Make a widget clickable. Sets the {@code action} prop, which the client
+     * dispatches as a {@code ui:action} ModActionEvent on left-click. Currently
+     * supported on {@code blip}, {@code frame} (and implicitly on {@code button},
+     * where action is set at construction).
+     */
+    public static WidgetNode action(WidgetNode node, String action) {
+        if (action != null && !action.isEmpty()) node.prop("action", action);
+        return node;
+    }
+
+    /**
+     * Add a soft glow pass behind an {@link #edge}. {@code glowThickness} is
+     * the full glow width and should be larger than the edge's own thickness
+     * or it disappears under the inner line. {@code glowColor} is "r,g,b,a" —
+     * a low-alpha tint of the edge color is the usual choice.
+     */
+    public static WidgetNode glowEdge(WidgetNode edge, int glowThickness, String glowColor) {
+        return edge.prop("glowThickness", Math.max(0, glowThickness))
+                .prop("glow", glowColor == null ? "1,1,1,0.4" : glowColor);
+    }
+
+    /**
+     * Square or circle frame container. Holds at most one child, sized to fit
+     * inside the border. Use shape {@code "square"} or {@code "circle"}; any
+     * other value falls back to square. {@code bg} is "r,g,b,a" for the inner
+     * fill (set alpha 0 for transparent), {@code outline} for the border.
+     *
+     * <p>Make the frame clickable by chaining {@link #action(WidgetNode, String)}
+     * — without an action it's input-transparent so a containing
+     * {@link #viewport} keeps drag-to-pan over the frame body.
+     */
+    public static WidgetNode frame(String shape, int width, int height,
+                                   int borderThickness,
+                                   String bg, String outline,
+                                   WidgetNode child) {
+        WidgetNode n = new WidgetNode(WidgetNode.FRAME)
+                .prop("shape", shape == null ? "square" : shape)
+                .prop("width", width)
+                .prop("height", height)
+                .prop("borderThickness", Math.max(1, borderThickness))
+                .prop("bg", bg == null ? "0,0,0,0" : bg)
+                .prop("outline", outline == null ? "1,1,1,1" : outline);
+        if (child != null) n.child(child);
+        return n;
+    }
+
+    /** Convenience: square frame with no fill. */
+    public static WidgetNode squareFrame(int width, int height, int borderThickness,
+                                         String outline, WidgetNode child) {
+        return frame("square", width, height, borderThickness, "0,0,0,0", outline, child);
+    }
+
+    /** Convenience: circle frame with no fill. */
+    public static WidgetNode circleFrame(int diameter, int borderThickness,
+                                         String outline, WidgetNode child) {
+        return frame("circle", diameter, diameter, borderThickness, "0,0,0,0", outline, child);
+    }
+
+    /**
+     * Soft radial-gradient glow circle — drops behind a node to suggest status
+     * (selected, available, on cooldown). {@code color} is "r,g,b,a" applied
+     * uniformly; the rim alpha-fades to transparent regardless. Always
+     * input-transparent so clicks pass through to whatever is layered on top.
+     */
+    public static WidgetNode halo(int diameter, String color) {
+        return new WidgetNode(WidgetNode.HALO)
+                .prop("diameter", Math.max(4, diameter))
+                .prop("color", color == null ? "1,1,1,0.6" : color);
     }
 }

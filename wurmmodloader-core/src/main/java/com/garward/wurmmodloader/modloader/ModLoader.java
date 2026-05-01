@@ -67,12 +67,14 @@ public class ModLoader implements Versioned {
 
 	private boolean isPreInitable(Object mod) {
 		return mod instanceof PreInitable ||
-		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.PreInitable;
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.PreInitable ||
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 	}
 
 	private boolean isInitable(Object mod) {
 		return mod instanceof Initable ||
-		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.Initable;
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.Initable ||
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 	}
 
 	/**
@@ -150,8 +152,10 @@ public class ModLoader implements Versioned {
 					logger.fine("[ModLoader] PreInit: " + modEntry.getName());
 					if (modEntry.mod instanceof PreInitable) {
 						((PreInitable) modEntry.mod).preInit();
-					} else {
+					} else if (modEntry.mod instanceof com.garward.wurmmodloader.modloader.interfaces.PreInitable) {
 						((com.garward.wurmmodloader.modloader.interfaces.PreInitable) modEntry.mod).preInit();
+					} else {
+						((com.garward.wurmmodloader.modloader.interfaces.WurmServerMod) modEntry.mod).preInit();
 					}
 				});
 
@@ -166,8 +170,10 @@ public class ModLoader implements Versioned {
 					logger.fine("[ModLoader] Init: " + modEntry.getName());
 					if (modEntry.mod instanceof Initable) {
 						((Initable) modEntry.mod).init();
-					} else {
+					} else if (modEntry.mod instanceof com.garward.wurmmodloader.modloader.interfaces.Initable) {
 						((com.garward.wurmmodloader.modloader.interfaces.Initable) modEntry.mod).init();
+					} else {
+						((com.garward.wurmmodloader.modloader.interfaces.WurmServerMod) modEntry.mod).init();
 					}
 				});
 
@@ -257,7 +263,16 @@ public class ModLoader implements Versioned {
 	 * to avoid freezing Creature class before ModCreatures can add callbacks.
 	 */
 	protected void preInit() {
-		// Empty now - performance optimizations moved to DelegatedLauncher
+		// Scan mods/<name>/icons/ before mod init() so dynamic-icon shorts are
+		// available to ItemTemplateBuilder.icon(stringId) callers during init.
+		// Synthesis of the framework-icons.jar pack happens later, after init.
+		try {
+			com.garward.wurmmodloader.core.icon.ModIconScanner.scanAll(
+				java.nio.file.Paths.get("mods"));
+		} catch (Throwable t) {
+			logger.log(java.util.logging.Level.WARNING,
+				"[ModLoader] ModIconScanner failed; continuing without auto-discovered icons", t);
+		}
 	}
 
 	/**

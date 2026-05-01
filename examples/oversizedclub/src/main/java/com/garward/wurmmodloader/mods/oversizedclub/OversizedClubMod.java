@@ -27,7 +27,6 @@ import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.ItemList;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.items.ItemTemplate;
-import com.wurmonline.server.items.ItemTemplateFactory;
 import com.wurmonline.server.items.ItemTypes;
 import com.wurmonline.server.items.Materials;
 import com.wurmonline.server.skills.SkillList;
@@ -180,20 +179,25 @@ public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable
         logger.info("Creating Oversized Club item template...");
 
         try {
-            // STEP 1: Copy the icon from an existing vanilla template rather than
-            // hardcoding an icon number. If Wurm ever renumbers icons internally,
-            // this keeps working.
+            // STEP 1: Pick the inventory icon. Two ways:
             //
-            // Other common weapon icons to copy from:
-            //   Clubs:  ItemList.clubHuge, ItemList.club
-            //   Swords: ItemList.swordLong, ItemList.swordShort, ItemList.swordGreat
-            //   Axes:   ItemList.hatchet, ItemList.axe, ItemList.axeHuge
-            //   Spears: ItemList.spearLong, ItemList.spearSteel
-            ItemTemplate hugeClubTemplate = ItemTemplateFactory.getInstance().getTemplate(ItemList.clubHuge);
-            short hugeClubIcon = hugeClubTemplate.getImageNumber();
-
-            // STEP 2: Build the template. The namespace string ("garward.oversizedclub")
-            // must be globally unique — prefix it with your mod / author name.
+            //   (a) Copy a vanilla icon by id — robust against icon renumbering:
+            //         short hugeClubIcon = ItemTemplateFactory.getInstance()
+            //             .getTemplate(ItemList.clubHuge).getImageNumber();
+            //         ...
+            //         .imageNumber(hugeClubIcon)
+            //
+            //   (b) Ship your own 32×32 PNG and reference it by string id —
+            //         drop the PNG at mods/oversizedclub/icons/club.png and the
+            //         framework's boot-time scanner allocates a wire-protocol
+            //         short, syncs the registry to clients, and serves the file
+            //         through the framework-icons server-pack. Modded clients
+            //         render the custom art; vanilla clients quietly fall back
+            //         to icon 0.
+            //
+            // We use (b) here so the example demonstrates the dynamic-icon
+            // pipeline end-to-end. The string id format is "<modname>:<relpath
+            // without .png>" — directory layout determines the id.
             ItemTemplate template = new ItemTemplateBuilder("garward.oversizedclub")
                     .name("oversized club", "oversized clubs",
                           "A massive, crudely made club of enormous proportions. " +
@@ -206,7 +210,7 @@ public class OversizedClubMod implements WurmServerMod, Configurable, Reloadable
                     //   Axes:   model.weapon.axe., model.weapon.axe.huge.
                     //   Spears: model.weapon.spear.
                     .modelName("model.weapon.club.huge.")
-                    .imageNumber(hugeClubIcon)
+                    .icon("oversizedclub:club")
                     .behaviourType((short) 35) // standard weapon
 
                     // Item types control how Wurm classifies the item. The last entry picks

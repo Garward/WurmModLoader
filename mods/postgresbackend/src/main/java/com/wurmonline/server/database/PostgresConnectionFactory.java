@@ -1,6 +1,7 @@
 package com.wurmonline.server.database;
 
 import com.garward.wurmmodloader.mods.postgresbackend.PostgresConfig;
+import com.garward.wurmmodloader.mods.postgresbackend.RewritingConnection;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -43,12 +44,14 @@ public final class PostgresConnectionFactory extends ConnectionFactory {
         Properties props = new Properties();
         props.setProperty("user", config.user);
         props.setProperty("password", config.password);
-        Connection conn = DriverManager.getConnection(getUrl(), props);
-        try (Statement st = conn.createStatement()) {
+        Connection raw = DriverManager.getConnection(getUrl(), props);
+        try (Statement st = raw.createStatement()) {
             st.execute("SET search_path TO " + searchPath);
         }
         logger.fine("[PostgresBackend] connection opened (schema=" + schema + ", search_path=" + searchPath + ")");
-        return conn;
+        // Wrap so vanilla SQL strings (e.g. duplicate-column UPDATE SET clauses)
+        // are rewritten to be Postgres-legal before they reach the driver.
+        return RewritingConnection.wrap(raw);
     }
 
     @Override

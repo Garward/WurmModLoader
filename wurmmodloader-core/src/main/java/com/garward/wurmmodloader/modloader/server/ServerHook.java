@@ -308,6 +308,13 @@ public class ServerHook {
 		// Initialize wml.serverinfo channel for server URL auto-discovery
 		com.garward.wurmmodloader.core.serverinfo.ServerInfoChannel.initialize();
 
+		// Initialize com.garward.icons channel for dynamic-icon registry sync
+		com.garward.wurmmodloader.core.icon.IconRegistrySyncChannel.initialize();
+
+		// Initialize com.garward.serverpacks (+ ago.serverpacks alias) — framework
+		// owns pack hosting now (Scope B promotion, was mods/serverpacks).
+		com.garward.wurmmodloader.core.serverpacks.ServerPackHost.initialize();
+
 		// Initialize capability system (Phase 5.5)
 		logger.info("[ServerHook] DEBUG: Initializing CapabilityManager");
 		com.garward.wurmmodloader.core.capability.CapabilityManager.getInstance().initialize();

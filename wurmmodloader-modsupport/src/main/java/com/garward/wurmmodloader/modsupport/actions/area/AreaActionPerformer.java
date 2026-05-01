@@ -158,10 +158,17 @@ public class AreaActionPerformer implements ActionPerformer {
 
     // === Tiles ===
 
+    // No-source surface-tile dispatch (CounterTypes.COUNTER_TYPE_TILES). The
+    // 9-arg sibling that looks like "no-source-with-heightOffset" doesn't
+    // exist on the interface — JVM erasure aliases it onto the cave-tile
+    // method `(..., int tile, int dir, ...)`, which silently swaps tile/dir
+    // and never fires for surface terrain. Surface clicks always come through
+    // this 8-arg overload, so route it into the 10-arg implementation with
+    // a synthetic heightOffset of 0.
     @Override
     public boolean action(Action action, Creature performer, int tilex, int tiley, boolean onSurface,
-                          int heightOffset, int tile, short num, float counter) {
-        return action(action, performer, null, tilex, tiley, onSurface, heightOffset, tile, num, counter);
+                          int tile, short num, float counter) {
+        return action(action, performer, null, tilex, tiley, onSurface, 0, tile, num, counter);
     }
 
     @Override

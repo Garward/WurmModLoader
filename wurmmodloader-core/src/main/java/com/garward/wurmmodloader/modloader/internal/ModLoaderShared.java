@@ -81,12 +81,14 @@ public abstract class ModLoaderShared<T extends Versioned> implements Versioned 
 
 	private boolean isPreInitable(Object mod) {
 		return mod instanceof PreInitable ||
-		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.PreInitable;
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.PreInitable ||
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 	}
 
 	private boolean isInitable(Object mod) {
 		return mod instanceof Initable ||
-		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.Initable;
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.Initable ||
+		       mod instanceof com.garward.wurmmodloader.modloader.interfaces.WurmServerMod;
 	}
 
 	/**
@@ -227,8 +229,10 @@ public abstract class ModLoaderShared<T extends Versioned> implements Versioned 
 			try (EarlyLoadingChecker c = EarlyLoadingChecker.init(modEntry.getName(), "preinit")) {
 				if (modEntry.mod instanceof PreInitable) {
 					((PreInitable)modEntry.mod).preInit();
-				} else {
+				} else if (modEntry.mod instanceof com.garward.wurmmodloader.modloader.interfaces.PreInitable) {
 					((com.garward.wurmmodloader.modloader.interfaces.PreInitable)modEntry.mod).preInit();
+				} else {
+					((com.garward.wurmmodloader.modloader.interfaces.WurmServerMod)modEntry.mod).preInit();
 				}
 				preInitTracker.recordSuccess();
 			} catch (Exception e) {
@@ -261,8 +265,10 @@ public abstract class ModLoaderShared<T extends Versioned> implements Versioned 
 			try (EarlyLoadingChecker c = EarlyLoadingChecker.init(modEntry.getName(), "init")) {
 				if (modEntry.mod instanceof Initable) {
 					((Initable)modEntry.mod).init();
-				} else {
+				} else if (modEntry.mod instanceof com.garward.wurmmodloader.modloader.interfaces.Initable) {
 					((com.garward.wurmmodloader.modloader.interfaces.Initable)modEntry.mod).init();
+				} else {
+					((com.garward.wurmmodloader.modloader.interfaces.WurmServerMod)modEntry.mod).init();
 				}
 				initTracker.recordSuccess();
 			} catch (Exception e) {

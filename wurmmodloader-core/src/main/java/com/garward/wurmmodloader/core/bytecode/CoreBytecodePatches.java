@@ -16,6 +16,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.CombatDualWieldPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CombatSwingSpeedPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CommunicatorChannelPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CommunicatorMessagePatch;
+import com.garward.wurmmodloader.core.bytecode.patches.OutboundIconGatePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ContainerVolumePatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CharmAnimalPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.CreatureBreedPatch;
@@ -114,6 +115,7 @@ import com.garward.wurmmodloader.core.bytecode.patches.SpecialMoveSendPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerConfigLoadPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerPollPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerPreInitPatch;
+import com.garward.wurmmodloader.core.bytecode.patches.ServerRunPanicLoggingPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerShutdownPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerStartPatch;
 import com.garward.wurmmodloader.core.bytecode.patches.ServerStartShutdownLoggingPatch;
@@ -146,6 +148,7 @@ public final class CoreBytecodePatches {
         new ServerStartPatch(),
         new ServerShutdownPatch(),
         new ServerStartShutdownLoggingPatch(),  // Diagnostic: logs caller stack of every startShutdown(int, String)
+        new ServerRunPanicLoggingPatch(),       // Diagnostic: logs the throwable that triggers Server.run's panic-catch shutdown
         new ItemTemplatesCreatedPatch(),
         // ActionConstructorSafetyPatch removed - addCatch() fails on complex constructors
         new ActionArrayBoundsCheckPatch(),  // CRITICAL: Prevents crashes from unregistered ModActions
@@ -250,6 +253,7 @@ public final class CoreBytecodePatches {
         new ServerPollPatch(),
         new CommunicatorMessagePatch(),
         new CommunicatorChannelPatch(),
+        new OutboundIconGatePatch(),
         new VehicleMountCreaturePatch(),
         new VehicleMountItemPatch(),
         new VehicleSpeedPatch(),

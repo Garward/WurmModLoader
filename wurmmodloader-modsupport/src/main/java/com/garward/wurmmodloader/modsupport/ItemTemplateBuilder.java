@@ -440,6 +440,33 @@ public class ItemTemplateBuilder {
 	}
 
 	/**
+	 * Resolve a registered dynamic-icon string id (e.g.
+	 * {@code "mastercraft:eternal_orb"}) to its allocated wire-protocol short
+	 * and assign it as this template's {@code imageNumber}.
+	 *
+	 * <p>Throws {@link IllegalStateException} if the id is not registered —
+	 * silent fallback to 0 would hide the typical modder mistakes (filename
+	 * typo, PNG missing from {@code mods/<modname>/icons/}, scanner skipped
+	 * the file because it wasn't 32×32). Catch the failure here so the boot
+	 * log names the offending template.
+	 *
+	 * @param stringId canonical {@code <modname>:<relpath without .png>} id used at scan time
+	 * @return this builder
+	 * @since 0.4.1
+	 */
+	public ItemTemplateBuilder icon(String stringId) {
+		short s = com.garward.wurmmodloader.core.icon.IconRegistry.lookup(stringId);
+		if (s < 0) {
+			throw new IllegalStateException(
+				"icon(\"" + stringId + "\") — no such id registered. "
+				+ "Drop a 32×32 PNG at mods/<modname>/icons/<relpath>.png "
+				+ "or call IconRegistry.register(stringId, packUri) before building the template.");
+		}
+		this.imageNumber = s;
+		return this;
+	}
+
+	/**
 	 * Sets the dye amount override in grams.
 	 * 
 	 * <p>This overrides the default amount of dye required to color this item.
